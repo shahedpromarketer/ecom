@@ -41,7 +41,7 @@
     </div>
 
     {{-- Navigation --}}
-    <nav class="flex-1 overflow-y-auto overflow-x-hidden py-4">
+    <nav id="sidebar" class="flex-1 overflow-y-auto overflow-x-hidden py-4">
 
         @php
             $navItem = fn(string $route) =>
@@ -565,6 +565,17 @@
 
 @vite(['resources/js/admin.js'])
 @stack('scripts')
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const sidebar = document.getElementById('sidebar');
+    if (!sidebar) return;
+    const activeItem = sidebar.querySelector('a.border-accent, a[class*="border-yellow"]');
+    if (activeItem) {
+        activeItem.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+});
+</script>
 
 </body>
 </html>
