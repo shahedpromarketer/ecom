@@ -33,6 +33,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::middleware(['auth', 'admin'])->group(function () {
         Route::get('/', fn () => redirect()->route('admin.dashboard'));
         Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
+        Route::get('dashboard/source-data', [DashboardController::class, 'sourceData'])->name('dashboard.source-data');
+        Route::get('dashboard/status-data', [DashboardController::class, 'statusData'])->name('dashboard.status-data');
 
         // Categories
         Route::patch('categories/{category}/toggle', [CategoryController::class, 'toggleActive'])->name('categories.toggle');

@@ -11,52 +11,27 @@
 @section('content')
 
 {{-- ═══ Date Range Filter ═══ --}}
-<div x-data="{
-        open: false,
-        range: '{{ request('range', 'today') }}',
-        custom: {{ request('range') === 'custom' ? 'true' : 'false' }},
-        applyRange(r) {
-            this.range = r;
-            if (r !== 'custom') {
-                window.location = '{{ route('admin.dashboard') }}?range=' + r;
-            }
-        }
-     }"
-     class="mb-6 flex flex-wrap items-center justify-between gap-3">
-
+<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
     <div class="flex items-center gap-2">
         <span class="text-xs font-semibold text-textsecondary dark:text-gray-400 uppercase tracking-wider">Period:</span>
         <span class="px-3 py-1 text-sm font-semibold bg-primary/10 text-primary dark:bg-primary/20 dark:text-blue-300 rounded-lg">{{ $rangeLabel }}</span>
     </div>
-
     <div class="flex flex-wrap items-center gap-2">
         @foreach([
+            'all'        => 'All Time',
             'today'      => 'Today',
-            'yesterday'  => 'Yesterday',
-            'this_week'  => 'This Week',
+            'last_7'     => 'Last 7 Days',
             'this_month' => 'This Month',
-            'last_month' => 'Last Month',
-            'custom'     => 'Custom',
-        ] as $key => $label)
-        <a href="{{ $key !== 'custom' ? route('admin.dashboard', ['range' => $key]) : '#' }}"
-           @if($key === 'custom') @click.prevent="custom = !custom" @endif
+            'this_year'  => 'This Year',
+        ] as $rKey => $rLabel)
+        <a href="{{ route('admin.dashboard', ['range' => $rKey]) }}"
            class="px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors
-                  {{ request('range', 'today') === $key
+                  {{ request('range', 'all') === $rKey
                       ? 'bg-primary text-white border-primary'
                       : 'border-border dark:border-gray-600 text-textsecondary dark:text-gray-400 hover:text-textprimary dark:hover:text-gray-200 bg-white dark:bg-gray-800' }}">
-            {{ $label }}
+            {{ $rLabel }}
         </a>
         @endforeach
-
-        <form method="GET" x-show="custom" x-cloak action="{{ route('admin.dashboard') }}" class="flex items-center gap-2">
-            <input type="hidden" name="range" value="custom">
-            <input type="date" name="from" value="{{ $from }}"
-                   class="px-3 py-1.5 text-xs rounded-lg border border-border dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30">
-            <span class="text-xs text-textsecondary">to</span>
-            <input type="date" name="to" value="{{ $to }}"
-                   class="px-3 py-1.5 text-xs rounded-lg border border-border dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30">
-            <button type="submit" class="px-3 py-1.5 text-xs font-semibold bg-primary hover:bg-primary/90 text-white rounded-lg transition-colors">Apply</button>
-        </form>
     </div>
 </div>
 
@@ -151,7 +126,6 @@ $dashStatusCards = [
     ['key' => 'pending_return', 'label' => 'Pend. Return',  'color' => '#EC4899'],
     ['key' => 'returned',       'label' => 'Returned',      'color' => '#8B5CF6'],
 ];
-$allTimeTotal = $orderStats->sum('count');
 @endphp
 
 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-7 gap-2.5 mb-6">
@@ -162,12 +136,12 @@ $allTimeTotal = $orderStats->sum('count');
             <span class="text-xs text-textsecondary dark:text-gray-400 font-medium">Total Orders</span>
             <span class="w-2 h-2 rounded-full bg-gray-400 flex-shrink-0"></span>
         </div>
-        <p class="text-2xl font-bold text-textprimary dark:text-gray-100">{{ number_format($allTimeTotal) }}</p>
-        <p class="text-xs text-textsecondary dark:text-gray-500 mt-0.5">All time · {{ $returnRatio }}% return</p>
+        <p class="text-2xl font-bold text-textprimary dark:text-gray-100">{{ number_format($periodTotal) }}</p>
+        <p class="text-xs text-textsecondary dark:text-gray-500 mt-0.5">{{ $rangeLabel }} · {{ $returnRatio }}% return</p>
     </a>
 
     @foreach($dashStatusCards as $card)
-    @php $stat = $orderStats->get($card['key']); @endphp
+    @php $stat = $ordersByStatus->get($card['key']); @endphp
     <a href="{{ route('admin.orders.index', ['status' => $card['key']]) }}"
        class="bg-white dark:bg-gray-800 rounded-xl border border-border dark:border-gray-700 shadow-sm p-3 hover:shadow-md transition-shadow">
         <div class="flex items-center justify-between mb-1">
@@ -184,11 +158,25 @@ $allTimeTotal = $orderStats->sum('count');
 <div class="grid grid-cols-1 xl:grid-cols-5 gap-6 mb-6">
 
     {{-- Order Status Donut (3/5) --}}
+    @php
+    $statusMeta = [
+        'pending'    => ['label' => 'Pending',    'color' => '#f59e0b'],
+        'confirmed'  => ['label' => 'Confirmed',  'color' => '#3b82f6'],
+        'processing' => ['label' => 'Processing', 'color' => '#8b5cf6'],
+        'shipped'    => ['label' => 'Shipped',    'color' => '#06b6d4'],
+        'delivered'  => ['label' => 'Delivered',  'color' => '#10b981'],
+        'completed'  => ['label' => 'Completed',  'color' => '#059669'],
+        'cancelled'  => ['label' => 'Cancelled',  'color' => '#ef4444'],
+        'returned'   => ['label' => 'Returned',   'color' => '#f97316'],
+        'hold'       => ['label' => 'Hold',       'color' => '#6b7280'],
+    ];
+    @endphp
     <div class="xl:col-span-3 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
         <div class="flex items-center justify-between mb-5">
             <h3 class="font-heading font-semibold text-textprimary dark:text-gray-100">Order Status</h3>
             <span class="text-xs text-textsecondary dark:text-gray-400">{{ $rangeLabel }}</span>
         </div>
+
         <div class="flex flex-col md:flex-row items-center gap-6">
             <div class="relative flex-shrink-0 w-44 h-44">
                 <canvas id="statusChart"></canvas>
@@ -198,21 +186,8 @@ $allTimeTotal = $orderStats->sum('count');
                 </div>
             </div>
             <div class="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
-                @php
-                $statusMeta = [
-                    'pending'    => ['label' => 'Pending',    'color' => '#f59e0b'],
-                    'confirmed'  => ['label' => 'Confirmed',  'color' => '#3b82f6'],
-                    'processing' => ['label' => 'Processing', 'color' => '#8b5cf6'],
-                    'shipped'    => ['label' => 'Shipped',    'color' => '#06b6d4'],
-                    'delivered'  => ['label' => 'Delivered',  'color' => '#10b981'],
-                    'completed'  => ['label' => 'Completed',  'color' => '#059669'],
-                    'cancelled'  => ['label' => 'Cancelled',  'color' => '#ef4444'],
-                    'returned'   => ['label' => 'Returned',   'color' => '#f97316'],
-                    'hold'       => ['label' => 'Hold',       'color' => '#6b7280'],
-                ];
-                @endphp
                 @foreach($statusMeta as $key => $meta)
-                @php $count = $ordersByStatus[$key] ?? 0; @endphp
+                @php $count = $statusCounts[$key] ?? 0; @endphp
                 <div class="flex items-center justify-between px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-700/50">
                     <div class="flex items-center gap-2">
                         <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background: {{ $meta['color'] }}"></span>
@@ -248,18 +223,58 @@ $allTimeTotal = $orderStats->sum('count');
         'facebook'    => 'Facebook',
     ];
     @endphp
-    <div class="xl:col-span-2 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+    <div x-data="sourceCardData()" x-init="init()"
+         class="xl:col-span-2 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
 
         <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
             <div>
                 <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
                     Order Source <span class="text-gray-400 cursor-help" title="Orders grouped by source">ⓘ</span>
                 </h3>
-                <p class="text-xs text-gray-400">{{ now()->startOfMonth()->format('d-m-Y') }} to {{ now()->endOfMonth()->format('d-m-Y') }}</p>
+                <p class="text-xs text-gray-400" x-text="subtitle"></p>
             </div>
-            <button class="px-3 py-1.5 bg-purple-600 text-white text-xs font-semibold rounded-lg">
-                This Month ▼
-            </button>
+
+            {{-- Range dropdown --}}
+            <div class="relative" @click.outside="open = false">
+                <button @click="open = !open"
+                        class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1 transition-colors">
+                    <span x-text="rangeLabel"></span>
+                    <svg class="w-3 h-3 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+                <div x-show="open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                     x-cloak class="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-50 py-1 overflow-hidden">
+                    @php
+                    $srcRanges = [
+                        'today'      => 'Today',
+                        'yesterday'  => 'Yesterday',
+                        'this_week'  => 'This Week',
+                        'this_month' => 'This Month',
+                        'last_month' => 'Last Month',
+                        'custom'     => 'Custom Range',
+                    ];
+                    @endphp
+                    @foreach($srcRanges as $rKey => $rLabel)
+                    <button @click="selectRange('{{ $rKey }}', '{{ $rLabel }}')"
+                            class="w-full flex items-center justify-between px-3 py-2 text-xs hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                            :class="range === '{{ $rKey }}' ? 'text-purple-600 font-semibold' : 'text-gray-700 dark:text-gray-300'">
+                        <span>{{ $rLabel }}</span>
+                        <svg x-show="range === '{{ $rKey }}'" class="w-3.5 h-3.5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </button>
+                    @endforeach
+                    <div x-show="showCustom" x-cloak class="border-t border-gray-100 dark:border-gray-700 px-3 py-2 space-y-1.5">
+                        <input type="date" x-model="customFrom"
+                               class="w-full px-2 py-1 text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-purple-500">
+                        <input type="date" x-model="customTo"
+                               class="w-full px-2 py-1 text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-purple-500">
+                        <button @click="applyCustom()"
+                                class="w-full py-1 text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors">Apply</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="p-6">
@@ -267,27 +282,24 @@ $allTimeTotal = $orderStats->sum('count');
                 <div class="relative w-48 h-48">
                     <canvas id="orderSourceChart"></canvas>
                     <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <span class="text-3xl font-bold text-gray-900 dark:text-white">
-                            {{ $orderSources->sum('count') }}
-                        </span>
+                        <span x-text="total" class="text-3xl font-bold text-gray-900 dark:text-white"></span>
                     </div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-3 gap-2">
-                @foreach($orderSources as $source)
+            <div class="grid grid-cols-3 gap-2" id="source-breakdown">
+                @foreach($orderSources as $src)
                 <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3 border-l-4"
-                     style="border-color: {{ $sourceColors[$source->source] ?? '#9CA3AF' }}">
+                     style="border-color: {{ $sourceColors[$src->source] ?? '#9CA3AF' }}">
                     <p class="text-xs font-medium text-gray-600 dark:text-gray-400">
-                        {{ $sourceLabels[$source->source] ?? ucfirst(str_replace('_', ' ', $source->source)) }}
+                        {{ $sourceLabels[$src->source] ?? ucfirst(str_replace('_', ' ', $src->source)) }}
                     </p>
                     <p class="text-sm font-bold text-gray-900 dark:text-white mt-1">
-                        {{ number_format($source->count) }}
-                        <span class="text-xs font-normal text-gray-400">({{ number_format($source->revenue) }})</span>
+                        {{ number_format($src->count) }}
+                        <span class="text-xs font-normal text-gray-400">({{ number_format($src->revenue) }})</span>
                     </p>
                 </div>
                 @endforeach
-
                 <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3 border-l-4 border-gray-900 dark:border-white">
                     <p class="text-xs font-medium text-gray-600 dark:text-gray-400">Total</p>
                     <p class="text-sm font-bold text-gray-900 dark:text-white mt-1">
@@ -404,50 +416,149 @@ $allTimeTotal = $orderStats->sum('count');
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-(function () {
-    const isDark = () => document.documentElement.classList.contains('dark');
+// ── Shared helpers ────────────────────────────────────────────────────────────
+const SOURCE_COLORS = @json($sourceColors);
+const SOURCE_LABELS = @json($sourceLabels);
 
-    // ── Status chart ──────────────────────────────────────────────────
-    const statusLabels = ['Pending','Confirmed','Processing','Shipped','Delivered','Completed','Cancelled','Returned','Hold'];
-    const statusData   = @json(array_values($ordersByStatus));
+function formatDate(d) {
+    return d.toISOString().slice(0, 10);
+}
+function rangeDefaults(range) {
+    const t = new Date(); t.setHours(0,0,0,0);
+    if (range === 'today')      return { from: formatDate(t), to: formatDate(t) };
+    if (range === 'yesterday')  { const y = new Date(t); y.setDate(y.getDate()-1); return { from: formatDate(y), to: formatDate(y) }; }
+    if (range === 'this_week')  { const s = new Date(t); s.setDate(s.getDate() - s.getDay()); return { from: formatDate(s), to: formatDate(t) }; }
+    if (range === 'this_month') { const s = new Date(t.getFullYear(), t.getMonth(), 1); return { from: formatDate(s), to: formatDate(t) }; }
+    if (range === 'last_month') { const s = new Date(t.getFullYear(), t.getMonth()-1, 1); const e = new Date(t.getFullYear(), t.getMonth(), 0); return { from: formatDate(s), to: formatDate(e) }; }
+    return { from: formatDate(t), to: formatDate(t) };
+}
+function buildSubtitle(from, to) {
+    return from === to ? from : `${from} to ${to}`;
+}
+
+// ── Order Source card ─────────────────────────────────────────────────────────
+let sourceChart = null;
+
+function sourceCardData() {
+    return {
+        open: false,
+        range: 'this_month',
+        rangeLabel: 'This Month',
+        showCustom: false,
+        customFrom: '',
+        customTo: '',
+        subtitle: '',
+        total: 0,
+
+        init() {
+            const d = rangeDefaults('this_month');
+            this.customFrom = d.from;
+            this.customTo   = d.to;
+            this.loadData('this_month');
+        },
+
+        selectRange(r, label) {
+            this.range      = r;
+            this.rangeLabel = label;
+            this.showCustom = (r === 'custom');
+            if (r !== 'custom') {
+                this.open = false;
+                this.loadData(r);
+            }
+        },
+
+        applyCustom() {
+            this.open = false;
+            this.loadData('custom', this.customFrom, this.customTo);
+        },
+
+        loadData(range, from, to) {
+            let url = '{{ route('admin.dashboard.source-data') }}?range=' + range;
+            if (range === 'custom') url += `&from=${from}&to=${to}`;
+
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(r => r.json())
+                .then(data => {
+                    this.subtitle = buildSubtitle(data.from, data.to);
+                    this.total    = data.sources.reduce((s, x) => s + x.count, 0);
+                    this.updateChart(data.sources);
+                    this.updateBreakdown(data.sources);
+                });
+        },
+
+        updateChart(sources) {
+            const labels = sources.map(s => SOURCE_LABELS[s.source] ?? s.source.replace(/_/g, ' '));
+            const counts = sources.map(s => s.count);
+            const colors = sources.map(s => SOURCE_COLORS[s.source] ?? '#9CA3AF');
+            const empty  = counts.every(v => v === 0);
+
+            const apply = () => {
+                if (!sourceChart) return;
+                sourceChart.data.labels            = labels;
+                sourceChart.data.datasets[0].data  = empty ? [1] : counts;
+                sourceChart.data.datasets[0].backgroundColor = empty ? ['#e5e7eb'] : colors;
+                sourceChart.update();
+            };
+            sourceChart ? apply() : setTimeout(apply, 100);
+        },
+
+        updateBreakdown(sources) {
+            const grid = document.getElementById('source-breakdown');
+            if (!grid) return;
+            let html = '';
+            let totalCount = 0;
+            sources.forEach(s => {
+                const color = SOURCE_COLORS[s.source] ?? '#9CA3AF';
+                const label = SOURCE_LABELS[s.source] ?? s.source.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                totalCount += s.count;
+                const rev = parseFloat(s.revenue) || 0;
+                html += `<div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3 border-l-4" style="border-color:${color}">
+                    <p class="text-xs font-medium text-gray-600 dark:text-gray-400">${label}</p>
+                    <p class="text-sm font-bold text-gray-900 dark:text-white mt-1">${s.count.toLocaleString()}
+                        <span class="text-xs font-normal text-gray-400">(${Math.round(rev).toLocaleString()})</span>
+                    </p></div>`;
+            });
+            html += `<div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3 border-l-4 border-gray-900 dark:border-white">
+                <p class="text-xs font-medium text-gray-600 dark:text-gray-400">Total</p>
+                <p class="text-sm font-bold text-gray-900 dark:text-white mt-1">${totalCount.toLocaleString()}
+                    <span class="text-xs font-normal text-gray-400">(${Math.round(sources.reduce((a,s) => a + (parseFloat(s.revenue)||0), 0)).toLocaleString()})</span>
+                </p></div>`;
+            grid.innerHTML = html;
+        },
+    };
+}
+
+// ── Charts (SSR data, no AJAX for status) ────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
+    // Status donut — uses same $statusCounts that drives the status cards
+    const statusData   = @json(array_values($statusCounts));
     const statusColors = ['#f59e0b','#3b82f6','#8b5cf6','#06b6d4','#10b981','#059669','#ef4444','#f97316','#6b7280'];
-
-    const statusNone = statusData.every(v => v === 0);
+    const statusLabels = ['Pending','Confirmed','Processing','Shipped','Delivered','Completed','Cancelled','Returned','Hold'];
+    const statusEmpty  = statusData.every(v => v === 0);
     new Chart(document.getElementById('statusChart').getContext('2d'), {
         type: 'doughnut',
         data: {
             labels: statusLabels,
-            datasets: [{
-                data: statusNone ? [1] : statusData,
-                backgroundColor: statusNone ? ['#e5e7eb'] : statusColors,
-                borderWidth: 0,
-                hoverOffset: 4,
-            }],
+            datasets: [{ data: statusEmpty ? [1] : statusData, backgroundColor: statusEmpty ? ['#e5e7eb'] : statusColors, borderWidth: 0, hoverOffset: 4 }],
         },
-        options: {
-            cutout: '72%',
-            plugins: { legend: { display: false }, tooltip: { enabled: !statusNone } },
-        },
+        options: { cutout: '72%', plugins: { legend: { display: false }, tooltip: { enabled: !statusEmpty } } },
     });
 
-    // ── Order Source chart ────────────────────────────────────────────
-    const sourceCtx = document.getElementById('orderSourceChart').getContext('2d');
-    new Chart(sourceCtx, {
+    // Source donut — initial SSR data; further updates via sourceCardData AJAX
+    const sourceCtx = document.getElementById('orderSourceChart');
+    if (!sourceCtx) return;
+    const initLabels = {!! json_encode($orderSources->map(fn($s) => $sourceLabels[$s->source] ?? ucfirst(str_replace('_', ' ', $s->source)))) !!};
+    const initData   = {!! json_encode($orderSources->pluck('count')) !!};
+    const initColors = {!! json_encode($orderSources->map(fn($s) => $sourceColors[$s->source] ?? '#9CA3AF')) !!};
+    const srcEmpty   = initData.every(v => v === 0);
+    sourceChart = new Chart(sourceCtx.getContext('2d'), {
         type: 'doughnut',
         data: {
-            labels:   {!! json_encode($orderSources->map(fn($s) => $sourceLabels[$s->source] ?? ucfirst(str_replace('_', ' ', $s->source)))) !!},
-            datasets: [{
-                data:            {!! json_encode($orderSources->pluck('count')) !!},
-                backgroundColor: {!! json_encode($orderSources->map(fn($s) => $sourceColors[$s->source] ?? '#9CA3AF')) !!},
-                borderWidth: 0,
-                hoverOffset: 4,
-            }],
+            labels: initLabels,
+            datasets: [{ data: srcEmpty ? [1] : initData, backgroundColor: srcEmpty ? ['#e5e7eb'] : initColors, borderWidth: 0, hoverOffset: 4 }],
         },
-        options: {
-            cutout: '72%',
-            plugins: { legend: { display: false } },
-        },
+        options: { cutout: '72%', plugins: { legend: { display: false }, tooltip: { enabled: !srcEmpty } } },
     });
-})();
+});
 </script>
 @endpush
