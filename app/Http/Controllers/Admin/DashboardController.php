@@ -113,13 +113,38 @@ class DashboardController extends Controller
         $raw   = $query->selectRaw('status, count(*) as count, sum(total) as revenue')
             ->groupBy('status')->get()->keyBy('status');
 
-        $statuses = collect(self::STATUSES)->map(fn ($s) => [
-            'status'  => $s,
-            'count'   => (int) ($raw->get($s)?->count ?? 0),
-            'revenue' => (float) ($raw->get($s)?->revenue ?? 0),
+        // All actual statuses for the chart (no hard-coded list — no missing slices)
+        $statuses = $raw->values()->map(fn ($s) => [
+            'status'  => $s->status,
+            'count'   => (int) $s->count,
+            'revenue' => (float) $s->revenue,
         ]);
 
-        return response()->json(['statuses' => $statuses, 'total' => $statuses->sum('count')]);
+        $total = (int) $raw->sum('count');
+
+        // Section 1b card statuses (the 12 mini-cards)
+        $cardKeys = [
+            'pending', 'confirmed', 'failed', 'processing', 'hold', 'hold_followup',
+            'shipped', 'delivered', 'completed', 'cancelled', 'pending_return', 'returned',
+        ];
+        $cards = [];
+        foreach ($cardKeys as $s) {
+            $cards[$s] = [
+                'count'   => (int) ($raw->get($s)?->count ?? 0),
+                'revenue' => (float) ($raw->get($s)?->revenue ?? 0),
+            ];
+        }
+
+        $returnRatio = $total > 0
+            ? round((($cards['returned']['count'] + $cards['pending_return']['count']) / $total) * 100, 2)
+            : 0;
+
+        return response()->json([
+            'statuses'     => $statuses,
+            'cards'        => $cards,
+            'total'        => $total,
+            'return_ratio' => $returnRatio,
+        ]);
     }
 
     public function orderSource(Request $request): \Illuminate\Http\JsonResponse

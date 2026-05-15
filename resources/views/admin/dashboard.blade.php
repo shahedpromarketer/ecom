@@ -136,8 +136,8 @@ $dashStatusCards = [
             <span class="text-xs text-textsecondary dark:text-gray-400 font-medium">Total Orders</span>
             <span class="w-2 h-2 rounded-full bg-gray-400 flex-shrink-0"></span>
         </div>
-        <p class="text-2xl font-bold text-textprimary dark:text-gray-100">{{ number_format($periodTotal) }}</p>
-        <p class="text-xs text-textsecondary dark:text-gray-500 mt-0.5">{{ $rangeLabel }} · {{ $returnRatio }}% return</p>
+        <p id="total-orders-count" class="text-2xl font-bold text-textprimary dark:text-gray-100">{{ number_format($periodTotal) }}</p>
+        <p class="text-xs text-textsecondary dark:text-gray-500 mt-0.5">{{ $rangeLabel }} · <span id="return-ratio">{{ $returnRatio }}</span>% return</p>
     </a>
 
     @foreach($dashStatusCards as $card)
@@ -148,8 +148,8 @@ $dashStatusCards = [
             <span class="text-[11px] text-textsecondary dark:text-gray-400 font-medium truncate leading-tight">{{ $card['label'] }}</span>
             <span class="w-2 h-2 rounded-full flex-shrink-0 ml-1" style="background:{{ $card['color'] }}"></span>
         </div>
-        <p class="text-xl font-bold text-textprimary dark:text-gray-100">{{ number_format($stat?->count ?? 0) }}</p>
-        <p class="text-[10px] text-textsecondary dark:text-gray-500 mt-0.5 truncate">৳{{ number_format($stat?->revenue ?? 0, 0) }}</p>
+        <p id="status-count-{{ $card['key'] }}" class="text-xl font-bold text-textprimary dark:text-gray-100">{{ number_format($stat?->count ?? 0) }}</p>
+        <p id="status-revenue-{{ $card['key'] }}" class="text-[10px] text-textsecondary dark:text-gray-500 mt-0.5 truncate">৳{{ number_format($stat?->revenue ?? 0, 0) }}</p>
     </a>
     @endforeach
 </div>
@@ -169,15 +169,18 @@ $cardRanges = [
     'custom'     => 'Custom Range',
 ];
 $statusMeta = [
-    'pending'    => ['label' => 'Pending',    'color' => '#f59e0b'],
-    'confirmed'  => ['label' => 'Confirmed',  'color' => '#3b82f6'],
-    'processing' => ['label' => 'Processing', 'color' => '#8b5cf6'],
-    'shipped'    => ['label' => 'Shipped',    'color' => '#06b6d4'],
-    'delivered'  => ['label' => 'Delivered',  'color' => '#10b981'],
-    'completed'  => ['label' => 'Completed',  'color' => '#059669'],
-    'cancelled'  => ['label' => 'Cancelled',  'color' => '#ef4444'],
-    'returned'   => ['label' => 'Returned',   'color' => '#f97316'],
-    'hold'       => ['label' => 'Hold',       'color' => '#6b7280'],
+    'pending'        => ['label' => 'Pending',       'color' => '#f59e0b'],
+    'confirmed'      => ['label' => 'Confirmed',     'color' => '#3b82f6'],
+    'processing'     => ['label' => 'Processing',    'color' => '#8b5cf6'],
+    'shipped'        => ['label' => 'Shipped',       'color' => '#06b6d4'],
+    'delivered'      => ['label' => 'Delivered',     'color' => '#10b981'],
+    'completed'      => ['label' => 'Completed',     'color' => '#059669'],
+    'cancelled'      => ['label' => 'Cancelled',     'color' => '#ef4444'],
+    'returned'       => ['label' => 'Returned',      'color' => '#f97316'],
+    'hold'           => ['label' => 'Hold',          'color' => '#6b7280'],
+    'hold_followup'  => ['label' => 'Hold Followup', 'color' => '#fb923c'],
+    'failed'         => ['label' => 'Failed',        'color' => '#dc2626'],
+    'pending_return' => ['label' => 'Pend. Return',  'color' => '#ec4899'],
 ];
 @endphp
 <div class="grid grid-cols-1 xl:grid-cols-5 gap-6 mb-6">
@@ -227,13 +230,13 @@ $statusMeta = [
             <div class="relative flex-shrink-0 w-44 h-44">
                 <canvas id="statusChart"></canvas>
                 <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span x-text="total.toLocaleString()" class="text-2xl font-bold text-textprimary dark:text-gray-100">{{ number_format($totalOrders) }}</span>
+                    <span x-text="total.toLocaleString()" class="text-2xl font-bold text-textprimary dark:text-gray-100">{{ number_format($periodTotal) }}</span>
                     <span class="text-xs text-textsecondary dark:text-gray-400">Total</span>
                 </div>
             </div>
             <div class="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
                 @foreach($statusMeta as $key => $meta)
-                @php $count = $statusCounts[$key] ?? 0; @endphp
+                @php $count = $ordersByStatus->get($key)?->count ?? 0; @endphp
                 <div class="flex items-center justify-between px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-700/50"
                      data-status-key="{{ $key }}">
                     <div class="flex items-center gap-2">
@@ -457,11 +460,20 @@ $statusMeta = [
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 // ── Shared constants ──────────────────────────────────────────────────────────
-const SOURCE_COLORS  = @json($sourceColors);
-const SOURCE_LABELS  = @json($sourceLabels);
-const STATUS_ORDER   = ['pending','confirmed','processing','shipped','delivered','completed','cancelled','returned','hold'];
-const STATUS_COLORS  = ['#f59e0b','#3b82f6','#8b5cf6','#06b6d4','#10b981','#059669','#ef4444','#f97316','#6b7280'];
-const STATUS_LABELS  = ['Pending','Confirmed','Processing','Shipped','Delivered','Completed','Cancelled','Returned','Hold'];
+const SOURCE_COLORS = @json($sourceColors);
+const SOURCE_LABELS = @json($sourceLabels);
+const STATUS_COLOR_MAP = {
+    pending: '#f59e0b', confirmed: '#3b82f6', processing: '#8b5cf6',
+    shipped: '#06b6d4', delivered: '#10b981', completed: '#059669',
+    cancelled: '#ef4444', returned: '#f97316', hold: '#6b7280',
+    hold_followup: '#fb923c', failed: '#dc2626', pending_return: '#ec4899',
+};
+const STATUS_LABEL_MAP = {
+    pending: 'Pending', confirmed: 'Confirmed', processing: 'Processing',
+    shipped: 'Shipped', delivered: 'Delivered', completed: 'Completed',
+    cancelled: 'Cancelled', returned: 'Returned', hold: 'Hold',
+    hold_followup: 'Hold Followup', failed: 'Failed', pending_return: 'Pend. Return',
+};
 
 // Chart instances (set once in DOMContentLoaded, updated by Alpine components)
 let statusChart = null;
@@ -471,23 +483,36 @@ function buildSubtitle(from, to) {
     return (!from && !to) ? 'All time' : (from === to ? from : `${from} to ${to}`);
 }
 function cardFetch(url, from, to) {
-    if (from && to) url += `&from=${from}&to=${to}`;
+    if (from && to) url += `&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
     return fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } }).then(r => r.json());
+}
+function applyStatusChart(statuses) {
+    const active = statuses.filter(s => s.count > 0);
+    const empty  = active.length === 0;
+    if (!statusChart) return;
+    statusChart.data.labels                      = empty ? [] : active.map(s => STATUS_LABEL_MAP[s.status] ?? s.status);
+    statusChart.data.datasets[0].data            = empty ? [1] : active.map(s => s.count);
+    statusChart.data.datasets[0].backgroundColor = empty ? ['#e5e7eb'] : active.map(s => STATUS_COLOR_MAP[s.status] ?? '#9CA3AF');
+    statusChart.options.plugins.tooltip.enabled  = !empty;
+    statusChart.update();
 }
 
 // ── Order Status card component ───────────────────────────────────────────────
 function statusCardData() {
     return {
-        open:        false,
-        range:       '{{ $range }}',
-        rangeLabel:  '{{ $rangeLabel }}',
-        showCustom:  false,
-        customFrom:  '{{ $from ?? '' }}',
-        customTo:    '{{ $to ?? '' }}',
-        total:       {{ $totalOrders }},
-        loading:     false,
+        open:       false,
+        range:      '{{ $range }}',
+        rangeLabel: '{{ $rangeLabel }}',
+        showCustom: false,
+        customFrom: '{{ $from ?? '' }}',
+        customTo:   '{{ $to ?? '' }}',
+        total:      {{ $periodTotal }},
+        loading:    false,
 
-        init() { /* chart already rendered via SSR data in DOMContentLoaded */ },
+        init() {
+            // Chart rendered with SSR data; just sync total display
+            this.total = {{ $periodTotal }};
+        },
 
         selectRange(r, label) {
             this.range      = r;
@@ -504,29 +529,30 @@ function statusCardData() {
             cardFetch(url, from, to).then(data => {
                 this.total   = data.total;
                 this.loading = false;
-                this.updateChart(data.statuses);
-                this.updateBreakdown(data.statuses);
+                applyStatusChart(data.statuses);
+                this.updateLegend(data.statuses);
+                this.updateCards(data.cards, data.total, data.return_ratio);
             });
         },
 
-        updateChart(statuses) {
-            const counts = STATUS_ORDER.map(s => {
-                const item = statuses.find(x => x.status === s);
-                return item ? item.count : 0;
-            });
-            const empty = counts.every(v => v === 0);
-            if (!statusChart) return;
-            statusChart.data.datasets[0].data            = empty ? [1] : counts;
-            statusChart.data.datasets[0].backgroundColor = empty ? ['#e5e7eb'] : STATUS_COLORS;
-            statusChart.options.plugins.tooltip.enabled  = !empty;
-            statusChart.update();
-        },
-
-        updateBreakdown(statuses) {
+        updateLegend(statuses) {
             document.querySelectorAll('[data-status-key]').forEach(el => {
                 const item = statuses.find(x => x.status === el.dataset.statusKey);
                 const val  = el.querySelector('.status-val');
                 if (val) val.textContent = (item ? item.count : 0).toLocaleString();
+            });
+        },
+
+        updateCards(cards, total, returnRatio) {
+            const totalEl = document.getElementById('total-orders-count');
+            if (totalEl) totalEl.textContent = total.toLocaleString();
+            const ratioEl = document.getElementById('return-ratio');
+            if (ratioEl) ratioEl.textContent = returnRatio;
+            Object.entries(cards).forEach(([status, info]) => {
+                const cEl = document.getElementById('status-count-' + status);
+                const rEl = document.getElementById('status-revenue-' + status);
+                if (cEl) cEl.textContent = info.count.toLocaleString();
+                if (rEl) rEl.textContent = '৳' + Math.round(info.revenue).toLocaleString();
             });
         },
     };
@@ -609,15 +635,21 @@ function sourceCardData() {
     };
 }
 
-// ── Initial chart render (SSR data) ───────────────────────────────────────────
+// ── Initial chart render (SSR data — guaranteed same as status cards) ─────────
 document.addEventListener('DOMContentLoaded', function () {
-    const statusData  = @json(array_values($statusCounts));
-    const statusEmpty = statusData.every(v => v === 0);
+    // Use $ordersByStatus->values() so chart segments always sum to $periodTotal
+    const initStatuses = @json($ordersByStatus->values()->map(fn($s) => ['status' => $s->status, 'count' => (int)$s->count, 'revenue' => (float)$s->revenue]));
+    const active       = initStatuses.filter(s => s.count > 0);
+    const statusEmpty  = active.length === 0;
     statusChart = new Chart(document.getElementById('statusChart').getContext('2d'), {
         type: 'doughnut',
         data: {
-            labels: STATUS_LABELS,
-            datasets: [{ data: statusEmpty ? [1] : statusData, backgroundColor: statusEmpty ? ['#e5e7eb'] : STATUS_COLORS, borderWidth: 0, hoverOffset: 4 }],
+            labels: statusEmpty ? [] : active.map(s => STATUS_LABEL_MAP[s.status] ?? s.status),
+            datasets: [{
+                data:            statusEmpty ? [1] : active.map(s => s.count),
+                backgroundColor: statusEmpty ? ['#e5e7eb'] : active.map(s => STATUS_COLOR_MAP[s.status] ?? '#9CA3AF'),
+                borderWidth: 0, hoverOffset: 4,
+            }],
         },
         options: { cutout: '72%', plugins: { legend: { display: false }, tooltip: { enabled: !statusEmpty } } },
     });
