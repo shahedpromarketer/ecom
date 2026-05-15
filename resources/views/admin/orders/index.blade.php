@@ -25,7 +25,7 @@
 
 {{-- ── Advanced Filter Panel ────────────────────────────────────────────── --}}
 @php
-    $hasFilters = collect(['search','status','payment_status','payment_method','source','created_range',
+    $hasFilters = collect(['search','payment_status','payment_method','source','created_range',
         'created_from','created_to','courier_from','courier_to','category','product','order_tag',
         'utm_source','district','print_status','cod_changed','duplicate','amount_min','amount_max'])
         ->filter(fn($k) => request()->filled($k))->isNotEmpty();
