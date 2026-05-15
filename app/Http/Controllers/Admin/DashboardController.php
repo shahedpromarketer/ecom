@@ -79,6 +79,16 @@ class DashboardController extends Controller
             ->take(10)
             ->get();
 
+        // ── All-time order status stats (for status summary cards) ───
+        $orderStats  = Order::selectRaw('status, count(*) as count, sum(total) as revenue')
+            ->groupBy('status')->get()->keyBy('status');
+        $allTimeTotal = $orderStats->sum('count');
+        $returnRatio  = $allTimeTotal > 0
+            ? round(
+                (($orderStats->get('returned')?->count ?? 0) + ($orderStats->get('pending_return')?->count ?? 0))
+                / $allTimeTotal * 100, 2)
+            : 0;
+
         // ── Quick stats ────────────────────────────────────────────────
         $totalCustomers  = User::where('role', 'customer')->count();
         $totalProducts   = Product::where('status', 'active')->count();
@@ -96,7 +106,8 @@ class DashboardController extends Controller
             'ordersByStatus', 'orderSources',
             'topProducts', 'recentOrders',
             'totalCustomers', 'totalProducts', 'lowStockCount',
-            'avgOrderValue', 'totalUnits', 'returnsCount'
+            'avgOrderValue', 'totalUnits', 'returnsCount',
+            'orderStats', 'returnRatio'
         ));
     }
 

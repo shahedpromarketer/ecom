@@ -23,56 +23,6 @@
     </div>
 @endif
 
-{{-- ── Status Summary Cards ─────────────────────────────────────────────── --}}
-@php
-    $statusCards = [
-        ['key' => 'pending',                    'label' => 'Pending',               'color' => '#F59E0B'],
-        ['key' => 'confirmed',                  'label' => 'Confirmed',             'color' => '#3B82F6'],
-        ['key' => 'failed',                     'label' => 'Failed',                'color' => '#DC2626'],
-        ['key' => 'processing',                 'label' => 'Processing',            'color' => '#6366F1'],
-        ['key' => 'hold',                       'label' => 'Hold',                  'color' => '#F97316'],
-        ['key' => 'hold_followup',              'label' => 'Hold Followup',         'color' => '#FB923C'],
-        ['key' => 'shipped',                    'label' => 'Shipped',               'color' => '#06B6D4'],
-        ['key' => 'delivered',                  'label' => 'Delivered',             'color' => '#10B981'],
-        ['key' => 'completed',                  'label' => 'Completed',             'color' => '#059669'],
-        ['key' => 'cancelled',                  'label' => 'Canceled',              'color' => '#EF4444'],
-        ['key' => 'pending_return',             'label' => 'Pend. Return',          'color' => '#EC4899'],
-        ['key' => 'returned',                   'label' => 'Returned',              'color' => '#8B5CF6'],
-        ['key' => 'damage',                     'label' => 'Damage',                'color' => '#7F1D1D'],
-        ['key' => 'hand_delivery',              'label' => 'Hand Delivery',         'color' => '#0D9488'],
-        ['key' => 'hand_delivery_completed',    'label' => 'HD Completed',          'color' => '#047857'],
-        ['key' => 'return_collection',          'label' => 'Return Collection',     'color' => '#BE185D'],
-        ['key' => 'courier_payment_validate',   'label' => 'Courier Pmt.',          'color' => '#1D4ED8'],
-        ['key' => 'others',                     'label' => 'Others',                'color' => '#6B7280'],
-    ];
-@endphp
-
-<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 mb-5">
-    {{-- Total card --}}
-    <a href="{{ route('admin.orders.index') }}"
-       class="bg-white dark:bg-gray-800 rounded-xl border border-border dark:border-gray-700 shadow-sm p-3.5 hover:shadow-md transition-shadow group">
-        <div class="flex items-center justify-between mb-1.5">
-            <span class="text-xs text-textsecondary dark:text-gray-400 font-medium">Total Orders</span>
-            <span class="w-2 h-2 rounded-full bg-gray-400 flex-shrink-0"></span>
-        </div>
-        <p class="text-2xl font-bold text-textprimary dark:text-gray-100">{{ number_format($totalOrders) }}</p>
-        <p class="text-xs text-textsecondary dark:text-gray-500 mt-0.5">{{ number_format($totalUnits) }} units · {{ $returnRatio }}% return</p>
-    </a>
-
-    @foreach($statusCards as $card)
-    @php $stat = $statusSummary->get($card['key']); @endphp
-    <a href="{{ route('admin.orders.index', ['status' => $card['key']]) }}"
-       class="bg-white dark:bg-gray-800 rounded-xl border border-border dark:border-gray-700 shadow-sm p-3 hover:shadow-md transition-shadow {{ request('status') === $card['key'] ? 'ring-2 ring-offset-1 ring-primary/40' : '' }}">
-        <div class="flex items-center justify-between mb-1">
-            <span class="text-[11px] text-textsecondary dark:text-gray-400 font-medium truncate leading-tight">{{ $card['label'] }}</span>
-            <span class="w-2 h-2 rounded-full flex-shrink-0 ml-1" style="background:{{ $card['color'] }}"></span>
-        </div>
-        <p class="text-xl font-bold text-textprimary dark:text-gray-100">{{ number_format($stat?->count ?? 0) }}</p>
-        <p class="text-[10px] text-textsecondary dark:text-gray-500 mt-0.5 truncate">৳{{ number_format($stat?->revenue ?? 0, 0) }}</p>
-    </a>
-    @endforeach
-</div>
-
 {{-- ── Advanced Filter Panel ────────────────────────────────────────────── --}}
 @php
     $hasFilters = collect(['search','status','payment_status','payment_method','source','created_range',
