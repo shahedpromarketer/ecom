@@ -371,7 +371,27 @@
                     $fullAddr = collect([$order->shipping_address, $order->shipping_area, $order->shipping_district])
                         ->filter()->implode(', ');
                 @endphp
-                <tr x-data="{ noteOpen: false }"
+                <tr x-data="{
+                    noteOpen: false,
+                    noteText: '{{ addslashes($order->notes ?? '') }}',
+                    async submitNote(event, orderId) {
+                        if (!this.noteText.trim()) return;
+                        const response = await fetch(`/admin/orders/${orderId}/notes`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
+                            },
+                            body: JSON.stringify({ note: this.noteText, is_customer_visible: false })
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            this.noteText = '';
+                            this.noteOpen = false;
+                            window.showToast('Note added successfully', 'success');
+                        }
+                    }
+                }"
                     class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors {{ $order->is_duplicate ? 'border-l-4 border-amber-400' : '' }}">
 
                     {{-- 1. STATUS --}}
@@ -396,10 +416,9 @@
                                 @if($order->is_duplicate)<span class="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Duplicate</span>@endif
                                 {{-- Inline note form --}}
                                 <div x-show="noteOpen" x-cloak class="mt-1.5">
-                                    <form method="POST" action="{{ route('admin.orders.addNote', $order) }}" class="space-y-1">
-                                        @csrf @method('PATCH')
-                                        <textarea name="note" rows="2" placeholder="Write note…"
-                                                  class="w-full text-[10px] px-1.5 py-1 rounded border border-border dark:border-gray-600 bg-white dark:bg-gray-700 text-textprimary dark:text-gray-100 resize-none focus:outline-none focus:ring-1 focus:ring-primary/30" style="min-width:110px">{{ $order->notes }}</textarea>
+                                    <form x-on:submit.prevent="submitNote($event, {{ $order->id }})" class="space-y-1">
+                                        <textarea x-model="noteText" rows="2" placeholder="Write note…"
+                                                  class="w-full text-[10px] px-1.5 py-1 rounded border border-border dark:border-gray-600 bg-white dark:bg-gray-700 text-textprimary dark:text-gray-100 resize-none focus:outline-none focus:ring-1 focus:ring-primary/30" style="min-width:110px"></textarea>
                                         <button type="submit" class="px-2 py-0.5 text-[10px] font-semibold bg-primary text-white rounded hover:bg-primary/90 transition-colors">Save</button>
                                     </form>
                                 </div>
@@ -540,12 +559,34 @@
 
 </div>
 
+{{-- AJAX note toast --}}
+<div id="note-toast"
+     class="fixed bottom-5 right-5 z-50 flex items-center gap-2 px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium text-white transition-all duration-300 opacity-0 translate-y-2 pointer-events-none"
+     style="background:#22c55e">
+    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+    <span id="note-toast-msg">Note added successfully</span>
+</div>
+
 @push('scripts')
 <script>
     // Select-all checkbox
     document.getElementById('selectAll')?.addEventListener('change', function () {
         document.querySelectorAll('.order-checkbox').forEach(cb => cb.checked = this.checked);
     });
+
+    window.showToast = function (message, type) {
+        const toast = document.getElementById('note-toast');
+        const msg   = document.getElementById('note-toast-msg');
+        if (!toast) return;
+        toast.style.background = type === 'success' ? '#22c55e' : '#ef4444';
+        msg.textContent = message;
+        toast.classList.remove('opacity-0', 'translate-y-2');
+        toast.classList.add('opacity-100', 'translate-y-0');
+        setTimeout(() => {
+            toast.classList.add('opacity-0', 'translate-y-2');
+            toast.classList.remove('opacity-100', 'translate-y-0');
+        }, 2500);
+    };
 </script>
 @endpush
 
