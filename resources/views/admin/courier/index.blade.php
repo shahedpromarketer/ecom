@@ -19,11 +19,48 @@
 
 @php
 $courierMeta = [
-    'pathao'    => ['name' => 'Pathao',     'color' => 'bg-red-500',    'fields' => [['key' => 'api_key', 'label' => 'Client ID'], ['key' => 'api_secret', 'label' => 'Client Secret']]],
-    'steadfast' => ['name' => 'Steadfast',  'color' => 'bg-green-600',  'fields' => [['key' => 'api_key', 'label' => 'API Key'],    ['key' => 'api_secret', 'label' => 'Secret Key']]],
-    'carrybe'   => ['name' => 'CarryBe',    'color' => 'bg-blue-600',   'fields' => [['key' => 'api_key', 'label' => 'API Key'],    ['key' => 'api_secret', 'label' => 'API Secret']]],
-    'redx'      => ['name' => 'REDx',       'color' => 'bg-red-700',    'fields' => [['key' => 'api_key', 'label' => 'API Key (Bearer)']]],
-    'paperfly'  => ['name' => 'Paperfly',   'color' => 'bg-yellow-500', 'fields' => [['key' => 'api_key', 'label' => 'API Key'],    ['key' => 'api_secret', 'label' => 'API Secret']]],
+    'pathao' => [
+        'name'  => 'Pathao',
+        'color' => 'bg-red-500',
+        'fields' => [
+            ['key' => 'api_key',    'label' => 'Client ID'],
+            ['key' => 'api_secret', 'label' => 'Client Secret'],
+            ['key' => 'username',   'label' => 'Username (Email)', 'source' => 'extra'],
+            ['key' => 'password',   'label' => 'Password',         'source' => 'extra', 'type' => 'password'],
+            ['key' => 'store_id',   'label' => 'Store ID',         'source' => 'extra'],
+        ],
+    ],
+    'steadfast' => [
+        'name'  => 'Steadfast',
+        'color' => 'bg-green-600',
+        'fields' => [
+            ['key' => 'api_key',    'label' => 'API Key'],
+            ['key' => 'api_secret', 'label' => 'Secret Key'],
+        ],
+    ],
+    'carrybe' => [
+        'name'  => 'CarryBe',
+        'color' => 'bg-blue-600',
+        'fields' => [
+            ['key' => 'api_key',    'label' => 'API Key'],
+            ['key' => 'api_secret', 'label' => 'API Secret'],
+        ],
+    ],
+    'redx' => [
+        'name'  => 'REDx',
+        'color' => 'bg-red-700',
+        'fields' => [
+            ['key' => 'api_key', 'label' => 'API Key (Bearer Token)'],
+        ],
+    ],
+    'paperfly' => [
+        'name'  => 'Paperfly',
+        'color' => 'bg-yellow-500',
+        'fields' => [
+            ['key' => 'api_key',    'label' => 'API Key'],
+            ['key' => 'api_secret', 'label' => 'API Secret'],
+        ],
+    ],
 ];
 @endphp
 
@@ -69,19 +106,24 @@ $courierMeta = [
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-5">
                     @foreach($meta['fields'] as $field)
+                    @php
+                        $isExtra    = ($field['source'] ?? 'main') === 'extra';
+                        $fieldName  = $isExtra ? "extra_config[{$field['key']}]" : $field['key'];
+                        $fieldValue = $isExtra
+                            ? ($setting?->extra_config[$field['key']] ?? '')
+                            : ($setting?->{$field['key']} ?? '');
+                        $inputType  = $field['type'] ?? 'text';
+                    @endphp
                     <div>
                         <label class="block text-xs font-medium text-textsecondary dark:text-gray-400 mb-1.5">{{ $field['label'] }}</label>
-                        <input type="text" name="{{ $field['key'] }}" value="{{ $setting?->{$field['key']} }}"
+                        <input type="{{ $inputType }}" name="{{ $fieldName }}" value="{{ $inputType === 'password' ? '' : $fieldValue }}"
                                placeholder="{{ $field['label'] }}"
                                class="w-full px-4 py-2.5 text-sm rounded-xl border border-border dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 placeholder-textsecondary dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary dark:focus:border-primary transition-all duration-200">
+                        @if($inputType === 'password' && $fieldValue)
+                            <p class="mt-1 text-[10px] text-green-600 dark:text-green-400">Password saved — leave blank to keep unchanged</p>
+                        @endif
                     </div>
                     @endforeach
-
-                    <div>
-                        <label class="block text-xs font-medium text-textsecondary dark:text-gray-400 mb-1.5">Base URL</label>
-                        <input type="url" name="base_url" value="{{ $setting?->base_url }}"
-                               class="w-full px-4 py-2.5 text-sm rounded-xl border border-border dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary dark:focus:border-primary transition-all duration-200">
-                    </div>
 
                     <div>
                         <label class="block text-xs font-medium text-textsecondary dark:text-gray-400 mb-1.5">Webhook URL (auto)</label>

@@ -8,43 +8,51 @@ use Illuminate\Support\Facades\Http;
 
 class RedxService extends BaseCourierService
 {
-    private string $baseUrl;
+    private const BASE_URL = 'https://openapi.redx.com.bd/v1.0.0-beta';
+
     private string $apiKey;
 
     public function __construct()
     {
-        $config = CourierSetting::forCourier('redx');
-        $this->baseUrl = $config?->base_url ?? 'https://openapi.redx.com.bd/v1.0.0-beta';
+        $config        = CourierSetting::forCourier('redx');
         $this->apiKey  = $config?->api_key ?? '';
     }
 
     public function createShipment(Order $order): array
     {
-        $response = Http::withToken($this->apiKey)
-            ->post("{$this->baseUrl}/parcel", [
-                'name'             => $order->shipping_name,
-                'phone'            => $order->shipping_phone,
-                'address'          => $order->shipping_address,
-                'merchant_invoice_id' => $order->order_number,
-                'cash_collection_amount' => (int) $order->total,
-                'parcel_weight'    => 500,
-            ]);
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $this->apiKey,
+            'Content-Type'  => 'application/json',
+        ])->post(self::BASE_URL . '/parcel', [
+            'customer_name'          => $order->shipping_name,
+            'customer_phone'         => $order->shipping_phone,
+            'delivery_area'          => $order->shipping_district,
+            'delivery_area_id'       => 1,
+            'customer_address'       => $order->shipping_address,
+            'merchant_invoice_id'    => $order->order_number,
+            'cash_collection_amount' => (float) $order->total,
+            'parcel_weight'          => 500,
+            'instruction'            => '',
+            'value'                  => (float) $order->total,
+        ]);
 
         return $response->json();
     }
 
     public function trackShipment(string $trackingCode): array
     {
-        $response = Http::withToken($this->apiKey)
-            ->get("{$this->baseUrl}/parcel/track/{$trackingCode}");
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $this->apiKey,
+        ])->get(self::BASE_URL . '/parcel/track/' . $trackingCode);
 
         return $response->json();
     }
 
     public function cancelShipment(string $consignmentId): array
     {
-        $response = Http::withToken($this->apiKey)
-            ->delete("{$this->baseUrl}/parcel/{$consignmentId}");
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $this->apiKey,
+        ])->delete(self::BASE_URL . '/parcel/' . $consignmentId);
 
         return $response->json();
     }
@@ -52,14 +60,5 @@ class RedxService extends BaseCourierService
     public function calculateDeliveryFee(string $district): float
     {
         return 60.0;
-    }
-
-    public function getAuthToken(): string
-    {
-        $response = Http::post("{$this->baseUrl}/auth/token", [
-            'api_key' => $this->apiKey,
-        ]);
-
-        return $response->json('token', '');
     }
 }
