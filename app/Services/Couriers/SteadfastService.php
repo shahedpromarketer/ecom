@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Http;
 
 class SteadfastService extends BaseCourierService
 {
+    private const BASE_URL = 'https://portal.packzy.com/api/v1';
+
     private string $apiKey;
     private string $secretKey;
 
@@ -32,7 +34,7 @@ class SteadfastService extends BaseCourierService
             'Api-Key'      => $setting->api_key,
             'Secret-Key'   => $setting->api_secret,
             'Content-Type' => 'application/json',
-        ])->post('https://portal.steadfast.com.bd/public/api/v1/create_order', [
+        ])->post(self::BASE_URL . '/create_order', [
             'invoice'           => $order->order_number,
             'recipient_name'    => $order->shipping_name,
             'recipient_phone'   => $order->shipping_phone,
@@ -63,7 +65,7 @@ class SteadfastService extends BaseCourierService
         $response = Http::withHeaders([
             'Api-Key'    => $this->apiKey,
             'Secret-Key' => $this->secretKey,
-        ])->get('https://portal.steadfast.com.bd/public/api/v1/status_by_trackingcode/' . $trackingCode);
+        ])->get(self::BASE_URL . '/status_by_trackingcode/' . $trackingCode);
 
         return $response->json();
     }

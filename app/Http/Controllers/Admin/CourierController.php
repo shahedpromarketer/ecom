@@ -73,7 +73,7 @@ class CourierController extends Controller
                     $response = Http::withHeaders([
                         'Api-Key'    => $config?->api_key ?? '',
                         'Secret-Key' => $config?->api_secret ?? '',
-                    ])->get('https://portal.steadfast.com.bd/public/api/v1/get_balance');
+                    ])->get('https://portal.packzy.com/api/v1/get_balance');
                     $ok = $response->successful();
                     break;
 
