@@ -35,6 +35,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('dashboard/source-data', [DashboardController::class, 'sourceData'])->name('dashboard.source-data');
         Route::get('dashboard/status-data', [DashboardController::class, 'statusData'])->name('dashboard.status-data');
+        Route::get('dashboard/order-status', [DashboardController::class, 'orderStatus'])->name('dashboard.orderStatus');
+        Route::get('dashboard/order-source', [DashboardController::class, 'orderSource'])->name('dashboard.orderSource');
 
         // Categories
         Route::patch('categories/{category}/toggle', [CategoryController::class, 'toggleActive'])->name('categories.toggle');

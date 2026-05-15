@@ -107,6 +107,53 @@ class DashboardController extends Controller
         ));
     }
 
+    public function orderStatus(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $query = $this->applyDateRange(Order::query(), $request->input('range', 'all'), $request);
+        $raw   = $query->selectRaw('status, count(*) as count, sum(total) as revenue')
+            ->groupBy('status')->get()->keyBy('status');
+
+        $statuses = collect(self::STATUSES)->map(fn ($s) => [
+            'status'  => $s,
+            'count'   => (int) ($raw->get($s)?->count ?? 0),
+            'revenue' => (float) ($raw->get($s)?->revenue ?? 0),
+        ]);
+
+        return response()->json(['statuses' => $statuses, 'total' => $statuses->sum('count')]);
+    }
+
+    public function orderSource(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $range   = $request->input('range', 'this_month');
+        $query   = $this->applyDateRange(Order::query(), $range, $request);
+        $sources = $query->selectRaw('COALESCE(source, "no_source") as source, count(*) as count, sum(total) as revenue')
+            ->groupBy('source')->get();
+
+        [$from, $to] = $this->parseDateRange($range, $request);
+
+        return response()->json(['sources' => $sources, 'total' => $sources->sum('count'), 'from' => $from ?? '', 'to' => $to ?? '']);
+    }
+
+    private function applyDateRange($query, string $range, Request $request)
+    {
+        return match ($range) {
+            'today'      => $query->whereDate('created_at', today()),
+            'yesterday'  => $query->whereDate('created_at', today()->subDay()),
+            'last_7'     => $query->where('created_at', '>=', today()->subDays(6)->startOfDay()),
+            'last_30'    => $query->where('created_at', '>=', today()->subDays(29)->startOfDay()),
+            'this_month' => $query->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year),
+            'last_month' => $query->whereMonth('created_at', now()->subMonth()->month)
+                                  ->whereYear('created_at', now()->subMonth()->year),
+            'this_year'  => $query->whereYear('created_at', now()->year),
+            'last_year'  => $query->whereYear('created_at', now()->subYear()->year),
+            'custom'     => $query->whereBetween('created_at', [
+                                Carbon::parse($request->input('from', today()->toDateString()))->startOfDay(),
+                                Carbon::parse($request->input('to',   today()->toDateString()))->endOfDay(),
+                            ]),
+            default      => $query, // 'all' — no filter
+        };
+    }
+
     public function sourceData(Request $request): \Illuminate\Http\JsonResponse
     {
         [$from, $to] = $this->parseDateRange($request->input('range', 'this_month'), $request);
