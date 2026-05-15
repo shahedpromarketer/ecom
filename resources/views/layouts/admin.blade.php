@@ -568,12 +568,18 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const sidebar = document.getElementById('sidebar');
-    if (!sidebar) return;
-    const activeItem = sidebar.querySelector('a.border-accent, a[class*="border-yellow"]');
-    if (activeItem) {
-        activeItem.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    }
+    const aside = document.getElementById('admin-sidebar');
+    if (!aside) return;
+    const nav = aside.querySelector('nav');
+    if (!nav) return;
+
+    const activeLink = nav.querySelector('a.bg-white\\/10, a.text-white.font-semibold, a.border-l-2');
+    if (!activeLink) return;
+
+    // offsetTop of both elements is relative to aside (position:fixed = offsetParent)
+    const itemPos    = activeLink.offsetTop - nav.offsetTop;
+    const itemHeight = activeLink.offsetHeight;
+    nav.scrollTop    = itemPos - (nav.offsetHeight / 2) + (itemHeight / 2);
 });
 </script>
 
