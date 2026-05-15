@@ -194,7 +194,7 @@
                         'pending'       => 'text-yellow-700 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-900/20',
                         'confirmed'     => 'text-blue-700 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/20',
                         'processing'    => 'text-teal-700 bg-teal-50 dark:text-teal-400 dark:bg-teal-900/20',
-                        'in_courier'    => 'text-purple-700 bg-purple-50 dark:text-purple-400 dark:bg-purple-900/20',
+                        'shipped'       => 'text-purple-700 bg-purple-50 dark:text-purple-400 dark:bg-purple-900/20',
                         'delivered'     => 'text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-900/20',
                         'completed'     => 'text-green-800 bg-green-100 dark:text-green-300 dark:bg-green-900/30',
                         'cancelled','failed' => 'text-red-700 bg-red-50 dark:text-red-400 dark:bg-red-900/20',
@@ -213,7 +213,7 @@
                             @foreach([
                                 'pending'=>'Pending','confirmed'=>'Confirmed','failed'=>'Failed',
                                 'processing'=>'Processing','hold'=>'Hold','hold_followup'=>'Hold Followup',
-                                'in_courier'=>'In Courier','delivered'=>'Delivered','completed'=>'Completed',
+                                'shipped'=>'Shipped','delivered'=>'Delivered','completed'=>'Completed',
                                 'cancelled'=>'Canceled','pending_return'=>'Pending Return','returned'=>'Returned',
                                 'damage'=>'Damage','hand_delivery'=>'Hand Delivery',
                                 'hand_delivery_completed'=>'Hand Delivery Completed',

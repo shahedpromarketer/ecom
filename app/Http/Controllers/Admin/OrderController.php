@@ -21,7 +21,7 @@ class OrderController extends Controller
 {
     const ALL_STATUSES = [
         'pending', 'confirmed', 'failed', 'processing', 'hold', 'hold_followup',
-        'in_courier', 'delivered', 'completed', 'cancelled', 'pending_return',
+        'shipped', 'delivered', 'completed', 'cancelled', 'pending_return',
         'returned', 'damage', 'hand_delivery', 'hand_delivery_completed',
         'others', 'return_collection', 'courier_payment_validate',
     ];
@@ -263,7 +263,7 @@ class OrderController extends Controller
         ]);
 
         $activeCouriers = CourierSetting::where('is_active', true)->get();
-        $statusSteps    = ['pending', 'confirmed', 'processing', 'in_courier', 'delivered', 'completed'];
+        $statusSteps    = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'completed'];
         $currentStep    = array_search($order->status, $statusSteps);
         if ($currentStep === false) $currentStep = -1;
 
@@ -309,7 +309,7 @@ class OrderController extends Controller
                     'notes'         => $request->notes,
                 ]
             );
-            $order->update(['status' => 'in_courier']);
+            $order->update(['status' => 'shipped']);
             ActivityLog::log('order.courier_assigned', $order, 'Manual courier assigned by ' . auth()->user()->name);
             return back()->with('success', 'Courier assigned manually.');
         }
@@ -330,7 +330,7 @@ class OrderController extends Controller
                 ]
             );
 
-            $order->update(['status' => 'in_courier']);
+            $order->update(['status' => 'shipped']);
             ActivityLog::log('order.courier_submitted', $order,
                 ucfirst($request->courier) . ' shipment created. Tracking: ' . ($result['tracking_code'] ?? 'N/A'),
                 $result
