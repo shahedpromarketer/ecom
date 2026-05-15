@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/inetpub//**)",
+      "Read(//d//**)",
+      "Bash(php --version)",
+      "Bash(composer --version)",
+      "Bash(npm --version)",
+      "Read(//c/ProgramData/**)",
+      "Read(//c/ProgramData/Herd/**)",
+      "Bash(Test-Path D:\\\\clothonic\\\\app\\\\Enums *)",
+      "Bash(php artisan *)",
+      "Bash(Get-ChildItem -Path \"D:\\\\clothonic\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(grep -c 'dark\\\\\\\\\\\\\\\\:' D:/clothonic/public/build/assets/admin-DVMSC8OD.css)",
+      "Bash(grep -o 'dark\\\\\\\\\\\\\\\\:bg-gray-[0-9]*' D:/clothonic/public/build/assets/admin-DVMSC8OD.css)",
+      "Bash(cd /d D:\\\\clothonic)",
+      "Bash(powershell -Command 'Get-ChildItem -Force | Select-Object Name, @{Name='\\\\''Type'\\\\'';Expression={if\\($_.PSIsContainer\\){'\\\\''DIR'\\\\''}else{'\\\\''FILE'\\\\''}}}')",
+      "Bash(findstr /n \".\")",
+      "Bash(npm run *)",
+      "Bash(Select-String -Path \"D:\\\\clothonic\\\\public\\\\build\\\\assets\\\\admin-*.css\" -Pattern \"translate-x-full|translate-x-0\")",
+      "Bash(Select-Object -First 10)",
+      "Bash(grep -o 'translate-x[^;,{: ]*' \"D:/clothonic/public/build/assets/admin-Bx5Ygtqj.css\")",
+      "Bash(grep *)",
+      "Bash(Select-String -Path \"public/build/assets/admin-CeDFVB3K.css\" -Pattern \"lg..ml-64|lg..translate-x-0\" -SimpleMatch)",
+      "Bash(Select-Object -First 5)",
+      "Bash(Category\")",
+      "Bash(Get-ChildItem \"D:\\\\clothonic\\\\app\\\\Models\" -Filter \"*Product*\" -o Name)",
+      "Bash(Get-ChildItem \"D:\\\\clothonic\\\\app\\\\Models\" -Filter \"*Category*\" -o Name)",
+      "Bash(Test-Path D:\\\\clothonic\\\\app\\\\Http\\\\Controllers\\\\Api *)",
+      "Bash(Get-Content *)",
+      "Bash(rm -rf \"D:/clothonic/storage/framework/views/\"*)",
+      "Bash(rm -rf \"D:/clothonic/storage/framework/cache/data/\"*)",
+      "Bash(Get-ChildItem -Path \"D:\\\\clothonic\\\\resources\\\\views\\\\admin\" -Filter \"*.blade.php\" -Recurse)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(sqlite3 *)"
+    ]
+  }
+}

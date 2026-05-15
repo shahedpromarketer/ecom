@@ -1,0 +1,422 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
+use App\Models\Category;
+use App\Models\CourierSetting;
+use App\Models\CourierShipment;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\OrderNote;
+use App\Models\Product;
+use App\Services\Couriers\CourierFactory;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+
+class OrderController extends Controller
+{
+    const ALL_STATUSES = [
+        'pending', 'confirmed', 'failed', 'processing', 'hold', 'hold_followup',
+        'in_courier', 'delivered', 'completed', 'cancelled', 'pending_return',
+        'returned', 'damage', 'hand_delivery', 'hand_delivery_completed',
+        'others', 'return_collection', 'courier_payment_validate',
+    ];
+
+    public function index(Request $request)
+    {
+        $perPage = in_array((int) request('per_page', 10), [10, 25, 50, 100])
+            ? (int) request('per_page', 10) : 10;
+
+        $query = Order::with(['user', 'items.product.images', 'shipment', 'assignedEmployee'])->latest();
+
+        // Status / flag filters
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('cod_changed')) {
+            $query->where('cod_changed', true);
+        }
+        if ($request->filled('duplicate')) {
+            $query->where('is_duplicate', true);
+        }
+
+        // Date range filters
+        $this->applyDateRange($query, 'created_at', $request->created_range, $request->created_from, $request->created_to);
+
+        // Courier date filter
+        if ($request->filled('courier_from') || $request->filled('courier_to')) {
+            $query->whereHas('shipment', function ($q) use ($request) {
+                if ($request->filled('courier_from')) {
+                    $q->whereDate('created_at', '>=', $request->courier_from);
+                }
+                if ($request->filled('courier_to')) {
+                    $q->whereDate('created_at', '<=', $request->courier_to);
+                }
+            });
+        }
+
+        // Search
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where(function ($q) use ($s) {
+                $q->where('order_number', 'like', "%{$s}%")
+                  ->orWhere('shipping_phone', 'like', "%{$s}%")
+                  ->orWhere('shipping_name', 'like', "%{$s}%");
+            });
+        }
+
+        // Dropdown filters
+        if ($request->filled('source'))         $query->where('source', $request->source);
+        if ($request->filled('payment_status')) $query->where('payment_status', $request->payment_status);
+        if ($request->filled('payment_method')) $query->where('payment_method', $request->payment_method);
+        if ($request->filled('order_tag'))      $query->where('order_tag', 'like', "%{$request->order_tag}%");
+        if ($request->filled('utm_source'))     $query->where('utm_source', $request->utm_source);
+        if ($request->filled('district'))       $query->where('shipping_district', 'like', "%{$request->district}%");
+        if ($request->filled('print_status'))   $query->where('print_status', $request->print_status);
+        if ($request->filled('amount_min'))     $query->where('total', '>=', $request->amount_min);
+        if ($request->filled('amount_max'))     $query->where('total', '<=', $request->amount_max);
+
+        if ($request->filled('category')) {
+            $query->whereHas('items.product.categories', fn ($q) => $q->where('categories.id', $request->category));
+        }
+
+        if ($request->filled('product')) {
+            $query->whereHas('items', fn ($q) => $q->where('product_id', $request->product));
+        }
+
+        // Group by status summary (all orders, no date filter)
+        $statusSummary = Order::selectRaw('status, count(*) as count, sum(total) as revenue')
+            ->groupBy('status')
+            ->get()
+            ->keyBy('status');
+
+        $totalOrders = Order::count();
+        $totalUnits  = OrderItem::sum('qty');
+        $returnRatio = $totalOrders > 0
+            ? round(Order::where('status', 'returned')->count() / $totalOrders * 100, 2)
+            : 0;
+
+        $orders = $query->paginate($perPage)->withQueryString();
+
+        $categories = Category::where('is_active', true)->orderBy('name')->get();
+        $districts  = Order::whereNotNull('shipping_district')
+            ->distinct()->pluck('shipping_district')->filter()->sort()->values();
+        $sources    = Order::whereNotNull('source')
+            ->distinct()->pluck('source')->filter()->sort()->values();
+
+        return view('admin.orders.index', compact(
+            'orders', 'statusSummary', 'totalOrders', 'totalUnits',
+            'returnRatio', 'categories', 'districts', 'sources', 'perPage'
+        ));
+    }
+
+    public function addNote(Request $request, Order $order)
+    {
+        $request->validate([
+            'note'                => 'required|string|max:2000',
+            'is_customer_visible' => 'boolean',
+        ]);
+
+        $note = $order->orderNotes()->create([
+            'user_id'              => auth()->id(),
+            'note'                 => $request->note,
+            'is_customer_visible'  => $request->boolean('is_customer_visible'),
+        ]);
+        $note->load('user');
+
+        ActivityLog::log('order.note_added', $order, 'Note added by ' . auth()->user()->name);
+
+        return response()->json([
+            'success' => true,
+            'note'    => [
+                'id'                   => $note->id,
+                'note'                 => $note->note,
+                'is_customer_visible'  => $note->is_customer_visible,
+                'user_name'            => $note->user->name,
+                'user_initial'         => strtoupper(substr($note->user->name, 0, 1)),
+                'time_ago'             => $note->created_at->diffForHumans(),
+            ],
+        ]);
+    }
+
+    public function deleteNote(OrderNote $note)
+    {
+        $note->delete();
+        return response()->json(['success' => true]);
+    }
+
+    public function create()
+    {
+        $products = Product::where('status', 'active')->with('variants')->orderBy('name')->get();
+        $categories = Category::where('is_active', true)->orderBy('name')->get();
+        return view('admin.orders.create', compact('products', 'categories'));
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'shipping_name'    => 'required|string|max:255',
+            'shipping_phone'   => 'required|string|max:20',
+            'payment_method'   => 'required|in:cod,bkash,nagad,card',
+            'items'            => 'required|array|min:1',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.qty'      => 'required|integer|min:1',
+            'items.*.unit_price' => 'required|numeric|min:0',
+        ]);
+
+        $subtotal  = collect($request->items)->sum(fn($i) => $i['unit_price'] * $i['qty']);
+        $discount  = (float) $request->discount ?? 0;
+        $shipping  = (float) $request->shipping_charge ?? 0;
+        $total     = $subtotal - $discount + $shipping;
+
+        $order = Order::create([
+            'shipping_name'     => $request->shipping_name,
+            'shipping_phone'    => $request->shipping_phone,
+            'shipping_division' => $request->shipping_division,
+            'shipping_district' => $request->shipping_district,
+            'shipping_area'     => $request->shipping_area,
+            'shipping_address'  => $request->shipping_address,
+            'subtotal'          => $subtotal,
+            'discount'          => $discount,
+            'shipping_charge'   => $shipping,
+            'total'             => $total,
+            'payment_method'    => $request->payment_method,
+            'payment_status'    => $request->payment_status ?? 'unpaid',
+            'status'            => 'pending',
+            'source'            => $request->source ?? 'manual',
+            'notes'             => $request->notes,
+            'order_tag'         => $request->order_tag,
+            'assigned_to'       => auth()->id(),
+        ]);
+
+        foreach ($request->items as $item) {
+            $product = Product::find($item['product_id']);
+            OrderItem::create([
+                'order_id'     => $order->id,
+                'product_id'   => $item['product_id'],
+                'variant_id'   => $item['variant_id'] ?? null,
+                'product_name' => $product?->name ?? $item['product_name'] ?? '',
+                'variant_info' => $item['variant_info'] ?? null,
+                'qty'          => $item['qty'],
+                'unit_price'   => $item['unit_price'],
+                'total'        => $item['unit_price'] * $item['qty'],
+            ]);
+        }
+
+        // Auto-generate invoice
+        try {
+            \App\Models\Invoice::create([
+                'order_id'       => $order->id,
+                'invoice_number' => \App\Models\Invoice::generateNumber(),
+                'subtotal'       => $subtotal,
+                'discount'       => $discount,
+                'shipping'       => $shipping,
+                'total'          => $total,
+                'status'         => 'draft',
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Auto-invoice creation failed for order ' . $order->id . ': ' . $e->getMessage());
+        }
+
+        ActivityLog::log('order.created', $order, 'Manual order created by ' . auth()->user()->name);
+
+        return redirect()->route('admin.orders.show', $order)->with('success', 'Order created successfully.');
+    }
+
+    public function incomplete(Request $request)
+    {
+        $query = Order::with(['user', 'items', 'shipment'])
+            ->whereIn('status', ['pending', 'confirmed', 'processing'])
+            ->latest();
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where(function ($q) use ($s) {
+                $q->where('order_number', 'like', "%{$s}%")
+                  ->orWhere('shipping_phone', 'like', "%{$s}%");
+            });
+        }
+
+        $orders = $query->paginate(20)->withQueryString();
+
+        return view('admin.orders.incomplete', compact('orders'));
+    }
+
+    public function show(Order $order)
+    {
+        $order->load([
+            'items.product.images',
+            'items.variant',
+            'user',
+            'coupon',
+            'shipment',
+            'orderNotes.user',
+            'orderReturn',
+            'assignedEmployee',
+        ]);
+
+        $activeCouriers = CourierSetting::where('is_active', true)->get();
+        $statusSteps    = ['pending', 'confirmed', 'processing', 'in_courier', 'delivered', 'completed'];
+        $currentStep    = array_search($order->status, $statusSteps);
+        if ($currentStep === false) $currentStep = -1;
+
+        return view('admin.orders.show', compact('order', 'activeCouriers', 'statusSteps', 'currentStep'));
+    }
+
+    public function updateStatus(Request $request, Order $order)
+    {
+        $request->validate([
+            'status' => 'required|in:' . implode(',', self::ALL_STATUSES),
+        ]);
+
+        $old = $order->status;
+        $order->update(['status' => $request->status]);
+
+        ActivityLog::log(
+            'order.status_changed',
+            $order,
+            "Status changed from {$old} to {$request->status}",
+            ['old' => $old, 'new' => $request->status]
+        );
+
+        return back()->with('success', 'Status updated to ' . ucwords(str_replace('_', ' ', $request->status)));
+    }
+
+    public function submitCourier(Request $request, Order $order)
+    {
+        $request->validate([
+            'courier'       => 'required|in:pathao,steadfast,carrybe,redx,paperfly,manual',
+            'delivery_fee'  => 'nullable|numeric|min:0',
+            'notes'         => 'nullable|string',
+            'tracking_code' => 'nullable|string',
+        ]);
+
+        if ($request->courier === 'manual') {
+            $order->shipment()->updateOrCreate(
+                ['order_id' => $order->id],
+                [
+                    'courier_name'  => 'manual',
+                    'tracking_code' => $request->tracking_code,
+                    'delivery_fee'  => $request->delivery_fee ?? 0,
+                    'status'        => 'assigned',
+                    'notes'         => $request->notes,
+                ]
+            );
+            $order->update(['status' => 'in_courier']);
+            ActivityLog::log('order.courier_assigned', $order, 'Manual courier assigned by ' . auth()->user()->name);
+            return back()->with('success', 'Courier assigned manually.');
+        }
+
+        try {
+            $service = CourierFactory::make($request->courier);
+            $result  = $service->createShipment($order);
+
+            $order->shipment()->updateOrCreate(
+                ['order_id' => $order->id],
+                [
+                    'courier_name'   => $request->courier,
+                    'consignment_id' => $result['consignment_id'] ?? null,
+                    'tracking_code'  => $result['tracking_code'] ?? $result['tracking_id'] ?? null,
+                    'delivery_fee'   => $request->delivery_fee ?? 0,
+                    'status'         => 'submitted',
+                    'notes'          => $request->notes,
+                ]
+            );
+
+            $order->update(['status' => 'in_courier']);
+            ActivityLog::log('order.courier_submitted', $order,
+                ucfirst($request->courier) . ' shipment created. Tracking: ' . ($result['tracking_code'] ?? 'N/A'),
+                $result
+            );
+
+            return back()->with('success', 'Shipment created on ' . ucfirst($request->courier) . '.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Courier API error: ' . $e->getMessage());
+        }
+    }
+
+    public function searchProducts(Request $request)
+    {
+        $q = $request->get('q', '');
+        $products = Product::where('status', 'active')
+            ->with(['variants', 'images'])
+            ->where(function ($query) use ($q) {
+                $query->where('name', 'like', "%{$q}%")
+                      ->orWhere('sku', 'like', "%{$q}%");
+            })
+            ->limit(10)
+            ->get()
+            ->map(fn($p) => [
+                'id'            => $p->id,
+                'name'          => $p->name,
+                'price'         => $p->price,
+                'sale_price'    => $p->sale_price,
+                'current_price' => $p->sale_price ?? $p->price,
+                'primary_image' => $p->images->where('is_primary', true)->first()?->image_path
+                                   ?? $p->images->first()?->image_path,
+                'variants'      => $p->variants->map(fn($v) => [
+                    'id'    => $v->id,
+                    'label' => trim(($v->size ?? '') . ' ' . ($v->color ?? '')),
+                    'stock' => $v->stock ?? 0,
+                    'price' => $v->price ?? $p->sale_price ?? $p->price,
+                ]),
+            ]);
+
+        return response()->json($products);
+    }
+
+    public function searchCustomer(Request $request)
+    {
+        $phone = $request->get('phone', '');
+        $order = Order::where('shipping_phone', $phone)
+            ->with('user')
+            ->latest()
+            ->first();
+
+        if (!$order) {
+            return response()->json(['found' => false]);
+        }
+
+        return response()->json([
+            'found'            => true,
+            'name'             => $order->shipping_name,
+            'division'         => $order->shipping_division ?? '',
+            'district'         => $order->shipping_district ?? '',
+            'area'             => $order->shipping_area ?? '',
+            'address'          => $order->shipping_address ?? '',
+            'total_orders'     => Order::where('shipping_phone', $phone)->count(),
+        ]);
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private function applyDateRange($query, string $column, ?string $range, ?string $from, ?string $to): void
+    {
+        if ($range && $range !== 'custom') {
+            [$start, $end] = $this->parseDateRange($range);
+            $query->whereDate($column, '>=', $start)->whereDate($column, '<=', $end);
+        } elseif ($from || $to) {
+            if ($from) $query->whereDate($column, '>=', $from);
+            if ($to)   $query->whereDate($column, '<=', $to);
+        }
+    }
+
+    private function parseDateRange(string $range): array
+    {
+        return match ($range) {
+            'today'      => [today()->toDateString(), today()->toDateString()],
+            'yesterday'  => [today()->subDay()->toDateString(), today()->subDay()->toDateString()],
+            'last_7'     => [today()->subDays(6)->toDateString(), today()->toDateString()],
+            'last_30'    => [today()->subDays(29)->toDateString(), today()->toDateString()],
+            'this_month' => [today()->startOfMonth()->toDateString(), today()->toDateString()],
+            default      => [today()->subDays(29)->toDateString(), today()->toDateString()],
+        };
+    }
+}

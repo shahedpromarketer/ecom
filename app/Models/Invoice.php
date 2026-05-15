@@ -1,0 +1,33 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Invoice extends Model
+{
+    protected $fillable = [
+        'order_id', 'invoice_number', 'subtotal', 'discount',
+        'shipping', 'total', 'status', 'notes',
+    ];
+
+    protected $casts = [
+        'subtotal'  => 'decimal:2',
+        'discount'  => 'decimal:2',
+        'shipping'  => 'decimal:2',
+        'total'     => 'decimal:2',
+    ];
+
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
+    }
+
+    public static function generateNumber(): string
+    {
+        $prefix  = Setting::getValue('invoice_prefix', 'CLT-INV');
+        $start   = (int) Setting::getValue('invoice_start_number', 1001);
+        $last    = static::max('id') ?? 0;
+        return $prefix . '-' . ($start + $last);
+    }
+}
