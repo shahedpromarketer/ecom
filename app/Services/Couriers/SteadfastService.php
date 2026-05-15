@@ -8,8 +8,6 @@ use Illuminate\Support\Facades\Http;
 
 class SteadfastService extends BaseCourierService
 {
-    private const BASE_URL = 'https://portal.steadfast.com.bd/public/api/v1';
-
     private string $apiKey;
     private string $secretKey;
 
@@ -22,26 +20,42 @@ class SteadfastService extends BaseCourierService
 
     public function createShipment(Order $order): array
     {
-        $address = collect([
-            $order->shipping_district,
-            $order->shipping_area,
-            $order->shipping_address,
-        ])->filter()->implode(', ');
+        $setting = CourierSetting::where('courier', 'steadfast')
+            ->where('is_active', true)
+            ->first();
+
+        if (! $setting) {
+            throw new \Exception('Steadfast is not configured or not active.');
+        }
 
         $response = Http::withHeaders([
-            'Api-Key'      => $this->apiKey,
-            'Secret-Key'   => $this->secretKey,
+            'Api-Key'      => $setting->api_key,
+            'Secret-Key'   => $setting->api_secret,
             'Content-Type' => 'application/json',
-        ])->post(self::BASE_URL . '/create_order', [
+        ])->post('https://portal.steadfast.com.bd/public/api/v1/create_order', [
             'invoice'           => $order->order_number,
             'recipient_name'    => $order->shipping_name,
             'recipient_phone'   => $order->shipping_phone,
-            'recipient_address' => $address,
+            'recipient_address' => $order->shipping_district . ', ' . $order->shipping_area . ', ' . $order->shipping_address,
             'cod_amount'        => $order->total,
             'note'              => '',
         ]);
 
-        return $response->json();
+        if ($response->failed()) {
+            throw new \Exception('Steadfast API error: ' . $response->body());
+        }
+
+        $data = $response->json();
+
+        if (! isset($data['consignment'])) {
+            throw new \Exception('Steadfast response invalid: ' . json_encode($data));
+        }
+
+        return [
+            'tracking_code'  => $data['consignment']['tracking_code'] ?? null,
+            'consignment_id' => $data['consignment']['id'] ?? null,
+            'status'         => 'submitted',
+        ];
     }
 
     public function trackShipment(string $trackingCode): array
@@ -49,7 +63,7 @@ class SteadfastService extends BaseCourierService
         $response = Http::withHeaders([
             'Api-Key'    => $this->apiKey,
             'Secret-Key' => $this->secretKey,
-        ])->get(self::BASE_URL . '/status_by_trackingcode/' . $trackingCode);
+        ])->get('https://portal.steadfast.com.bd/public/api/v1/status_by_trackingcode/' . $trackingCode);
 
         return $response->json();
     }
