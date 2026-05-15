@@ -49,12 +49,12 @@ class DashboardController extends Controller
                 ->where('status', $status)->count();
         }
 
-        // ── Order sources (by payment method) ─────────────────────────
-        $orderSources = Order::whereBetween('created_at', [$start, $end])
-            ->select('payment_method', DB::raw('count(*) as total'))
-            ->groupBy('payment_method')
-            ->pluck('total', 'payment_method')
-            ->toArray();
+        // ── Order sources (by source field) ───────────────────────────
+        $orderSources = Order::selectRaw('
+            COALESCE(source, "no_source") as source,
+            count(*) as count,
+            sum(total) as revenue
+        ')->groupBy('source')->get();
 
         // ── Top products by revenue ────────────────────────────────────
         $topProducts = DB::table('order_items')

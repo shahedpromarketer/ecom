@@ -225,40 +225,79 @@ $allTimeTotal = $orderStats->sum('count');
         </div>
     </div>
 
-    {{-- Order Source Donut (2/5) --}}
-    <div class="xl:col-span-2 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
-        <div class="flex items-center justify-between mb-5">
-            <h3 class="font-heading font-semibold text-textprimary dark:text-gray-100">Order Source</h3>
-            <span class="text-xs text-textsecondary dark:text-gray-400">By Payment</span>
-        </div>
-        <div class="flex flex-col items-center gap-4">
-            <div class="relative w-40 h-40">
-                <canvas id="sourceChart"></canvas>
-                <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span class="text-xl font-bold text-textprimary dark:text-gray-100">{{ count($orderSources) }}</span>
-                    <span class="text-xs text-textsecondary dark:text-gray-400">Sources</span>
-                </div>
+    {{-- Order Source Card (2/5) --}}
+    @php
+    $sourceColors = [
+        'no_source'   => '#9CA3AF',
+        'website'     => '#3B82F6',
+        'wordpress'   => '#8B5CF6',
+        'cartflow'    => '#EC4899',
+        'manual'      => '#F59E0B',
+        'mobile_call' => '#10B981',
+        'whatsapp'    => '#22C55E',
+        'facebook'    => '#1877F2',
+    ];
+    $sourceLabels = [
+        'no_source'   => 'No Source',
+        'website'     => 'Website',
+        'wordpress'   => 'WordPress',
+        'cartflow'    => 'CartFlow',
+        'manual'      => 'Manual',
+        'mobile_call' => 'Mobile Call',
+        'whatsapp'    => 'WhatsApp',
+        'facebook'    => 'Facebook',
+    ];
+    @endphp
+    <div class="xl:col-span-2 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+
+        <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+            <div>
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+                    Order Source <span class="text-gray-400 cursor-help" title="Orders grouped by source">ⓘ</span>
+                </h3>
+                <p class="text-xs text-gray-400">{{ now()->startOfMonth()->format('d-m-Y') }} to {{ now()->endOfMonth()->format('d-m-Y') }}</p>
             </div>
-            <div class="w-full space-y-2">
-                @php
-                $sourceColors = ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444','#06b6d4','#f97316'];
-                $si = 0;
-                @endphp
-                @foreach($orderSources as $method => $count)
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background: {{ $sourceColors[$si % count($sourceColors)] }}"></span>
-                        <span class="text-xs text-textsecondary dark:text-gray-400 capitalize">{{ str_replace('_', ' ', $method ?: 'Unknown') }}</span>
+            <button class="px-3 py-1.5 bg-purple-600 text-white text-xs font-semibold rounded-lg">
+                This Month ▼
+            </button>
+        </div>
+
+        <div class="p-6">
+            <div class="flex justify-center mb-6">
+                <div class="relative w-48 h-48">
+                    <canvas id="orderSourceChart"></canvas>
+                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <span class="text-3xl font-bold text-gray-900 dark:text-white">
+                            {{ $orderSources->sum('count') }}
+                        </span>
                     </div>
-                    <span class="text-xs font-semibold text-textprimary dark:text-gray-100">{{ $count }}</span>
                 </div>
-                @php $si++; @endphp
+            </div>
+
+            <div class="grid grid-cols-3 gap-2">
+                @foreach($orderSources as $source)
+                <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3 border-l-4"
+                     style="border-color: {{ $sourceColors[$source->source] ?? '#9CA3AF' }}">
+                    <p class="text-xs font-medium text-gray-600 dark:text-gray-400">
+                        {{ $sourceLabels[$source->source] ?? ucfirst(str_replace('_', ' ', $source->source)) }}
+                    </p>
+                    <p class="text-sm font-bold text-gray-900 dark:text-white mt-1">
+                        {{ number_format($source->count) }}
+                        <span class="text-xs font-normal text-gray-400">({{ number_format($source->revenue) }})</span>
+                    </p>
+                </div>
                 @endforeach
-                @if(empty($orderSources))
-                <p class="text-center text-xs text-textsecondary dark:text-gray-400">No data for period</p>
-                @endif
+
+                <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3 border-l-4 border-gray-900 dark:border-white">
+                    <p class="text-xs font-medium text-gray-600 dark:text-gray-400">Total</p>
+                    <p class="text-sm font-bold text-gray-900 dark:text-white mt-1">
+                        {{ number_format($orderSources->sum('count')) }}
+                        <span class="text-xs font-normal text-gray-400">({{ number_format($orderSources->sum('revenue')) }})</span>
+                    </p>
+                </div>
             </div>
         </div>
+
     </div>
 
 </div>
@@ -391,27 +430,22 @@ $allTimeTotal = $orderStats->sum('count');
         },
     });
 
-    // ── Source chart ──────────────────────────────────────────────────
-    const sourceKeys   = @json(array_keys($orderSources));
-    const sourceVals   = @json(array_values($orderSources));
-    const sourceColors = ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444','#06b6d4','#f97316'];
-    const sourceLabels = sourceKeys.map(k => k ? k.replace(/_/g,' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Unknown');
-
-    const sourceNone = sourceVals.length === 0;
-    new Chart(document.getElementById('sourceChart').getContext('2d'), {
+    // ── Order Source chart ────────────────────────────────────────────
+    const sourceCtx = document.getElementById('orderSourceChart').getContext('2d');
+    new Chart(sourceCtx, {
         type: 'doughnut',
         data: {
-            labels: sourceNone ? ['No Data'] : sourceLabels,
+            labels:   {!! json_encode($orderSources->map(fn($s) => $sourceLabels[$s->source] ?? ucfirst(str_replace('_', ' ', $s->source)))) !!},
             datasets: [{
-                data: sourceNone ? [1] : sourceVals,
-                backgroundColor: sourceNone ? ['#e5e7eb'] : sourceColors.slice(0, sourceVals.length),
+                data:            {!! json_encode($orderSources->pluck('count')) !!},
+                backgroundColor: {!! json_encode($orderSources->map(fn($s) => $sourceColors[$s->source] ?? '#9CA3AF')) !!},
                 borderWidth: 0,
                 hoverOffset: 4,
             }],
         },
         options: {
             cutout: '72%',
-            plugins: { legend: { display: false }, tooltip: { enabled: !sourceNone } },
+            plugins: { legend: { display: false } },
         },
     });
 })();
