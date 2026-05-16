@@ -113,22 +113,20 @@
 {{-- ═══ SECTION 1b: Order Status Summary Cards ═══ --}}
 @php
 $dashStatusCards = [
-    ['key' => 'pending',        'label' => 'Pending',       'color' => '#F59E0B'],
-    ['key' => 'confirmed',      'label' => 'Confirmed',     'color' => '#3B82F6'],
-    ['key' => 'failed',         'label' => 'Failed',        'color' => '#DC2626'],
-    ['key' => 'processing',     'label' => 'Processing',    'color' => '#6366F1'],
-    ['key' => 'hold',           'label' => 'Hold',          'color' => '#F97316'],
-    ['key' => 'hold_followup',  'label' => 'Hold Followup', 'color' => '#FB923C'],
-    ['key' => 'shipped',        'label' => 'Shipped',       'color' => '#06B6D4'],
-    ['key' => 'delivered',      'label' => 'Delivered',     'color' => '#10B981'],
-    ['key' => 'completed',      'label' => 'Completed',     'color' => '#059669'],
-    ['key' => 'cancelled',      'label' => 'Canceled',      'color' => '#EF4444'],
-    ['key' => 'pending_return', 'label' => 'Pend. Return',  'color' => '#EC4899'],
-    ['key' => 'returned',       'label' => 'Returned',      'color' => '#8B5CF6'],
+    ['key' => 'pending',        'label' => 'Pending',     'color' => '#F59E0B'],
+    ['key' => 'confirmed',      'label' => 'Confirmed',   'color' => '#3B82F6'],
+    ['key' => 'processing',     'label' => 'Processing',  'color' => '#6366F1'],
+    ['key' => 'hold',           'label' => 'Hold',        'color' => '#F97316'],
+    ['key' => 'in_courier',     'label' => 'In Courier',  'color' => '#06B6D4', 'status' => 'shipped'],
+    ['key' => 'delivered',      'label' => 'Delivered',   'color' => '#10B981'],
+    ['key' => 'completed',      'label' => 'Completed',   'color' => '#059669'],
+    ['key' => 'cancelled',      'label' => 'Canceled',    'color' => '#EF4444'],
+    ['key' => 'pending_return', 'label' => 'Pend. Return','color' => '#EC4899'],
+    ['key' => 'returned',       'label' => 'Returned',    'color' => '#8B5CF6'],
 ];
 @endphp
 
-<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-7 gap-2.5 mb-6">
+<div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2.5 mb-6">
     {{-- Total card --}}
     <a href="{{ route('admin.orders.index') }}"
        class="bg-white dark:bg-gray-800 rounded-xl border border-border dark:border-gray-700 shadow-sm p-3.5 hover:shadow-md transition-shadow">
@@ -141,8 +139,8 @@ $dashStatusCards = [
     </a>
 
     @foreach($dashStatusCards as $card)
-    @php $stat = $ordersByStatus->get($card['key']); @endphp
-    <a href="{{ route('admin.orders.index', ['status' => $card['key']]) }}"
+    @php $statusKey = $card['status'] ?? $card['key']; $stat = $ordersByStatus->get($statusKey); @endphp
+    <a href="{{ route('admin.orders.index', ['status' => $statusKey]) }}"
        class="bg-white dark:bg-gray-800 rounded-xl border border-border dark:border-gray-700 shadow-sm p-3 hover:shadow-md transition-shadow">
         <div class="flex items-center justify-between mb-1">
             <span class="text-[11px] text-textsecondary dark:text-gray-400 font-medium truncate leading-tight">{{ $card['label'] }}</span>
@@ -169,18 +167,16 @@ $cardRanges = [
     'custom'     => 'Custom Range',
 ];
 $statusMeta = [
-    'pending'        => ['label' => 'Pending',       'color' => '#f59e0b'],
-    'confirmed'      => ['label' => 'Confirmed',     'color' => '#3b82f6'],
-    'processing'     => ['label' => 'Processing',    'color' => '#8b5cf6'],
-    'shipped'        => ['label' => 'Shipped',       'color' => '#06b6d4'],
-    'delivered'      => ['label' => 'Delivered',     'color' => '#10b981'],
-    'completed'      => ['label' => 'Completed',     'color' => '#059669'],
-    'cancelled'      => ['label' => 'Cancelled',     'color' => '#ef4444'],
-    'returned'       => ['label' => 'Returned',      'color' => '#f97316'],
-    'hold'           => ['label' => 'Hold',          'color' => '#6b7280'],
-    'hold_followup'  => ['label' => 'Hold Followup', 'color' => '#fb923c'],
-    'failed'         => ['label' => 'Failed',        'color' => '#dc2626'],
-    'pending_return' => ['label' => 'Pend. Return',  'color' => '#ec4899'],
+    'pending'        => ['label' => 'Pending',     'color' => '#f59e0b'],
+    'confirmed'      => ['label' => 'Confirmed',   'color' => '#3b82f6'],
+    'processing'     => ['label' => 'Processing',  'color' => '#8b5cf6'],
+    'hold'           => ['label' => 'Hold',        'color' => '#6b7280'],
+    'shipped'        => ['label' => 'In Courier',  'color' => '#06b6d4'],
+    'delivered'      => ['label' => 'Delivered',   'color' => '#10b981'],
+    'completed'      => ['label' => 'Completed',   'color' => '#059669'],
+    'cancelled'      => ['label' => 'Cancelled',   'color' => '#ef4444'],
+    'pending_return' => ['label' => 'Pend. Return','color' => '#ec4899'],
+    'returned'       => ['label' => 'Returned',    'color' => '#f97316'],
 ];
 @endphp
 <div class="grid grid-cols-1 xl:grid-cols-5 gap-6 mb-6">
@@ -466,13 +462,13 @@ const STATUS_COLOR_MAP = {
     pending: '#f59e0b', confirmed: '#3b82f6', processing: '#8b5cf6',
     shipped: '#06b6d4', delivered: '#10b981', completed: '#059669',
     cancelled: '#ef4444', returned: '#f97316', hold: '#6b7280',
-    hold_followup: '#fb923c', failed: '#dc2626', pending_return: '#ec4899',
+    pending_return: '#ec4899',
 };
 const STATUS_LABEL_MAP = {
     pending: 'Pending', confirmed: 'Confirmed', processing: 'Processing',
-    shipped: 'Shipped', delivered: 'Delivered', completed: 'Completed',
+    shipped: 'In Courier', delivered: 'Delivered', completed: 'Completed',
     cancelled: 'Cancelled', returned: 'Returned', hold: 'Hold',
-    hold_followup: 'Hold Followup', failed: 'Failed', pending_return: 'Pend. Return',
+    pending_return: 'Pend. Return',
 };
 
 // Chart instances (set once in DOMContentLoaded, updated by Alpine components)

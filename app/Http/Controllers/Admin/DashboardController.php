@@ -124,8 +124,8 @@ class DashboardController extends Controller
 
         // Section 1b card statuses (the 12 mini-cards)
         $cardKeys = [
-            'pending', 'confirmed', 'failed', 'processing', 'hold', 'hold_followup',
-            'shipped', 'delivered', 'completed', 'cancelled', 'pending_return', 'returned',
+            'pending', 'confirmed', 'processing', 'hold',
+            'delivered', 'completed', 'cancelled', 'pending_return', 'returned',
         ];
         $cards = [];
         foreach ($cardKeys as $s) {
@@ -134,6 +134,10 @@ class DashboardController extends Controller
                 'revenue' => (float) ($raw->get($s)?->revenue ?? 0),
             ];
         }
+        $cards['in_courier'] = [
+            'count'   => (int) ($raw->get('shipped')?->count ?? 0),
+            'revenue' => (float) ($raw->get('shipped')?->revenue ?? 0),
+        ];
 
         $returnRatio = $total > 0
             ? round((($cards['returned']['count'] + $cards['pending_return']['count']) / $total) * 100, 2)
