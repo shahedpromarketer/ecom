@@ -458,17 +458,23 @@
                     Search
                 </button>
             </form>
-            <select onchange="window.location.href=this.value"
-                class="px-2 py-2 text-xs rounded-xl border border-gray-200
-                       dark:border-gray-600 bg-white dark:bg-gray-700
-                       text-gray-900 dark:text-white flex-shrink-0">
-                @foreach([10, 25, 50, 100] as $n)
-                <option value="{{ request()->fullUrlWithQuery(['per_page' => $n, 'page' => 1]) }}"
-                    {{ request('per_page', 10) == $n ? 'selected' : '' }}>
-                    {{ $n }}
-                </option>
-                @endforeach
-            </select>
+            <div class="relative flex-shrink-0">
+                <select onchange="window.location.href=this.value"
+                    class="appearance-none pl-2 pr-6 py-2 text-xs rounded-xl border border-gray-200
+                           dark:border-gray-600 bg-white dark:bg-gray-700
+                           text-gray-900 dark:text-white cursor-pointer min-w-[52px]">
+                    @foreach([10, 25, 50, 100] as $n)
+                    <option value="{{ request()->fullUrlWithQuery(['per_page' => $n, 'page' => 1]) }}"
+                        {{ request('per_page', 10) == $n ? 'selected' : '' }}>
+                        {{ $n }}
+                    </option>
+                    @endforeach
+                </select>
+                <svg class="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none"
+                     fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </div>
         </div>
     </div>
 
@@ -786,7 +792,7 @@
             rounded-none md:rounded-2xl shadow-2xl
             border-t md:border border-gray-200 dark:border-gray-700
             px-3 py-2 md:px-6 md:py-4
-            md:min-w-[700px] md:max-w-4xl">
+            md:min-w-[700px] md:max-w-4xl overflow-visible">
 
   <!-- Mobile Layout -->
   <div class="flex md:hidden items-center justify-between gap-2 w-full">
@@ -798,25 +804,27 @@
       </div>
     </div>
 
-    <!-- Right: action buttons (scrollable row) -->
-    <div class="flex items-center gap-1 overflow-x-auto flex-1 justify-end">
+    <!-- Right: action buttons -->
+    <div class="flex items-center gap-1 overflow-visible flex-1 justify-end">
 
       <!-- Status dropdown -->
-      <div class="relative flex-shrink-0" x-data="{ open: false }">
-        <button @click="open = !open"
-          class="px-2.5 py-1.5 rounded-xl bg-primary text-white text-xs font-semibold whitespace-nowrap">
+      <div class="relative overflow-visible flex-shrink-0" x-data="{ o: false }">
+        <button @click="o = !o; $event.stopPropagation()"
+          class="px-2.5 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold whitespace-nowrap">
           Status ▾
         </button>
-        <div x-show="open" @click.away="open = false"
-             class="absolute bottom-full mb-2 right-0 bg-white dark:bg-gray-800
-                    rounded-xl border border-gray-200 dark:border-gray-700
-                    shadow-xl z-[999] w-44 max-h-56 overflow-y-auto">
+        <div x-show="o"
+             x-on:click.away="o = false"
+             x-transition
+             style="position: absolute; bottom: 100%; margin-bottom: 8px; left: 0; z-index: 9999;"
+             class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700
+                    shadow-2xl w-44 max-h-56 overflow-y-auto">
           @foreach(['pending','confirmed','processing','hold','shipped','delivered','completed','cancelled','pending_return','returned'] as $s)
-          <button @click="bulkUpdateStatus('{{ $s }}'); open = false"
-            class="w-full px-4 py-2.5 text-left text-xs font-medium
+          <button @click="bulkUpdateStatus('{{ $s }}'); o = false"
+            class="w-full px-3 py-2.5 text-left text-xs font-medium
                    text-gray-700 dark:text-gray-300
                    hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-            {{ ucfirst(str_replace('_',' ',$s)) }}
+            {{ ucfirst(str_replace('_', ' ', $s)) }}
           </button>
           @endforeach
         </div>
@@ -837,19 +845,21 @@
       </button>
 
       <!-- Courier dropdown -->
-      <div class="relative flex-shrink-0" x-data="{ open: false }">
-        <button @click="open = !open"
-          class="px-2.5 py-1.5 rounded-xl bg-purple-600 text-white
+      <div class="relative overflow-visible flex-shrink-0" x-data="{ o: false }">
+        <button @click="o = !o; $event.stopPropagation()"
+          class="px-2.5 py-1.5 rounded-lg bg-purple-600 text-white
                  text-xs font-semibold whitespace-nowrap">
           Courier ▾
         </button>
-        <div x-show="open" @click.away="open = false"
-             class="absolute bottom-full mb-2 right-0 bg-white dark:bg-gray-800
-                    rounded-xl border border-gray-200 dark:border-gray-700
-                    shadow-xl z-[999] w-36 max-h-48 overflow-y-auto">
+        <div x-show="o"
+             x-on:click.away="o = false"
+             x-transition
+             style="position: absolute; bottom: 100%; margin-bottom: 8px; right: 0; z-index: 9999;"
+             class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700
+                    shadow-2xl w-36">
           @foreach(['pathao','steadfast','carrybe','redx','paperfly','manual'] as $c)
-          <button @click="bulkAssignCourier('{{ $c }}'); open = false"
-            class="w-full px-4 py-2.5 text-left text-xs font-medium
+          <button @click="bulkAssignCourier('{{ $c }}'); o = false"
+            class="w-full px-3 py-2.5 text-left text-xs font-medium
                    text-gray-700 dark:text-gray-300
                    hover:bg-gray-50 dark:hover:bg-gray-700 transition">
             {{ ucfirst($c) }}
