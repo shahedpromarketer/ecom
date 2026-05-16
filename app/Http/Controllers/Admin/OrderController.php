@@ -14,6 +14,7 @@ use App\Models\Product;
 use App\Services\Couriers\CourierFactory;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -406,6 +407,76 @@ class OrderController extends Controller
             'address'          => $order->shipping_address ?? '',
             'total_orders'     => Order::where('shipping_phone', $phone)->count(),
         ]);
+    }
+
+    public function bulkStatus(Request $request)
+    {
+        $request->validate(['ids' => 'required|array', 'status' => 'required|string']);
+        Order::whereIn('id', $request->ids)->update(['status' => $request->status]);
+        Cache::forget('sidebar_order_counts');
+        return response()->json(['success' => true]);
+    }
+
+    public function bulkCourier(Request $request)
+    {
+        $request->validate(['ids' => 'required|array', 'courier' => 'required|string']);
+        foreach ($request->ids as $id) {
+            $order = Order::find($id);
+            if ($order) {
+                CourierShipment::updateOrCreate(
+                    ['order_id' => $order->id],
+                    ['courier_name' => $request->courier, 'status' => 'assigned']
+                );
+                $order->update(['status' => 'shipped']);
+            }
+        }
+        return response()->json(['success' => true]);
+    }
+
+    public function bulkTag(Request $request)
+    {
+        $request->validate(['ids' => 'required|array', 'tag' => 'required|string']);
+        Order::whereIn('id', $request->ids)->update(['order_tag' => $request->tag]);
+        return response()->json(['success' => true]);
+    }
+
+    public function exportCsv(Request $request)
+    {
+        $ids    = $request->input('ids', []);
+        $orders = Order::with(['items.product'])->whereIn('id', $ids)->get();
+
+        $headers = [
+            'Content-Type'        => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="orders-' . date('Y-m-d') . '.csv"',
+        ];
+
+        $callback = function () use ($orders) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, ['Order#', 'Customer', 'Phone', 'Address', 'Items', 'Total', 'Payment', 'Status', 'Date']);
+            foreach ($orders as $order) {
+                fputcsv($file, [
+                    $order->order_number,
+                    $order->shipping_name,
+                    $order->shipping_phone,
+                    $order->shipping_district . ', ' . $order->shipping_area,
+                    $order->items->count() . ' items',
+                    $order->total,
+                    $order->payment_method,
+                    $order->status,
+                    $order->created_at->format('Y-m-d H:i'),
+                ]);
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    public function bulkPrint(Request $request)
+    {
+        $ids    = $request->input('ids', []);
+        $orders = Order::with(['items.product', 'items.variant'])->whereIn('id', $ids)->get();
+        return view('admin.orders.bulk-print', compact('orders'));
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

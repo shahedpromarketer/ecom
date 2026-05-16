@@ -414,6 +414,25 @@
 </div>
 
 {{-- ── Orders Table ─────────────────────────────────────────────────────── --}}
+<div x-data="{
+  selectedOrders: [],
+  selectAll: false,
+  toggleAll() {
+    this.selectAll = !this.selectAll;
+    if (this.selectAll) {
+      this.selectedOrders = Array.from(document.querySelectorAll('input[name=selected]')).map(el => el.value);
+    } else {
+      this.selectedOrders = [];
+    }
+    updateBulkSummary(this.selectedOrders);
+  },
+  toggleOrder(id) {
+    const idx = this.selectedOrders.indexOf(id);
+    if (idx === -1) { this.selectedOrders.push(id); } else { this.selectedOrders.splice(idx, 1); }
+    updateBulkSummary(this.selectedOrders);
+  },
+  get selectedCount() { return this.selectedOrders.length; }
+}">
 <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
 
     {{-- Table Header Bar --}}
@@ -462,6 +481,8 @@
                 <tr class="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
                     <th class="px-4 py-3 text-left">
                         <input type="checkbox" id="selectAll"
+                            :checked="selectAll"
+                            @click="toggleAll()"
                             class="w-4 h-4 rounded border-gray-300 text-primary cursor-pointer">
                     </th>
                     <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-32">Status</th>
@@ -513,11 +534,16 @@
                         ->filter()->implode(', ');
                 @endphp
                 <tr class="hover:bg-gray-50/80 dark:hover:bg-gray-700/20 transition-colors duration-100 group {{ $order->is_duplicate ? 'border-l-4 border-amber-400' : '' }}"
-                    data-order-id="{{ $order->id }}">
+                    data-order-id="{{ $order->id }}"
+                    data-total="{{ $order->total }}"
+                    data-paid="{{ $order->payment_status === 'paid' ? $order->total : 0 }}"
+                    data-due="{{ $order->payment_status !== 'paid' ? $order->total : 0 }}">
 
                     {{-- Checkbox --}}
                     <td class="px-4 py-4">
-                        <input type="checkbox" name="order_ids[]" value="{{ $order->id }}"
+                        <input type="checkbox" name="selected" value="{{ $order->id }}"
+                            :checked="selectedOrders.includes('{{ $order->id }}')"
+                            @change="toggleOrder('{{ $order->id }}')"
                             class="order-checkbox w-4 h-4 rounded border-gray-300 text-primary cursor-pointer">
                     </td>
 
@@ -736,6 +762,167 @@
 
 </div>
 
+{{-- Sticky Bulk Action Bar --}}
+<div x-show="selectedCount > 0"
+     x-transition:enter="transition ease-out duration-200"
+     x-transition:enter-start="opacity-0 translate-y-4"
+     x-transition:enter-end="opacity-100 translate-y-0"
+     x-transition:leave="transition ease-in duration-150"
+     x-transition:leave-start="opacity-100 translate-y-0"
+     x-transition:leave-end="opacity-0 translate-y-4"
+     class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50
+            bg-white dark:bg-gray-800 rounded-2xl shadow-2xl
+            border border-gray-200 dark:border-gray-700
+            px-6 py-4 min-w-[700px] max-w-4xl">
+
+  <div class="flex items-center justify-between gap-6">
+
+    <!-- Left: Selected count + deselect -->
+    <div class="flex items-center gap-3 flex-shrink-0">
+      <div class="w-8 h-8 rounded-xl bg-primary flex items-center justify-center">
+        <span class="text-white text-xs font-bold" x-text="selectedCount"></span>
+      </div>
+      <div>
+        <p class="text-sm font-semibold text-gray-900 dark:text-white"
+           x-text="selectedCount + ' orders selected'"></p>
+        <button @click="selectedOrders = []; selectAll = false; updateBulkSummary([])"
+          class="text-xs text-gray-400 hover:text-red-500 transition">
+          Clear selection
+        </button>
+      </div>
+    </div>
+
+    <!-- Divider -->
+    <div class="h-8 w-px bg-gray-200 dark:bg-gray-600"></div>
+
+    <!-- Middle: Action buttons -->
+    <div class="flex items-center flex-wrap gap-2">
+
+      <!-- Change Status -->
+      <div class="flex items-center gap-1.5" x-data="{ statusOpen: false }">
+        <div class="relative">
+          <button @click="statusOpen = !statusOpen"
+            class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl
+                   bg-primary text-white text-xs font-semibold
+                   hover:bg-primary/90 transition">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            Change Status
+            <svg class="w-3 h-3" :class="statusOpen ? 'rotate-180' : ''"
+                 fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </button>
+          <div x-show="statusOpen" @click.away="statusOpen = false"
+               class="absolute bottom-full mb-2 left-0 bg-white dark:bg-gray-800
+                      rounded-2xl border border-gray-200 dark:border-gray-700
+                      shadow-xl z-50 overflow-hidden w-44">
+            @foreach(['pending','confirmed','processing','hold','hold_followup','shipped','delivered','completed','cancelled','pending_return','returned'] as $s)
+            <button @click="bulkUpdateStatus('{{ $s }}'); statusOpen = false"
+              class="w-full px-4 py-2.5 text-left text-xs font-medium
+                     text-gray-700 dark:text-gray-300
+                     hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+              {{ ucfirst(str_replace('_',' ',$s)) }}
+            </button>
+            @endforeach
+          </div>
+        </div>
+      </div>
+
+      <!-- Print Selected -->
+      <button @click="bulkPrint()"
+        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl
+               bg-teal-600 text-white text-xs font-semibold
+               hover:bg-teal-700 transition">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M17 17H7a2 2 0 01-2-2V9a2 2 0 012-2h10a2 2 0 012 2v6a2 2 0 01-2 2zm0 0v2a2 2 0 01-2 2H9a2 2 0 01-2-2v-2"/>
+        </svg>
+        Print
+      </button>
+
+      <!-- Export CSV -->
+      <button @click="bulkExport()"
+        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl
+               bg-green-600 text-white text-xs font-semibold
+               hover:bg-green-700 transition">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+        Export CSV
+      </button>
+
+      <!-- Assign Courier -->
+      <div class="relative" x-data="{ courierOpen: false }">
+        <button @click="courierOpen = !courierOpen"
+          class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl
+                 bg-purple-600 text-white text-xs font-semibold
+                 hover:bg-purple-700 transition">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+          </svg>
+          Assign Courier
+          <svg class="w-3 h-3" :class="courierOpen ? 'rotate-180' : ''"
+               fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </button>
+        <div x-show="courierOpen" @click.away="courierOpen = false"
+             class="absolute bottom-full mb-2 left-0 bg-white dark:bg-gray-800
+                    rounded-2xl border border-gray-200 dark:border-gray-700
+                    shadow-xl z-50 overflow-hidden w-36">
+          @foreach(['pathao','steadfast','carrybe','redx','paperfly','manual'] as $c)
+          <button @click="bulkAssignCourier('{{ $c }}'); courierOpen = false"
+            class="w-full px-4 py-2.5 text-left text-xs font-medium
+                   text-gray-700 dark:text-gray-300
+                   hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+            {{ ucfirst($c) }}
+          </button>
+          @endforeach
+        </div>
+      </div>
+
+      <!-- Assign Tag -->
+      <div class="flex items-center gap-1.5">
+        <input type="text" id="bulkTag" placeholder="Add tag..."
+          class="w-28 px-3 py-2 text-xs rounded-xl border border-gray-200
+                 dark:border-gray-600 bg-white dark:bg-gray-700
+                 text-gray-900 dark:text-white placeholder-gray-400
+                 focus:outline-none focus:ring-2 focus:ring-primary/30">
+        <button @click="bulkAssignTag()"
+          class="px-3 py-2 rounded-xl bg-amber-500 text-white
+                 text-xs font-semibold hover:bg-amber-600 transition">
+          Tag
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Divider -->
+    <div class="h-8 w-px bg-gray-200 dark:bg-gray-600"></div>
+
+    <!-- Right: Summary -->
+    <div class="flex-shrink-0 text-right space-y-0.5">
+      <p class="text-xs text-gray-500 dark:text-gray-400">
+        Total: <span class="font-bold text-gray-900 dark:text-white" id="bulk-total">৳0</span>
+      </p>
+      <p class="text-xs text-green-600">
+        Paid: <span class="font-semibold" id="bulk-paid">৳0</span>
+      </p>
+      <p class="text-xs text-red-500">
+        Due: <span class="font-semibold" id="bulk-due">৳0</span>
+      </p>
+    </div>
+
+  </div>
+</div>
+
+</div>{{-- end x-data wrapper --}}
+
 {{-- AJAX note toast --}}
 <div id="note-toast"
      class="fixed bottom-5 right-5 z-50 flex items-center gap-2 px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium text-white transition-all duration-300 opacity-0 translate-y-2 pointer-events-none"
@@ -751,10 +938,6 @@
             showToast('Copied!', 'success');
         });
     }
-
-    document.getElementById('selectAll')?.addEventListener('change', function () {
-        document.querySelectorAll('.order-checkbox').forEach(cb => cb.checked = this.checked);
-    });
 
     window.showToast = function (message, type) {
         const toast = document.getElementById('note-toast');
@@ -772,6 +955,99 @@
 
     function showDuplicates() {
         window.location.href = '{{ route('admin.orders.index', ['duplicates' => '1']) }}';
+    }
+
+    function getSelectedIds() {
+        return Array.from(document.querySelectorAll('input[name=selected]:checked')).map(el => el.value);
+    }
+
+    async function bulkUpdateStatus(status) {
+        const selected = getSelectedIds();
+        if (!selected.length) return;
+        if (!confirm(`Change ${selected.length} orders to "${status}"?`)) return;
+        const response = await fetch('/admin/orders/bulk-status', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
+            },
+            body: JSON.stringify({ ids: selected, status: status })
+        });
+        const data = await response.json();
+        if (data.success) {
+            showToast(`${selected.length} orders updated to ${status}`, 'success');
+            setTimeout(() => window.location.reload(), 1000);
+        }
+    }
+
+    function bulkExport() {
+        const selected = getSelectedIds();
+        if (!selected.length) return;
+        const params = new URLSearchParams();
+        selected.forEach(id => params.append('ids[]', id));
+        window.open('/admin/orders/export-csv?' + params.toString());
+    }
+
+    function bulkPrint() {
+        const selected = getSelectedIds();
+        if (!selected.length) return;
+        const params = new URLSearchParams();
+        selected.forEach(id => params.append('ids[]', id));
+        window.open('/admin/orders/bulk-print?' + params.toString());
+    }
+
+    async function bulkAssignCourier(courier) {
+        const selected = getSelectedIds();
+        if (!selected.length) return;
+        if (!confirm(`Assign ${selected.length} orders to ${courier}?`)) return;
+        const response = await fetch('/admin/orders/bulk-courier', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
+            },
+            body: JSON.stringify({ ids: selected, courier: courier })
+        });
+        const data = await response.json();
+        if (data.success) {
+            showToast(`${selected.length} orders assigned to ${courier}`, 'success');
+            setTimeout(() => window.location.reload(), 1000);
+        }
+    }
+
+    async function bulkAssignTag() {
+        const selected = getSelectedIds();
+        const tag = document.getElementById('bulkTag').value.trim();
+        if (!selected.length || !tag) return;
+        const response = await fetch('/admin/orders/bulk-tag', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
+            },
+            body: JSON.stringify({ ids: selected, tag: tag })
+        });
+        const data = await response.json();
+        if (data.success) {
+            showToast(`Tag "${tag}" assigned to ${selected.length} orders`, 'success');
+            document.getElementById('bulkTag').value = '';
+        }
+    }
+
+    function updateBulkSummary(selectedOrders) {
+        let total = 0, paid = 0, due = 0;
+        selectedOrders.forEach(id => {
+            const row = document.querySelector(`tr[data-order-id="${id}"]`);
+            if (row) {
+                total += parseFloat(row.dataset.total || 0);
+                paid  += parseFloat(row.dataset.paid  || 0);
+                due   += parseFloat(row.dataset.due   || 0);
+            }
+        });
+        const fmt = n => '৳' + n.toLocaleString();
+        document.getElementById('bulk-total').textContent = fmt(total);
+        document.getElementById('bulk-paid').textContent  = fmt(paid);
+        document.getElementById('bulk-due').textContent   = fmt(due);
     }
 </script>
 @endpush

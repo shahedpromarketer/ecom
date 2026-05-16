@@ -59,6 +59,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('orders/search-products', [OrderController::class, 'searchProducts'])->name('orders.searchProducts');
         Route::get('orders/search-customer', [OrderController::class, 'searchCustomer'])->name('orders.searchCustomer');
 
+        Route::post('orders/bulk-status', [OrderController::class, 'bulkStatus'])->name('orders.bulkStatus');
+        Route::post('orders/bulk-courier', [OrderController::class, 'bulkCourier'])->name('orders.bulkCourier');
+        Route::post('orders/bulk-tag', [OrderController::class, 'bulkTag'])->name('orders.bulkTag');
+        Route::get('orders/export-csv', [OrderController::class, 'exportCsv'])->name('orders.exportCsv');
+        Route::get('orders/bulk-print', [OrderController::class, 'bulkPrint'])->name('orders.bulkPrint');
+
         Route::patch('orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
         Route::patch('orders/{order}/note', [OrderController::class, 'addNote'])->name('orders.addNote');
         Route::post('orders/{order}/notes', [OrderController::class, 'addNote'])->name('orders.notes.add');
