@@ -104,7 +104,7 @@
             <form method="GET" action="{{ route('admin.orders.index') }}" class="p-6 space-y-6">
 
                 {{-- ROW 1: Date Range Dropdowns --}}
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div class="space-y-1.5">
                         <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Order Created At</label>
                         <select name="created_range"
@@ -167,7 +167,7 @@
                 </div>
 
                 {{-- ROW 2: Status, Source, Order Tag, Courier --}}
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div class="space-y-1.5">
                         <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</label>
                         <select name="status"
@@ -238,7 +238,7 @@
                 </div>
 
                 {{-- ROW 3: Courier Status, Payment Status, Print Status, District --}}
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div class="space-y-1.5">
                         <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Courier Status</label>
                         <select name="courier_status"
@@ -294,7 +294,7 @@
                 </div>
 
                 {{-- ROW 4: Category, UTM Source, Amount Min, Amount Max --}}
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div class="space-y-1.5">
                         <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Product Category</label>
                         <select name="category"
@@ -342,7 +342,7 @@
                 </div>
 
                 {{-- ROW 5: Checkboxes --}}
-                <div class="flex items-center gap-6">
+                <div class="flex flex-wrap items-center gap-4">
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" name="cod_changed" value="1"
                                {{ request('cod_changed') ? 'checked' : '' }}
@@ -432,26 +432,26 @@
     updateBulkSummary(this.selectedOrders);
   },
   get selectedCount() { return this.selectedOrders.length; }
-}">
+}" :class="selectedCount > 0 ? 'pb-16 md:pb-0' : ''">
 <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
 
     {{-- Table Header Bar --}}
-    <div class="px-6 py-4 flex items-center justify-between border-b border-gray-100 dark:border-gray-700">
+    <div class="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-700">
         <div class="flex items-center gap-3">
             <h3 class="text-sm font-bold text-gray-900 dark:text-white">Order List</h3>
             <span class="px-2 py-0.5 bg-primary/10 text-primary text-xs font-semibold rounded-full">
                 {{ $orders->total() }} results
             </span>
         </div>
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3 w-full sm:w-auto">
             {{-- Search --}}
-            <form method="GET" action="{{ route('admin.orders.index') }}" class="flex items-center gap-2">
+            <form method="GET" action="{{ route('admin.orders.index') }}" class="flex items-center gap-2 flex-1 sm:flex-none">
                 @foreach(request()->except(['search','page']) as $key => $val)
                     <input type="hidden" name="{{ $key }}" value="{{ $val }}">
                 @endforeach
                 <input type="text" name="search" value="{{ request('search') }}"
                     placeholder="Search order# or phone..."
-                    class="w-56 px-4 py-2 text-sm rounded-xl border border-gray-200
+                    class="flex-1 sm:w-56 px-4 py-2 text-sm rounded-xl border border-gray-200
                            dark:border-gray-600 bg-white dark:bg-gray-700
                            text-gray-900 dark:text-white placeholder-gray-400
                            focus:outline-none focus:ring-2 focus:ring-primary/30">
@@ -461,7 +461,7 @@
             <select onchange="window.location.href=this.value"
                 class="px-3 py-2 text-sm rounded-xl border border-gray-200
                        dark:border-gray-600 bg-white dark:bg-gray-700
-                       text-gray-900 dark:text-white">
+                       text-gray-900 dark:text-white flex-shrink-0">
                 @foreach([10, 25, 50, 100] as $n)
                 <option value="{{ request()->fullUrlWithQuery(['per_page' => $n, 'page' => 1]) }}"
                     {{ request('per_page', 10) == $n ? 'selected' : '' }}>
@@ -474,7 +474,7 @@
 
     {{-- Table --}}
     <div class="overflow-x-auto">
-        <table class="w-full min-w-[800px]">
+        <table class="w-full min-w-[900px]">
 
             {{-- Head --}}
             <thead>
@@ -749,13 +749,15 @@
         </table>
     </div>
 
+    <p class="text-xs text-gray-400 text-center py-2 sm:hidden">← Scroll to see more →</p>
+
     {{-- Pagination --}}
-    <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-        <p class="text-xs text-gray-500 dark:text-gray-400">
+    <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <p class="text-xs text-gray-500 dark:text-gray-400 order-2 sm:order-1">
             Showing {{ $orders->firstItem() ?? 0 }} to {{ $orders->lastItem() ?? 0 }}
             of {{ $orders->total() }} orders
         </p>
-        <div class="flex items-center gap-1">
+        <div class="flex items-center gap-1 order-1 sm:order-2">
             {{ $orders->links('pagination::tailwind') }}
         </div>
     </div>
@@ -775,7 +777,7 @@
             bg-white dark:bg-gray-800
             rounded-none md:rounded-2xl shadow-2xl
             border-t md:border border-gray-200 dark:border-gray-700
-            px-3 py-3 md:px-6 md:py-4
+            px-3 py-2 md:px-6 md:py-4
             md:min-w-[700px] md:max-w-4xl">
 
   <!-- Mobile Layout -->
@@ -783,20 +785,18 @@
 
     <!-- Left: count -->
     <div class="flex items-center gap-2 flex-shrink-0">
-      <div class="w-7 h-7 rounded-xl bg-primary flex items-center justify-center">
+      <div class="w-6 h-6 rounded-lg bg-primary flex items-center justify-center">
         <span class="text-white text-xs font-bold" x-text="selectedCount"></span>
       </div>
-      <span class="text-sm font-semibold text-gray-900 dark:text-white"
-            x-text="selectedCount + ' selected'"></span>
     </div>
 
     <!-- Right: action buttons (scrollable row) -->
-    <div class="flex items-center gap-1.5 overflow-x-auto flex-1 justify-end">
+    <div class="flex items-center gap-1 overflow-x-auto flex-1 justify-end">
 
       <!-- Status dropdown -->
       <div class="relative flex-shrink-0" x-data="{ open: false }">
         <button @click="open = !open"
-          class="px-3 py-2 rounded-xl bg-primary text-white text-xs font-semibold whitespace-nowrap">
+          class="px-2.5 py-1.5 rounded-xl bg-primary text-white text-xs font-semibold whitespace-nowrap">
           Status ▾
         </button>
         <div x-show="open" @click.away="open = false"
@@ -816,14 +816,14 @@
 
       <!-- Print -->
       <button @click="bulkPrint()"
-        class="px-3 py-2 rounded-xl bg-teal-600 text-white
+        class="px-2.5 py-1.5 rounded-xl bg-teal-600 text-white
                text-xs font-semibold flex-shrink-0">
         Print
       </button>
 
       <!-- Export CSV -->
       <button @click="bulkExport()"
-        class="px-3 py-2 rounded-xl bg-green-600 text-white
+        class="px-2.5 py-1.5 rounded-xl bg-green-600 text-white
                text-xs font-semibold flex-shrink-0">
         CSV
       </button>
@@ -831,7 +831,7 @@
       <!-- Courier dropdown -->
       <div class="relative flex-shrink-0" x-data="{ open: false }">
         <button @click="open = !open"
-          class="px-3 py-2 rounded-xl bg-purple-600 text-white
+          class="px-2.5 py-1.5 rounded-xl bg-purple-600 text-white
                  text-xs font-semibold whitespace-nowrap">
           Courier ▾
         </button>
