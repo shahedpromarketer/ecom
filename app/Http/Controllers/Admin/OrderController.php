@@ -28,35 +28,22 @@ class OrderController extends Controller
 
     public function index(Request $request)
     {
-        $perPage = in_array((int) request('per_page', 10), [10, 25, 50, 100])
-            ? (int) request('per_page', 10) : 10;
+        $perPage = in_array((int) $request->get('per_page', 10), [10, 25, 50, 100])
+            ? (int) $request->get('per_page', 10) : 10;
 
         $query = Order::with(['user', 'items.product.images', 'shipment', 'assignedEmployee'])->latest();
 
-        // Status / flag filters
+        // Status filter
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
+
+        // Flag filters
         if ($request->filled('cod_changed')) {
             $query->where('cod_changed', true);
         }
-        if ($request->filled('duplicate')) {
+        if ($request->filled('duplicates')) {
             $query->where('is_duplicate', true);
-        }
-
-        // Date range filters
-        $this->applyDateRange($query, 'created_at', $request->created_range, $request->created_from, $request->created_to);
-
-        // Courier date filter
-        if ($request->filled('courier_from') || $request->filled('courier_to')) {
-            $query->whereHas('shipment', function ($q) use ($request) {
-                if ($request->filled('courier_from')) {
-                    $q->whereDate('created_at', '>=', $request->courier_from);
-                }
-                if ($request->filled('courier_to')) {
-                    $q->whereDate('created_at', '<=', $request->courier_to);
-                }
-            });
         }
 
         // Search
@@ -70,35 +57,62 @@ class OrderController extends Controller
         }
 
         // Dropdown filters
-        if ($request->filled('source'))         $query->where('source', $request->source);
-        if ($request->filled('payment_status')) $query->where('payment_status', $request->payment_status);
-        if ($request->filled('payment_method')) $query->where('payment_method', $request->payment_method);
-        if ($request->filled('order_tag'))      $query->where('order_tag', 'like', "%{$request->order_tag}%");
-        if ($request->filled('utm_source'))     $query->where('utm_source', $request->utm_source);
-        if ($request->filled('district'))       $query->where('shipping_district', 'like', "%{$request->district}%");
-        if ($request->filled('print_status'))   $query->where('print_status', $request->print_status);
-        if ($request->filled('amount_min'))     $query->where('total', '>=', $request->amount_min);
-        if ($request->filled('amount_max'))     $query->where('total', '<=', $request->amount_max);
+        if ($request->filled('source'))          $query->where('source', $request->source);
+        if ($request->filled('payment_status'))  $query->where('payment_status', $request->payment_status);
+        if ($request->filled('payment_method'))  $query->where('payment_method', $request->payment_method);
+        if ($request->filled('order_tag'))       $query->where('order_tag', 'like', "%{$request->order_tag}%");
+        if ($request->filled('utm_source'))      $query->where('utm_source', $request->utm_source);
+        if ($request->filled('district'))        $query->where('shipping_district', 'like', "%{$request->district}%");
+        if ($request->filled('print_status'))    $query->where('print_status', $request->print_status);
+        if ($request->filled('amount_min'))      $query->where('total', '>=', $request->amount_min);
+        if ($request->filled('amount_max'))      $query->where('total', '<=', $request->amount_max);
 
+        // Category filter
         if ($request->filled('category')) {
             $query->whereHas('items.product.categories', fn ($q) => $q->where('categories.id', $request->category));
         }
 
+        // Product filter
         if ($request->filled('product')) {
             $query->whereHas('items', fn ($q) => $q->where('product_id', $request->product));
         }
 
-        // Group by status summary (all orders, no date filter)
-        $statusSummary = Order::selectRaw('status, count(*) as count, sum(total) as revenue')
-            ->groupBy('status')
-            ->get()
-            ->keyBy('status');
+        // Courier filter
+        if ($request->filled('courier')) {
+            $query->whereHas('shipment', fn ($q) => $q->where('courier_name', $request->courier));
+        }
 
-        $totalOrders = Order::count();
-        $totalUnits  = OrderItem::sum('qty');
-        $returnRatio = $totalOrders > 0
-            ? round(Order::where('status', 'returned')->count() / $totalOrders * 100, 2)
-            : 0;
+        // Courier status filter
+        if ($request->filled('courier_status')) {
+            $query->whereHas('shipment', fn ($q) => $q->where('status', $request->courier_status));
+        }
+
+        // Date range — Order Created At
+        if ($request->filled('created_range') && $request->created_range !== 'custom') {
+            $this->applyDateFilter($query, 'created_at', $request->created_range);
+        } elseif ($request->filled('created_from') || $request->filled('created_to')) {
+            if ($request->filled('created_from')) $query->whereDate('created_at', '>=', $request->created_from);
+            if ($request->filled('created_to'))   $query->whereDate('created_at', '<=', $request->created_to);
+        }
+
+        // Date range — Courier Submitted At
+        if ($request->filled('courier_range') && $request->courier_range !== 'custom') {
+            $query->whereHas('shipment', function ($q) use ($request) {
+                $this->applyDateFilter($q, 'created_at', $request->courier_range);
+            });
+        }
+
+        // Date range — Status Added At (approximated via orders.updated_at)
+        if ($request->filled('status_range')) {
+            $this->applyDateFilter($query, 'updated_at', $request->status_range);
+        }
+
+        // Date range — Note Added At
+        if ($request->filled('note_range')) {
+            $query->whereHas('orderNotes', function ($q) use ($request) {
+                $this->applyDateFilter($q, 'created_at', $request->note_range);
+            });
+        }
 
         $orders = $query->paginate($perPage)->withQueryString();
 
@@ -109,8 +123,7 @@ class OrderController extends Controller
             ->distinct()->pluck('source')->filter()->sort()->values();
 
         return view('admin.orders.index', compact(
-            'orders', 'statusSummary', 'totalOrders', 'totalUnits',
-            'returnRatio', 'categories', 'districts', 'sources', 'perPage'
+            'orders', 'categories', 'districts', 'sources', 'perPage'
         ));
     }
 
@@ -397,15 +410,10 @@ class OrderController extends Controller
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    private function applyDateRange($query, string $column, ?string $range, ?string $from, ?string $to): void
+    private function applyDateFilter($query, string $column, string $range): void
     {
-        if ($range && $range !== 'custom') {
-            [$start, $end] = $this->parseDateRange($range);
-            $query->whereDate($column, '>=', $start)->whereDate($column, '<=', $end);
-        } elseif ($from || $to) {
-            if ($from) $query->whereDate($column, '>=', $from);
-            if ($to)   $query->whereDate($column, '<=', $to);
-        }
+        [$start, $end] = $this->parseDateRange($range);
+        $query->whereDate($column, '>=', $start)->whereDate($column, '<=', $end);
     }
 
     private function parseDateRange(string $range): array
@@ -416,6 +424,11 @@ class OrderController extends Controller
             'last_7'     => [today()->subDays(6)->toDateString(), today()->toDateString()],
             'last_30'    => [today()->subDays(29)->toDateString(), today()->toDateString()],
             'this_month' => [today()->startOfMonth()->toDateString(), today()->toDateString()],
+            'last_month' => [
+                today()->subMonthNoOverflow()->startOfMonth()->toDateString(),
+                today()->subMonthNoOverflow()->endOfMonth()->toDateString(),
+            ],
+            'this_year'  => [today()->startOfYear()->toDateString(), today()->toDateString()],
             default      => [today()->subDays(29)->toDateString(), today()->toDateString()],
         };
     }
