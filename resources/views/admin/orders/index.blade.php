@@ -474,7 +474,7 @@
 
     {{-- Table --}}
     <div class="overflow-x-auto">
-        <table class="w-full">
+        <table class="w-full min-w-[800px]">
 
             {{-- Head --}}
             <thead>
@@ -770,14 +770,70 @@
      x-transition:leave="transition ease-in duration-150"
      x-transition:leave-start="opacity-100 translate-y-0"
      x-transition:leave-end="opacity-0 translate-y-4"
-     class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50
-            bg-white dark:bg-gray-800 rounded-2xl shadow-2xl
-            border border-gray-200 dark:border-gray-700
-            px-6 py-4 min-w-[700px] max-w-4xl">
+     class="fixed bottom-0 md:bottom-6 left-0 md:left-1/2
+            w-full md:w-auto md:-translate-x-1/2 z-50
+            bg-white dark:bg-gray-800
+            md:rounded-2xl shadow-2xl
+            border-t md:border border-gray-200 dark:border-gray-700
+            px-4 md:px-6 py-3 md:py-4
+            md:min-w-[700px] md:max-w-4xl">
 
-  <div class="flex items-center justify-between gap-6">
+  <!-- Mobile Layout -->
+  <div class="flex md:hidden items-center justify-between gap-3">
 
-    <!-- Left: Selected count + deselect -->
+    <!-- Selected count -->
+    <div class="flex items-center gap-2">
+      <div class="w-7 h-7 rounded-xl bg-primary flex items-center justify-center">
+        <span class="text-white text-xs font-bold" x-text="selectedCount"></span>
+      </div>
+      <span class="text-sm font-semibold text-gray-900 dark:text-white"
+            x-text="selectedCount + ' selected'"></span>
+    </div>
+
+    <!-- Mobile action buttons -->
+    <div class="flex items-center gap-2">
+
+      <!-- Change Status dropdown (mobile) -->
+      <div class="relative" x-data="{ open: false }">
+        <button @click="open = !open"
+          class="px-3 py-2 rounded-xl bg-primary text-white text-xs font-semibold">
+          Status &#x25BE;
+        </button>
+        <div x-show="open" @click.away="open = false"
+             class="absolute bottom-full mb-2 right-0 bg-white dark:bg-gray-800
+                    rounded-2xl border border-gray-200 dark:border-gray-700
+                    shadow-xl z-50 overflow-hidden w-40">
+          @foreach(['pending','confirmed','processing','hold','shipped','delivered','completed','cancelled','returned'] as $s)
+          <button @click="bulkUpdateStatus('{{ $s }}'); open = false"
+            class="w-full px-4 py-2.5 text-left text-xs font-medium
+                   text-gray-700 dark:text-gray-300
+                   hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+            {{ ucfirst(str_replace('_',' ',$s)) }}
+          </button>
+          @endforeach
+        </div>
+      </div>
+
+      <!-- Export -->
+      <button @click="bulkExport()"
+        class="px-3 py-2 rounded-xl bg-green-600 text-white text-xs font-semibold">
+        CSV
+      </button>
+
+      <!-- Clear -->
+      <button @click="selectedOrders = []; selectAll = false; updateBulkSummary([])"
+        class="px-3 py-2 rounded-xl bg-gray-200 dark:bg-gray-700
+               text-gray-700 dark:text-gray-300 text-xs font-semibold">
+        &#x2715;
+      </button>
+
+    </div>
+  </div>
+
+  <!-- Desktop Layout (existing, hidden on mobile) -->
+  <div class="hidden md:flex items-center justify-between gap-6">
+
+    <!-- Left: Selected count -->
     <div class="flex items-center gap-3 flex-shrink-0">
       <div class="w-8 h-8 rounded-xl bg-primary flex items-center justify-center">
         <span class="text-white text-xs font-bold" x-text="selectedCount"></span>
@@ -792,19 +848,17 @@
       </div>
     </div>
 
-    <!-- Divider -->
     <div class="h-8 w-px bg-gray-200 dark:bg-gray-600"></div>
 
-    <!-- Middle: Action buttons -->
+    <!-- Middle: Actions -->
     <div class="flex items-center flex-wrap gap-2">
 
       <!-- Change Status -->
-      <div class="flex items-center gap-1.5" x-data="{ statusOpen: false }">
+      <div x-data="{ statusOpen: false }">
         <div class="relative">
           <button @click="statusOpen = !statusOpen"
             class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl
-                   bg-primary text-white text-xs font-semibold
-                   hover:bg-primary/90 transition">
+                   bg-primary text-white text-xs font-semibold hover:bg-primary/90 transition">
             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
@@ -831,11 +885,10 @@
         </div>
       </div>
 
-      <!-- Print Selected -->
+      <!-- Print -->
       <button @click="bulkPrint()"
         class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl
-               bg-teal-600 text-white text-xs font-semibold
-               hover:bg-teal-700 transition">
+               bg-teal-600 text-white text-xs font-semibold hover:bg-teal-700 transition">
         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M17 17H7a2 2 0 01-2-2V9a2 2 0 012-2h10a2 2 0 012 2v6a2 2 0 01-2 2zm0 0v2a2 2 0 01-2 2H9a2 2 0 01-2-2v-2"/>
@@ -846,8 +899,7 @@
       <!-- Export CSV -->
       <button @click="bulkExport()"
         class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl
-               bg-green-600 text-white text-xs font-semibold
-               hover:bg-green-700 transition">
+               bg-green-600 text-white text-xs font-semibold hover:bg-green-700 transition">
         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
@@ -859,13 +911,12 @@
       <div class="relative" x-data="{ courierOpen: false }">
         <button @click="courierOpen = !courierOpen"
           class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl
-                 bg-purple-600 text-white text-xs font-semibold
-                 hover:bg-purple-700 transition">
+                 bg-purple-600 text-white text-xs font-semibold hover:bg-purple-700 transition">
           <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
           </svg>
-          Assign Courier
+          Courier
           <svg class="w-3 h-3" :class="courierOpen ? 'rotate-180' : ''"
                fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
@@ -886,7 +937,7 @@
         </div>
       </div>
 
-      <!-- Assign Tag -->
+      <!-- Tag -->
       <div class="flex items-center gap-1.5">
         <input type="text" id="bulkTag" placeholder="Add tag..."
           class="w-28 px-3 py-2 text-xs rounded-xl border border-gray-200
@@ -902,7 +953,6 @@
 
     </div>
 
-    <!-- Divider -->
     <div class="h-8 w-px bg-gray-200 dark:bg-gray-600"></div>
 
     <!-- Right: Summary -->
