@@ -773,16 +773,16 @@
      class="fixed bottom-0 md:bottom-6 left-0 md:left-1/2
             w-full md:w-auto md:-translate-x-1/2 z-50
             bg-white dark:bg-gray-800
-            md:rounded-2xl shadow-2xl
+            rounded-none md:rounded-2xl shadow-2xl
             border-t md:border border-gray-200 dark:border-gray-700
-            px-4 md:px-6 py-3 md:py-4
+            px-3 py-3 md:px-6 md:py-4
             md:min-w-[700px] md:max-w-4xl">
 
   <!-- Mobile Layout -->
-  <div class="flex md:hidden items-center justify-between gap-3">
+  <div class="flex md:hidden items-center justify-between gap-2 w-full">
 
-    <!-- Selected count -->
-    <div class="flex items-center gap-2">
+    <!-- Left: count -->
+    <div class="flex items-center gap-2 flex-shrink-0">
       <div class="w-7 h-7 rounded-xl bg-primary flex items-center justify-center">
         <span class="text-white text-xs font-bold" x-text="selectedCount"></span>
       </div>
@@ -790,20 +790,20 @@
             x-text="selectedCount + ' selected'"></span>
     </div>
 
-    <!-- Mobile action buttons -->
-    <div class="flex items-center gap-2">
+    <!-- Right: action buttons (scrollable row) -->
+    <div class="flex items-center gap-1.5 overflow-x-auto flex-1 justify-end">
 
-      <!-- Change Status dropdown (mobile) -->
-      <div class="relative" x-data="{ open: false }">
+      <!-- Status dropdown -->
+      <div class="relative flex-shrink-0" x-data="{ open: false }">
         <button @click="open = !open"
-          class="px-3 py-2 rounded-xl bg-primary text-white text-xs font-semibold">
-          Status &#x25BE;
+          class="px-3 py-2 rounded-xl bg-primary text-white text-xs font-semibold whitespace-nowrap">
+          Status ▾
         </button>
         <div x-show="open" @click.away="open = false"
              class="absolute bottom-full mb-2 right-0 bg-white dark:bg-gray-800
                     rounded-2xl border border-gray-200 dark:border-gray-700
-                    shadow-xl z-50 overflow-hidden w-40">
-          @foreach(['pending','confirmed','processing','hold','shipped','delivered','completed','cancelled','returned'] as $s)
+                    shadow-xl z-50 overflow-hidden w-44 max-h-64 overflow-y-auto">
+          @foreach(['pending','confirmed','processing','hold','shipped','delivered','completed','cancelled','pending_return','returned'] as $s)
           <button @click="bulkUpdateStatus('{{ $s }}'); open = false"
             class="w-full px-4 py-2.5 text-left text-xs font-medium
                    text-gray-700 dark:text-gray-300
@@ -814,17 +814,48 @@
         </div>
       </div>
 
-      <!-- Export -->
+      <!-- Print -->
+      <button @click="bulkPrint()"
+        class="px-3 py-2 rounded-xl bg-teal-600 text-white
+               text-xs font-semibold flex-shrink-0">
+        Print
+      </button>
+
+      <!-- Export CSV -->
       <button @click="bulkExport()"
-        class="px-3 py-2 rounded-xl bg-green-600 text-white text-xs font-semibold">
+        class="px-3 py-2 rounded-xl bg-green-600 text-white
+               text-xs font-semibold flex-shrink-0">
         CSV
       </button>
 
+      <!-- Courier dropdown -->
+      <div class="relative flex-shrink-0" x-data="{ open: false }">
+        <button @click="open = !open"
+          class="px-3 py-2 rounded-xl bg-purple-600 text-white
+                 text-xs font-semibold whitespace-nowrap">
+          Courier ▾
+        </button>
+        <div x-show="open" @click.away="open = false"
+             class="absolute bottom-full mb-2 right-0 bg-white dark:bg-gray-800
+                    rounded-2xl border border-gray-200 dark:border-gray-700
+                    shadow-xl z-50 overflow-hidden w-36">
+          @foreach(['pathao','steadfast','carrybe','redx','paperfly','manual'] as $c)
+          <button @click="bulkAssignCourier('{{ $c }}'); open = false"
+            class="w-full px-4 py-2.5 text-left text-xs font-medium
+                   text-gray-700 dark:text-gray-300
+                   hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+            {{ ucfirst($c) }}
+          </button>
+          @endforeach
+        </div>
+      </div>
+
       <!-- Clear -->
       <button @click="selectedOrders = []; selectAll = false; updateBulkSummary([])"
-        class="px-3 py-2 rounded-xl bg-gray-200 dark:bg-gray-700
-               text-gray-700 dark:text-gray-300 text-xs font-semibold">
-        &#x2715;
+        class="w-8 h-8 flex items-center justify-center rounded-xl
+               bg-gray-200 dark:bg-gray-700 text-gray-600
+               dark:text-gray-300 flex-shrink-0 text-sm font-bold">
+        ✕
       </button>
 
     </div>
