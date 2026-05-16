@@ -414,246 +414,308 @@
 </div>
 
 {{-- ── Orders Table ─────────────────────────────────────────────────────── --}}
-<div class="bg-white dark:bg-gray-800 rounded-2xl border border-border dark:border-gray-700 shadow-sm overflow-hidden">
+<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
 
-    {{-- Table top bar --}}
-    <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-border dark:border-gray-700">
-        <h3 class="font-heading font-semibold text-sm text-textprimary dark:text-gray-100">Order List</h3>
-        <form method="GET" action="{{ route('admin.orders.index') }}" class="flex items-center gap-2 flex-wrap">
-            {{-- Preserve all active filters except search/per_page/page --}}
-            @foreach(request()->except(['search','per_page','page']) as $k => $v)
-                <input type="hidden" name="{{ $k }}" value="{{ $v }}">
-            @endforeach
-            <input type="text" name="search" value="{{ request('search') }}"
-                   placeholder="By Order ID or Mobile"
-                   class="px-3 py-1.5 text-xs rounded-lg border border-border dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-textprimary dark:text-gray-100 placeholder-textsecondary focus:outline-none focus:ring-2 focus:ring-primary/30 w-44">
-            <div class="flex items-center gap-1.5">
-                <span class="text-xs text-textsecondary dark:text-gray-400">Show</span>
-                <select name="per_page" onchange="this.form.submit()"
-                        class="px-2 py-1.5 text-xs rounded-lg border border-border dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-textprimary dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30">
-                    @foreach([10, 25, 50, 100] as $pp)
-                        <option value="{{ $pp }}" {{ $perPage == $pp ? 'selected' : '' }}>{{ $pp }}</option>
-                    @endforeach
-                </select>
-                <span class="text-xs text-textsecondary dark:text-gray-400">entries</span>
-            </div>
-            <button type="submit" class="px-3 py-1.5 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">Search</button>
-        </form>
+    {{-- Table Header Bar --}}
+    <div class="px-6 py-4 flex items-center justify-between border-b border-gray-100 dark:border-gray-700">
+        <div class="flex items-center gap-3">
+            <h3 class="text-sm font-bold text-gray-900 dark:text-white">Order List</h3>
+            <span class="px-2 py-0.5 bg-primary/10 text-primary text-xs font-semibold rounded-full">
+                {{ $orders->total() }} results
+            </span>
+        </div>
+        <div class="flex items-center gap-3">
+            {{-- Search --}}
+            <form method="GET" action="{{ route('admin.orders.index') }}" class="flex items-center gap-2">
+                @foreach(request()->except(['search','page']) as $key => $val)
+                    <input type="hidden" name="{{ $key }}" value="{{ $val }}">
+                @endforeach
+                <input type="text" name="search" value="{{ request('search') }}"
+                    placeholder="Search order# or phone..."
+                    class="w-56 px-4 py-2 text-sm rounded-xl border border-gray-200
+                           dark:border-gray-600 bg-white dark:bg-gray-700
+                           text-gray-900 dark:text-white placeholder-gray-400
+                           focus:outline-none focus:ring-2 focus:ring-primary/30">
+                <button type="submit" class="px-3 py-2 text-xs font-semibold bg-primary text-white rounded-xl hover:bg-primary/90 transition-colors">Search</button>
+            </form>
+            {{-- Per page --}}
+            <select onchange="window.location.href=this.value"
+                class="px-3 py-2 text-sm rounded-xl border border-gray-200
+                       dark:border-gray-600 bg-white dark:bg-gray-700
+                       text-gray-900 dark:text-white">
+                @foreach([10, 25, 50, 100] as $n)
+                <option value="{{ request()->fullUrlWithQuery(['per_page' => $n, 'page' => 1]) }}"
+                    {{ request('per_page', 10) == $n ? 'selected' : '' }}>
+                    Show {{ $n }}
+                </option>
+                @endforeach
+            </select>
+        </div>
     </div>
-
-    {{-- Showing X to Y of Z --}}
-    @if($orders->total() > 0)
-    <div class="px-4 py-2 text-xs text-textsecondary dark:text-gray-400 border-b border-border dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/20">
-        Showing {{ $orders->firstItem() }} to {{ $orders->lastItem() }} of {{ number_format($orders->total()) }} entries
-        @if($hasFilters)
-            <span class="text-primary dark:text-blue-400">(filtered)</span>
-        @endif
-    </div>
-    @endif
 
     {{-- Table --}}
     <div class="overflow-x-auto">
         <table class="w-full">
-            <thead class="bg-gray-50 dark:bg-gray-700/50 border-b border-border dark:border-gray-700">
-                <tr>
-                    <th class="px-3 py-2.5 text-left text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider" style="min-width:130px">Status</th>
-                    <th class="px-2 py-2.5 text-center text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-8">
-                        <input type="checkbox" id="selectAll" class="w-3.5 h-3.5 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary/30 cursor-pointer">
+
+            {{-- Head --}}
+            <thead>
+                <tr class="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
+                    <th class="px-4 py-3 text-left">
+                        <input type="checkbox" id="selectAll"
+                            class="w-4 h-4 rounded border-gray-300 text-primary cursor-pointer">
                     </th>
-                    <th class="px-2 py-2.5 text-center text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-10">Note</th>
-                    <th class="px-3 py-2.5 text-left text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider" style="min-width:260px">ID & Products</th>
-                    <th class="px-3 py-2.5 text-left text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider" style="min-width:200px">Name & Number</th>
-                    <th class="px-3 py-2.5 text-left text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider" style="min-width:160px">Date</th>
-                    <th class="px-3 py-2.5 text-left text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider" style="min-width:180px">Address</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-32">Status</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">ID & Products</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Customer</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-40">Date</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Address</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-32">Payment</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-8"></th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-border dark:divide-gray-700">
+
+            {{-- Body --}}
+            <tbody class="divide-y divide-gray-50 dark:divide-gray-700/50">
                 @forelse($orders as $order)
                 @php
                     $serial = $orders->firstItem() + $loop->index;
-                    $statusCls = match($order->status) {
-                        'pending'                => 'text-yellow-700 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-900/20',
-                        'confirmed'              => 'text-blue-700 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/20',
-                        'processing'             => 'text-teal-700 bg-teal-50 dark:text-teal-400 dark:bg-teal-900/20',
-                        'hold','hold_followup'   => 'text-orange-700 bg-orange-50 dark:text-orange-400 dark:bg-orange-900/20',
-                        'shipped'                => 'text-purple-700 bg-purple-50 dark:text-purple-400 dark:bg-purple-900/20',
-                        'delivered'              => 'text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-900/20',
-                        'completed'              => 'text-green-800 bg-green-100 dark:text-green-300 dark:bg-green-900/30',
-                        'cancelled','failed'     => 'text-red-700 bg-red-50 dark:text-red-400 dark:bg-red-900/20',
-                        'pending_return'         => 'text-orange-800 bg-orange-100 dark:text-orange-300 dark:bg-orange-900/30',
-                        'returned'               => 'text-gray-700 bg-gray-100 dark:text-gray-400 dark:bg-gray-700',
-                        default                  => 'text-gray-700 bg-gray-50 dark:text-gray-400 dark:bg-gray-700/50',
-                    };
+                    $statusColors = [
+                        'pending'        => 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400',
+                        'confirmed'      => 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400',
+                        'processing'     => 'bg-cyan-50 text-cyan-700 border-cyan-200',
+                        'hold'           => 'bg-orange-50 text-orange-700 border-orange-200',
+                        'hold_followup'  => 'bg-orange-50 text-orange-600 border-orange-200',
+                        'shipped'        => 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400',
+                        'delivered'      => 'bg-green-50 text-green-700 border-green-200',
+                        'completed'      => 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                        'cancelled'      => 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:text-red-400',
+                        'pending_return' => 'bg-pink-50 text-pink-700 border-pink-200',
+                        'returned'       => 'bg-gray-100 text-gray-600 border-gray-200',
+                        'failed'         => 'bg-red-100 text-red-700 border-red-300',
+                    ];
+                    $statusLabels = [
+                        'pending'        => 'Pending',
+                        'confirmed'      => 'Confirmed',
+                        'processing'     => 'Processing',
+                        'hold'           => 'Hold',
+                        'hold_followup'  => 'Hold F/U',
+                        'shipped'        => 'In Courier',
+                        'delivered'      => 'Delivered',
+                        'completed'      => 'Completed',
+                        'cancelled'      => 'Cancelled',
+                        'pending_return' => 'Pend. Return',
+                        'returned'       => 'Returned',
+                        'failed'         => 'Failed',
+                    ];
                     $phone = $order->shipping_phone;
                     $waPhone = '880' . ltrim($phone, '0');
                     $fullAddr = collect([$order->shipping_address, $order->shipping_area, $order->shipping_district])
                         ->filter()->implode(', ');
                 @endphp
-                <tr x-data="{
-                    noteOpen: false,
-                    noteText: '{{ addslashes($order->notes ?? '') }}',
-                    async submitNote(event, orderId) {
-                        if (!this.noteText.trim()) return;
-                        const response = await fetch(`/admin/orders/${orderId}/notes`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
-                            },
-                            body: JSON.stringify({ note: this.noteText, is_customer_visible: false })
-                        });
-                        const data = await response.json();
-                        if (data.success) {
-                            this.noteText = '';
-                            this.noteOpen = false;
-                            window.showToast('Note added successfully', 'success');
-                        }
-                    }
-                }"
-                    class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors {{ $order->is_duplicate ? 'border-l-4 border-amber-400' : '' }}">
+                <tr class="hover:bg-gray-50/80 dark:hover:bg-gray-700/20 transition-colors duration-100 group {{ $order->is_duplicate ? 'border-l-4 border-amber-400' : '' }}"
+                    data-order-id="{{ $order->id }}">
 
-                    {{-- 1. STATUS --}}
-                    <td class="px-2 py-3 align-top">
-                        <div class="flex items-start gap-1.5">
-                            {{-- Quick action buttons --}}
-                            <div class="flex flex-col gap-1 flex-shrink-0 pt-0.5">
-                                <button @click="noteOpen = !noteOpen" title="Add note"
-                                        class="w-5 h-5 rounded-full bg-green-500 hover:bg-green-600 text-white flex items-center justify-center transition-colors flex-shrink-0">
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
-                                </button>
-                                <a href="{{ route('admin.orders.show', $order) }}" target="_blank" title="View / Print"
-                                   class="w-5 h-5 rounded text-gray-400 dark:text-gray-500 hover:text-primary dark:hover:text-blue-400 flex items-center justify-center transition-colors">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z"/></svg>
+                    {{-- Checkbox --}}
+                    <td class="px-4 py-4">
+                        <input type="checkbox" name="order_ids[]" value="{{ $order->id }}"
+                            class="order-checkbox w-4 h-4 rounded border-gray-300 text-primary cursor-pointer">
+                    </td>
+
+                    {{-- STATUS + ACTIONS --}}
+                    <td class="px-4 py-4">
+                        <div class="space-y-2">
+                            <span class="inline-flex px-2.5 py-1 rounded-lg text-xs font-semibold border {{ $statusColors[$order->status] ?? 'bg-gray-100 text-gray-600 border-gray-200' }}">
+                                {{ $statusLabels[$order->status] ?? ucfirst(str_replace('_', ' ', $order->status)) }}
+                            </span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-xs text-gray-400">sl: {{ $serial }}</span>
+                                @if($order->cod_changed)
+                                    <span class="text-[10px] text-orange-600 dark:text-orange-400 font-medium">COD</span>
+                                @endif
+                                @if($order->is_duplicate)
+                                    <span class="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Dup</span>
+                                @endif
+                                <a href="{{ route('admin.invoices.generatePrint', $order) }}"
+                                   target="_blank"
+                                   class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-primary transition rounded">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                              d="M17 17H7a2 2 0 01-2-2V9a2 2 0 012-2h10a2 2 0 012 2v6a2 2 0 01-2 2zm0 0v2a2 2 0 01-2 2H9a2 2 0 01-2-2v-2"/>
+                                    </svg>
                                 </a>
-                            </div>
-                            {{-- Badge + serial + flags --}}
-                            <div class="flex flex-col gap-0.5 min-w-0">
-                                <span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold whitespace-nowrap {{ $statusCls }}">{{ ucwords(str_replace('_', ' ', $order->status)) }}</span>
-                                <span class="text-[10px] text-gray-400 dark:text-gray-500">sl: {{ $serial }}</span>
-                                @if($order->cod_changed)<span class="text-[10px] text-orange-600 dark:text-orange-400 font-medium">COD Changed</span>@endif
-                                @if($order->is_duplicate)<span class="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Duplicate</span>@endif
-                                {{-- Inline note form --}}
-                                <div x-show="noteOpen" x-cloak class="mt-1.5">
-                                    <form x-on:submit.prevent="submitNote($event, {{ $order->id }})" class="space-y-1">
-                                        <textarea x-model="noteText" rows="2" placeholder="Write note…"
-                                                  class="w-full text-[10px] px-1.5 py-1 rounded border border-border dark:border-gray-600 bg-white dark:bg-gray-700 text-textprimary dark:text-gray-100 resize-none focus:outline-none focus:ring-1 focus:ring-primary/30" style="min-width:110px"></textarea>
-                                        <button type="submit" class="px-2 py-0.5 text-[10px] font-semibold bg-primary text-white rounded hover:bg-primary/90 transition-colors">Save</button>
-                                    </form>
-                                </div>
                             </div>
                         </div>
                     </td>
 
-                    {{-- 2. CHECKBOX --}}
-                    <td class="px-2 py-3 text-center align-top">
-                        <input type="checkbox" value="{{ $order->id }}" name="order_ids[]"
-                               class="order-checkbox w-3.5 h-3.5 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary/30 cursor-pointer mt-1">
-                    </td>
-
-                    {{-- 3. NOTES --}}
-                    <td class="px-2 py-3 text-center align-top">
-                        @if($order->notes)
-                            <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-bold cursor-pointer mt-0.5" title="{{ $order->notes }}">N</span>
-                        @else
-                            <button @click="noteOpen = !noteOpen" title="Add note"
-                                    class="inline-flex items-center justify-center w-5 h-5 rounded-full border border-dashed border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 hover:border-green-400 hover:text-green-500 transition-colors mt-0.5">
-                                <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
-                            </button>
-                        @endif
-                    </td>
-
-                    {{-- 4. ID & PRODUCTS --}}
-                    <td class="px-3 py-3 align-top">
+                    {{-- ID & PRODUCTS --}}
+                    <td class="px-4 py-4 max-w-xs">
                         <a href="{{ route('admin.orders.show', $order) }}"
-                           class="text-xs font-bold text-primary dark:text-blue-400 hover:underline">#{{ $order->order_number }}</a>
-                        <div class="mt-1.5 space-y-1.5">
-                            @foreach($order->items as $item)
-                            @php $thumb = $item->product?->images->first(); @endphp
-                            <div class="flex items-center gap-1.5">
-                                @if($thumb)
-                                    <img src="{{ asset('storage/' . $thumb->path) }}" alt="{{ $item->product_name }}"
-                                         class="w-8 h-8 rounded object-cover flex-shrink-0 border border-border dark:border-gray-600">
-                                @else
-                                    <div class="w-8 h-8 rounded bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0 border border-border dark:border-gray-600">
-                                        <svg class="w-4 h-4 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5M4.5 3h15A1.5 1.5 0 0121 4.5v15A1.5 1.5 0 0119.5 21h-15A1.5 1.5 0 013 19.5v-15A1.5 1.5 0 014.5 3z"/></svg>
-                                    </div>
-                                @endif
+                           class="text-sm font-bold text-primary hover:underline">
+                            #{{ $order->order_number }}
+                        </a>
+                        <div class="mt-1.5 space-y-1">
+                            @foreach($order->items->take(2) as $item)
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-8 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
+                                    @if($item->product?->primaryImage)
+                                        <img src="{{ asset('storage/' . $item->product->primaryImage->image_path) }}"
+                                             class="w-full h-full object-cover"
+                                             alt="{{ $item->product_name }}">
+                                    @else
+                                        <div class="w-full h-full flex items-center justify-center text-gray-300">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                            </svg>
+                                        </div>
+                                    @endif
+                                </div>
                                 <div class="min-w-0">
-                                    <p class="text-[11px] text-gray-700 dark:text-gray-300 leading-tight" style="max-width:170px">{{ $item->qty }}× {{ Str::limit($item->product_name, 30) }}</p>
-                                    <p class="text-[10px] text-gray-400 dark:text-gray-500">৳{{ number_format($item->unit_price, 0) }}</p>
+                                    <p class="text-xs text-gray-700 dark:text-gray-300 truncate max-w-[160px]">
+                                        {{ $item->qty }}× {{ $item->product_name }}
+                                    </p>
+                                    <p class="text-xs text-gray-400">৳{{ number_format($item->unit_price) }}</p>
                                 </div>
                             </div>
                             @endforeach
+                            @if($order->items->count() > 2)
+                                <p class="text-xs text-gray-400">+{{ $order->items->count() - 2 }} more items</p>
+                            @endif
                         </div>
-                        <p class="mt-1.5 text-[10px] font-bold text-textprimary dark:text-gray-200">Total: ৳{{ number_format($order->total, 0) }}</p>
+                        <div class="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                            <span class="text-xs font-bold text-gray-900 dark:text-white">
+                                Total: ৳{{ number_format($order->total) }}
+                            </span>
+                            @if($order->discount > 0)
+                                <span class="text-xs text-green-600 ml-1">(-৳{{ number_format($order->discount) }})</span>
+                            @endif
+                        </div>
                     </td>
 
-                    {{-- 5. NAME & NUMBER --}}
-                    <td class="px-3 py-3 align-top">
-                        <div class="flex items-center gap-1 mb-1">
-                            <a href="{{ route('admin.orders.show', $order) }}"
-                               class="text-xs font-semibold text-teal-600 dark:text-teal-400 hover:underline truncate" style="max-width:130px">{{ $order->shipping_name }}</a>
-                            <button onclick="navigator.clipboard.writeText('{{ addslashes($order->shipping_name) }}')"
-                                    class="text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 flex-shrink-0 transition-colors" title="Copy name">
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-                            </button>
+                    {{-- CUSTOMER --}}
+                    <td class="px-4 py-4">
+                        <div class="space-y-1.5">
+                            <p class="text-sm font-semibold text-gray-900 dark:text-white">
+                                {{ $order->shipping_name }}
+                            </p>
+                            <div class="flex items-center gap-1.5">
+                                <span class="px-2.5 py-1 bg-gray-900 dark:bg-gray-600 text-white text-xs font-mono rounded-lg">
+                                    {{ $phone }}
+                                </span>
+                                <a href="https://wa.me/{{ $waPhone }}"
+                                   target="_blank"
+                                   class="w-6 h-6 flex items-center justify-center bg-green-500 text-white rounded-lg hover:bg-green-600 transition">
+                                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                                    </svg>
+                                </a>
+                                <button onclick="copyToClipboard('{{ $phone }}')"
+                                    class="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-primary bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 transition">
+                                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                              d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            @if($order->source)
+                            <span class="text-xs text-gray-400">
+                                Source: {{ ucfirst(str_replace('_', ' ', $order->source)) }}
+                            </span>
+                            @endif
                         </div>
-                        {{-- Phone badge + action icons --}}
-                        <div class="flex items-center gap-1 flex-wrap mb-1">
-                            <span class="px-2 py-0.5 text-[10px] font-medium rounded-full bg-gray-800 text-white dark:bg-gray-600 whitespace-nowrap">{{ $phone }}</span>
-                            <a href="https://wa.me/{{ $waPhone }}" target="_blank"
-                               class="text-green-500 hover:text-green-600 transition-colors flex-shrink-0" title="WhatsApp">
-                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                            </a>
-                            <button onclick="navigator.clipboard.writeText('{{ $phone }}')" title="Copy phone"
-                                    class="text-gray-400 hover:text-primary dark:hover:text-blue-400 flex-shrink-0 transition-colors">
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-                            </button>
-                        </div>
-                        <p class="text-[10px] text-gray-400 dark:text-gray-500">Source: <span class="text-gray-500 dark:text-gray-400">{{ $order->source ?? 'manual' }}</span></p>
                     </td>
 
-                    {{-- 6. DATE --}}
-                    <td class="px-3 py-3 align-top">
-                        <div class="space-y-1 text-[10px]">
-                            <div class="text-gray-600 dark:text-gray-300">
-                                <span class="font-semibold">C:</span>
-                                <span class="text-gray-500 dark:text-gray-400"> {{ $order->created_at->format('d M Y') }} · {{ $order->created_at->format('H:i') }}</span>
+                    {{-- DATE --}}
+                    <td class="px-4 py-4">
+                        <div class="space-y-1 text-xs text-gray-500 dark:text-gray-400">
+                            <div>
+                                <span class="font-semibold text-gray-400">C:</span>
+                                {{ $order->created_at->format('d M Y · H:i') }}
                             </div>
-                            <div class="text-gray-600 dark:text-gray-300">
-                                <span class="font-semibold">U:</span>
-                                <span class="text-gray-500 dark:text-gray-400"> {{ $order->updated_at->format('d M Y') }} · {{ $order->updated_at->format('H:i') }}</span>
+                            <div>
+                                <span class="font-semibold text-gray-400">U:</span>
+                                {{ $order->updated_at->format('d M Y · H:i') }}
                             </div>
+                            <div class="text-gray-400">{{ $order->created_at->diffForHumans() }}</div>
                             @if($order->assignedEmployee)
-                            <div class="text-gray-600 dark:text-gray-300">
-                                <span class="font-semibold">By:</span>
-                                <span class="text-gray-500 dark:text-gray-400"> {{ $order->assignedEmployee->name }}</span>
+                            <div>
+                                <span class="font-semibold text-gray-400">By:</span>
+                                {{ $order->assignedEmployee->name }}
                             </div>
                             @endif
                         </div>
                     </td>
 
-                    {{-- 7. ADDRESS --}}
-                    <td class="px-3 py-3 align-top">
-                        <div class="flex items-start gap-1">
-                            <p class="text-[10px] text-gray-600 dark:text-gray-400 leading-relaxed flex-1">{{ $fullAddr ?: '—' }}</p>
+                    {{-- ADDRESS --}}
+                    <td class="px-4 py-4">
+                        <div class="flex items-start gap-1.5">
+                            <p class="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                                {{ $order->shipping_district }}
+                                @if($order->shipping_area), {{ $order->shipping_area }}@endif
+                            </p>
                             @if($fullAddr)
-                            <button onclick="navigator.clipboard.writeText('{{ addslashes($fullAddr) }}')" title="Copy address"
-                                    class="flex-shrink-0 text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors mt-0.5">
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                            <button onclick="copyToClipboard('{{ addslashes($fullAddr) }}')"
+                                class="w-5 h-5 flex-shrink-0 flex items-center justify-center text-gray-300 hover:text-primary transition rounded">
+                                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                </svg>
                             </button>
                             @endif
                         </div>
                     </td>
+
+                    {{-- PAYMENT --}}
+                    <td class="px-4 py-4">
+                        <div class="space-y-1">
+                            <span class="inline-flex px-2 py-0.5 rounded-md text-xs font-semibold
+                                @if($order->payment_method === 'bkash') bg-pink-50 text-pink-700 border border-pink-200
+                                @elseif($order->payment_method === 'nagad') bg-orange-50 text-orange-700 border border-orange-200
+                                @else bg-gray-100 text-gray-600 border border-gray-200 @endif">
+                                {{ strtoupper($order->payment_method) }}
+                            </span>
+                            <div>
+                                <span class="text-xs
+                                    @if($order->payment_status === 'paid') text-green-600 font-semibold
+                                    @elseif($order->payment_status === 'failed') text-red-500
+                                    @else text-gray-400 @endif">
+                                    {{ ucfirst($order->payment_status) }}
+                                </span>
+                            </div>
+                            @if($order->payment_status !== 'paid')
+                            <p class="text-xs text-red-500 font-semibold">Due: ৳{{ number_format($order->total) }}</p>
+                            @else
+                            <p class="text-xs text-green-600 font-semibold">Paid: ৳{{ number_format($order->total) }}</p>
+                            @endif
+                        </div>
+                    </td>
+
+                    {{-- ACTIONS --}}
+                    <td class="px-4 py-4">
+                        <a href="{{ route('admin.orders.show', $order) }}"
+                           class="w-8 h-8 flex items-center justify-center rounded-xl
+                                  bg-primary/10 text-primary hover:bg-primary hover:text-white
+                                  transition-all duration-150">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </a>
+                    </td>
+
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="7" class="px-6 py-16 text-center">
-                        <svg class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z"/>
-                        </svg>
-                        <p class="text-sm font-medium text-textsecondary dark:text-gray-400">No orders found</p>
-                        <p class="text-xs text-textsecondary dark:text-gray-500 mt-1">Try adjusting your filters or create a new order.</p>
+                    <td colspan="8" class="px-6 py-16 text-center">
+                        <div class="flex flex-col items-center gap-3">
+                            <div class="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                                <svg class="w-7 h-7 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                          d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                                </svg>
+                            </div>
+                            <p class="text-sm font-semibold text-gray-500 dark:text-gray-400">No orders found</p>
+                            <p class="text-xs text-gray-400">Try adjusting your filters</p>
+                        </div>
                     </td>
                 </tr>
                 @endforelse
@@ -661,18 +723,15 @@
         </table>
     </div>
 
-    {{-- Footer: pagination --}}
-    <div class="px-4 py-3 border-t border-border dark:border-gray-700 flex flex-wrap items-center justify-between gap-3">
-        <p class="text-xs text-textsecondary dark:text-gray-400">
-            @if($orders->total() > 0)
-                Showing {{ $orders->firstItem() }} to {{ $orders->lastItem() }} of {{ number_format($orders->total()) }} entries
-            @else
-                No entries
-            @endif
+    {{-- Pagination --}}
+    <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+        <p class="text-xs text-gray-500 dark:text-gray-400">
+            Showing {{ $orders->firstItem() ?? 0 }} to {{ $orders->lastItem() ?? 0 }}
+            of {{ $orders->total() }} orders
         </p>
-        @if($orders->hasPages())
-            {{ $orders->links() }}
-        @endif
+        <div class="flex items-center gap-1">
+            {{ $orders->links('pagination::tailwind') }}
+        </div>
     </div>
 
 </div>
@@ -687,6 +746,12 @@
 
 @push('scripts')
 <script>
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            showToast('Copied!', 'success');
+        });
+    }
+
     document.getElementById('selectAll')?.addEventListener('change', function () {
         document.querySelectorAll('.order-checkbox').forEach(cb => cb.checked = this.checked);
     });
