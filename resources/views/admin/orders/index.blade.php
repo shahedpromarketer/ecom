@@ -809,8 +809,8 @@
         </button>
         <div x-show="open" @click.away="open = false"
              class="absolute bottom-full mb-2 right-0 bg-white dark:bg-gray-800
-                    rounded-2xl border border-gray-200 dark:border-gray-700
-                    shadow-xl z-50 overflow-hidden w-44 max-h-64 overflow-y-auto">
+                    rounded-xl border border-gray-200 dark:border-gray-700
+                    shadow-xl z-[999] w-44 max-h-56 overflow-y-auto">
           @foreach(['pending','confirmed','processing','hold','shipped','delivered','completed','cancelled','pending_return','returned'] as $s)
           <button @click="bulkUpdateStatus('{{ $s }}'); open = false"
             class="w-full px-4 py-2.5 text-left text-xs font-medium
@@ -845,8 +845,8 @@
         </button>
         <div x-show="open" @click.away="open = false"
              class="absolute bottom-full mb-2 right-0 bg-white dark:bg-gray-800
-                    rounded-2xl border border-gray-200 dark:border-gray-700
-                    shadow-xl z-50 overflow-hidden w-36">
+                    rounded-xl border border-gray-200 dark:border-gray-700
+                    shadow-xl z-[999] w-36 max-h-48 overflow-y-auto">
           @foreach(['pathao','steadfast','carrybe','redx','paperfly','manual'] as $c)
           <button @click="bulkAssignCourier('{{ $c }}'); open = false"
             class="w-full px-4 py-2.5 text-left text-xs font-medium
@@ -911,7 +911,7 @@
           <div x-show="statusOpen" @click.away="statusOpen = false"
                class="absolute bottom-full mb-2 left-0 bg-white dark:bg-gray-800
                       rounded-2xl border border-gray-200 dark:border-gray-700
-                      shadow-xl z-50 overflow-hidden w-44">
+                      shadow-xl z-[999] overflow-hidden w-44">
             @foreach(['pending','confirmed','processing','hold','hold_followup','shipped','delivered','completed','cancelled','pending_return','returned'] as $s)
             <button @click="bulkUpdateStatus('{{ $s }}'); statusOpen = false"
               class="w-full px-4 py-2.5 text-left text-xs font-medium
@@ -964,7 +964,7 @@
         <div x-show="courierOpen" @click.away="courierOpen = false"
              class="absolute bottom-full mb-2 left-0 bg-white dark:bg-gray-800
                     rounded-2xl border border-gray-200 dark:border-gray-700
-                    shadow-xl z-50 overflow-hidden w-36">
+                    shadow-xl z-[999] overflow-hidden w-36">
           @foreach(['pathao','steadfast','carrybe','redx','paperfly','manual'] as $c)
           <button @click="bulkAssignCourier('{{ $c }}'); courierOpen = false"
             class="w-full px-4 py-2.5 text-left text-xs font-medium
