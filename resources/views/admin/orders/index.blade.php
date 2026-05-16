@@ -61,9 +61,6 @@
         </svg>
         Export CSV
     </a>
-    <span class="ml-auto text-xs text-textsecondary dark:text-gray-500">
-        {{ number_format($orders->total()) }} result{{ $orders->total() !== 1 ? 's' : '' }}
-    </span>
 </div>
 
 {{-- ── Filter Panel ─────────────────────────────────────────────────────────── --}}
@@ -432,40 +429,43 @@
     updateBulkSummary(this.selectedOrders);
   },
   get selectedCount() { return this.selectedOrders.length; }
-}" :class="selectedCount > 0 ? 'pb-16 md:pb-0' : ''">
+}" :class="selectedCount > 0 ? 'pb-20 md:pb-6' : 'pb-0'">
 <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
 
     {{-- Table Header Bar --}}
-    <div class="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-700">
-        <div class="flex items-center gap-3">
+    <div class="flex flex-col gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+        {{-- Row 1: Title + results --}}
+        <div class="flex items-center gap-2">
             <h3 class="text-sm font-bold text-gray-900 dark:text-white">Order List</h3>
             <span class="px-2 py-0.5 bg-primary/10 text-primary text-xs font-semibold rounded-full">
                 {{ $orders->total() }} results
             </span>
         </div>
-        <div class="flex items-center gap-3 w-full sm:w-auto">
-            {{-- Search --}}
-            <form method="GET" action="{{ route('admin.orders.index') }}" class="flex items-center gap-2 flex-1 sm:flex-none">
+        {{-- Row 2: Search + Show entries --}}
+        <div class="flex items-center gap-2">
+            <form method="GET" action="{{ route('admin.orders.index') }}" class="flex items-center gap-2 flex-1">
                 @foreach(request()->except(['search','page']) as $key => $val)
                     <input type="hidden" name="{{ $key }}" value="{{ $val }}">
                 @endforeach
                 <input type="text" name="search" value="{{ request('search') }}"
                     placeholder="Search order# or phone..."
-                    class="flex-1 sm:w-56 px-4 py-2 text-sm rounded-xl border border-gray-200
+                    class="flex-1 min-w-0 px-3 py-2 text-sm rounded-xl border border-gray-200
                            dark:border-gray-600 bg-white dark:bg-gray-700
                            text-gray-900 dark:text-white placeholder-gray-400
                            focus:outline-none focus:ring-2 focus:ring-primary/30">
-                <button type="submit" class="px-3 py-2 text-xs font-semibold bg-primary text-white rounded-xl hover:bg-primary/90 transition-colors">Search</button>
+                <button type="submit"
+                    class="px-3 py-2 bg-primary text-white text-xs font-semibold rounded-xl flex-shrink-0">
+                    Search
+                </button>
             </form>
-            {{-- Per page --}}
             <select onchange="window.location.href=this.value"
-                class="px-3 py-2 text-sm rounded-xl border border-gray-200
+                class="px-2 py-2 text-xs rounded-xl border border-gray-200
                        dark:border-gray-600 bg-white dark:bg-gray-700
                        text-gray-900 dark:text-white flex-shrink-0">
                 @foreach([10, 25, 50, 100] as $n)
                 <option value="{{ request()->fullUrlWithQuery(['per_page' => $n, 'page' => 1]) }}"
                     {{ request('per_page', 10) == $n ? 'selected' : '' }}>
-                    Show {{ $n }}
+                    {{ $n }}
                 </option>
                 @endforeach
             </select>
@@ -488,8 +488,8 @@
                     <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-32">Status</th>
                     <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">ID & Products</th>
                     <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Customer</th>
-                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-40">Date</th>
-                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Address</th>
+                    <th class="hidden md:table-cell px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-40">Date</th>
+                    <th class="hidden md:table-cell px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Address</th>
                     <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-32">Payment</th>
                     <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-8"></th>
                 </tr>
@@ -540,15 +540,23 @@
                     data-due="{{ $order->payment_status !== 'paid' ? $order->total : 0 }}">
 
                     {{-- Checkbox --}}
-                    <td class="px-4 py-4">
+                    <td class="px-4 py-3">
                         <input type="checkbox" name="selected" value="{{ $order->id }}"
                             :checked="selectedOrders.includes('{{ $order->id }}')"
-                            @change="toggleOrder('{{ $order->id }}')"
+                            x-on:change="
+                                const id = '{{ $order->id }}';
+                                if ($event.target.checked) {
+                                    if (!selectedOrders.includes(id)) selectedOrders.push(id);
+                                } else {
+                                    selectedOrders = selectedOrders.filter(i => i !== id);
+                                }
+                                updateBulkSummary(selectedOrders);
+                            "
                             class="order-checkbox w-4 h-4 rounded border-gray-300 text-primary cursor-pointer">
                     </td>
 
                     {{-- STATUS + ACTIONS --}}
-                    <td class="px-4 py-4">
+                    <td class="px-4 py-3">
                         <div class="space-y-2">
                             <span class="inline-flex px-2.5 py-1 rounded-lg text-xs font-semibold border {{ $statusColors[$order->status] ?? 'bg-gray-100 text-gray-600 border-gray-200' }}">
                                 {{ $statusLabels[$order->status] ?? ucfirst(str_replace('_', ' ', $order->status)) }}
@@ -574,7 +582,7 @@
                     </td>
 
                     {{-- ID & PRODUCTS --}}
-                    <td class="px-4 py-4 max-w-xs">
+                    <td class="px-4 py-3 max-w-xs">
                         <a href="{{ route('admin.orders.show', $order) }}"
                            class="text-sm font-bold text-primary hover:underline">
                             #{{ $order->order_number }}
@@ -619,7 +627,7 @@
                     </td>
 
                     {{-- CUSTOMER --}}
-                    <td class="px-4 py-4">
+                    <td class="px-4 py-3">
                         <div class="space-y-1.5">
                             <p class="text-sm font-semibold text-gray-900 dark:text-white">
                                 {{ $order->shipping_name }}
@@ -652,7 +660,7 @@
                     </td>
 
                     {{-- DATE --}}
-                    <td class="px-4 py-4">
+                    <td class="hidden md:table-cell px-4 py-3">
                         <div class="space-y-1 text-xs text-gray-500 dark:text-gray-400">
                             <div>
                                 <span class="font-semibold text-gray-400">C:</span>
@@ -673,7 +681,7 @@
                     </td>
 
                     {{-- ADDRESS --}}
-                    <td class="px-4 py-4">
+                    <td class="hidden md:table-cell px-4 py-3">
                         <div class="flex items-start gap-1.5">
                             <p class="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
                                 {{ $order->shipping_district }}
@@ -692,7 +700,7 @@
                     </td>
 
                     {{-- PAYMENT --}}
-                    <td class="px-4 py-4">
+                    <td class="px-4 py-3">
                         <div class="space-y-1">
                             <span class="inline-flex px-2 py-0.5 rounded-md text-xs font-semibold
                                 @if($order->payment_method === 'bkash') bg-pink-50 text-pink-700 border border-pink-200
@@ -717,7 +725,7 @@
                     </td>
 
                     {{-- ACTIONS --}}
-                    <td class="px-4 py-4">
+                    <td class="px-4 py-3">
                         <a href="{{ route('admin.orders.show', $order) }}"
                            class="w-8 h-8 flex items-center justify-center rounded-xl
                                   bg-primary/10 text-primary hover:bg-primary hover:text-white
@@ -1042,10 +1050,17 @@
         return Array.from(document.querySelectorAll('input[name=selected]:checked')).map(el => el.value);
     }
 
+    window.getSelectedOrders = function() {
+        return Array.from(document.querySelectorAll('input[name=selected]:checked')).map(el => el.value);
+    };
+
     async function bulkUpdateStatus(status) {
-        const selected = getSelectedIds();
-        if (!selected.length) return;
-        if (!confirm(`Change ${selected.length} orders to "${status}"?`)) return;
+        const selected = window.getSelectedOrders();
+        if (!selected.length) {
+            showToast('No orders selected', 'error');
+            return;
+        }
+        if (!confirm(`Change ${selected.length} order(s) to "${status}"?`)) return;
         const response = await fetch('/admin/orders/bulk-status', {
             method: 'POST',
             headers: {
@@ -1058,6 +1073,8 @@
         if (data.success) {
             showToast(`${selected.length} orders updated to ${status}`, 'success');
             setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showToast('Update failed', 'error');
         }
     }
 
@@ -1078,9 +1095,12 @@
     }
 
     async function bulkAssignCourier(courier) {
-        const selected = getSelectedIds();
-        if (!selected.length) return;
-        if (!confirm(`Assign ${selected.length} orders to ${courier}?`)) return;
+        const selected = window.getSelectedOrders();
+        if (!selected.length) {
+            showToast('No orders selected', 'error');
+            return;
+        }
+        if (!confirm(`Assign ${selected.length} order(s) to ${courier}?`)) return;
         const response = await fetch('/admin/orders/bulk-courier', {
             method: 'POST',
             headers: {
@@ -1093,6 +1113,8 @@
         if (data.success) {
             showToast(`${selected.length} orders assigned to ${courier}`, 'success');
             setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showToast('Assignment failed', 'error');
         }
     }
 
