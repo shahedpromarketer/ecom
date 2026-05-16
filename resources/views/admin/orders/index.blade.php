@@ -1,11 +1,22 @@
 @extends('layouts.admin')
 
-@section('title', 'All Orders')
-@section('page-title', 'Orders')
+@section('title', request('status') ? ucwords(str_replace('_', ' ', request('status'))) . ' Orders' : (request('cod_changed') ? 'COD Changed Orders' : 'All Orders'))
+
+@section('page-title')
+@if(request('status')){{ ucwords(str_replace('_', ' ', request('status'))) }} Orders
+@elseif(request('cod_changed'))COD Changed Orders
+@else Orders
+@endif
+@endsection
 
 @section('breadcrumb')
     <span class="text-textsecondary">/</span>
-    <span class="text-textprimary font-medium">All Orders</span>
+    <span class="text-textprimary font-medium">
+        @if(request('status')){{ ucwords(str_replace('_', ' ', request('status'))) }} Orders
+        @elseif(request('cod_changed'))COD Changed Orders
+        @else All Orders
+        @endif
+    </span>
 @endsection
 
 @section('content')
@@ -24,7 +35,7 @@
 @endif
 
 @php
-    $hasFilters = collect(['search','payment_status','payment_method','source','created_range',
+    $hasFilters = collect(['status','search','payment_status','payment_method','source','created_range',
         'courier_range','status_range','note_range','courier','courier_status','district','category',
         'order_tag','utm_source','print_status','amount_min','amount_max','cod_changed','duplicates'])
         ->filter(fn($k) => request()->filled($k))->isNotEmpty();
