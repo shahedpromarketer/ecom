@@ -35,8 +35,8 @@
 @endif
 
 @php
-    $hasFilters = collect(['status','search','payment_status','payment_method','source','created_range',
-        'courier_range','status_range','note_range','courier','courier_status','district','category',
+    $hasFilters = collect(['search','payment_status','payment_method','source','created_range',
+        'courier_range','courier','courier_status','district','category',
         'order_tag','utm_source','print_status','amount_min','amount_max','cod_changed','duplicates'])
         ->filter(fn($k) => request()->filled($k))->isNotEmpty();
 @endphp
@@ -67,7 +67,7 @@
 </div>
 
 {{-- ── Filter Panel ─────────────────────────────────────────────────────────── --}}
-<div x-data="{ filterOpen: {{ $hasFilters ? 'true' : 'false' }} }" class="mb-4">
+<div x-data="{ filterOpen: false }" class="mb-4">
 
     <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden">
 
@@ -195,7 +195,7 @@
                                 'return_collection'        => 'Return Collection',
                                 'courier_payment_validate' => 'Courier Payment Validate',
                             ] as $val => $label)
-                                <option value="{{ $val }}" {{ request('status') === $val ? 'selected' : '' }}>{{ $label }}</option>
+                                <option value="{{ $val }}">{{ $label }}</option>
                             @endforeach
                         </select>
                     </div>
