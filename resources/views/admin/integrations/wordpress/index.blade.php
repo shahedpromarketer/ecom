@@ -1,274 +1,616 @@
 @extends('layouts.admin')
 
-@section('title', 'WordPress Sync')
-@section('page-title', 'WordPress Integration')
+@section('title', 'WordPress / Landing Page Integration')
+@section('page-title', 'Website & Landing Page Integration')
 
 @section('breadcrumb')
     <span class="text-textsecondary">/</span>
-    <span class="text-textprimary font-medium">WordPress Sync</span>
+    <span class="text-textprimary font-medium">WordPress Integration</span>
 @endsection
 
 @section('content')
 
-@if(session('success'))
-    <div class="mb-5 flex items-center gap-3 p-3.5 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-        <svg class="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"/></svg>
-        <p class="text-sm text-green-700 dark:text-green-400">{{ session('success') }}</p>
+{{-- ── Page Header ──────────────────────────────────────────────────────── --}}
+<div x-data="{
+    showModal: false,
+    editMode: false,
+    editId: null,
+    submitting: false,
+    showSecret: false,
+    logoPreview: null,
+    form: {
+        site_name: '', site_url: '', type: 'wordpress',
+        consumer_key: '', consumer_secret: '',
+        mobile_number: '', invoice_title: '', invoice_address: '',
+        logo: null
+    },
+    openAdd() {
+        this.editMode  = false;
+        this.editId    = null;
+        this.showSecret = false;
+        this.logoPreview = null;
+        this.form = { site_name:'', site_url:'', type:'wordpress', consumer_key:'', consumer_secret:'', mobile_number:'', invoice_title:'', invoice_address:'', logo:null };
+        this.showModal = true;
+    },
+    openEdit(site) {
+        this.editMode  = true;
+        this.editId    = site.id;
+        this.showSecret = false;
+        this.logoPreview = site.logo_url || null;
+        this.form = {
+            site_name: site.name, site_url: site.site_url, type: site.type || 'wordpress',
+            consumer_key: site.consumer_key || '', consumer_secret: site.consumer_secret || '',
+            mobile_number: site.mobile_number || '', invoice_title: site.invoice_title || '',
+            invoice_address: site.invoice_address || '', logo: null
+        };
+        this.showModal = true;
+    },
+    handleLogo(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        this.form.logo = file;
+        const reader = new FileReader();
+        reader.onload = e => this.logoPreview = e.target.result;
+        reader.readAsDataURL(file);
+    },
+    async submitForm() {
+        this.submitting = true;
+        const fd = new FormData();
+        Object.entries(this.form).forEach(([k, v]) => {
+            if (v !== null && v !== undefined && v !== '') fd.append(k, v);
+        });
+        fd.append('_token', document.querySelector('meta[name=csrf-token]').content);
+        if (this.editMode) fd.append('_method', 'PUT');
+        const url = this.editMode
+            ? '/admin/integrations/wordpress/' + this.editId
+            : '/admin/integrations/wordpress';
+        const res  = await fetch(url, { method: 'POST', body: fd });
+        const data = await res.json();
+        this.submitting = false;
+        if (data.success) {
+            this.showModal = false;
+            wpToast(this.editMode ? 'Site updated!' : 'Site added!', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            wpToast(data.message || 'Failed to save.', 'error');
+        }
+    },
+    async testModalConnection() {
+        if (!this.editMode || !this.editId) { wpToast('Save the site first to test connection.', 'error'); return; }
+        await testConnection(this.editId);
+    }
+}">
+
+<div class="flex flex-wrap items-start justify-between gap-4 mb-6">
+    <div>
+        <h2 class="text-lg font-bold text-gray-900 dark:text-white">Website &amp; Landing Page Integration</h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Connect your WordPress/WooCommerce sites to sync orders automatically.</p>
     </div>
-@endif
-@if(session('error'))
-    <div class="mb-5 flex items-center gap-3 p-3.5 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-        <svg class="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd"/></svg>
-        <p class="text-sm text-red-700 dark:text-red-400">{{ session('error') }}</p>
+    <button @click="openAdd()"
+        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+        </svg>
+        Add New Site
+    </button>
+</div>
+
+{{-- ── Info / Webhook Card ───────────────────────────────────────────────── --}}
+<div class="mb-6 flex flex-wrap items-start gap-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl">
+    <svg class="w-5 h-5 text-blue-500 dark:text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/>
+    </svg>
+    <div class="flex-1 min-w-0">
+        <p class="text-sm font-semibold text-blue-800 dark:text-blue-300">Orders sync automatically via webhook. Use <em>Sync Now</em> for manual sync.</p>
+        <div x-data="{ copied: false }" class="flex items-center gap-2 mt-2 flex-wrap">
+            <span class="text-xs text-blue-600 dark:text-blue-400 font-medium">Webhook URL:</span>
+            <code class="text-xs bg-white dark:bg-gray-800 border border-blue-200 dark:border-blue-700 px-2 py-1 rounded-lg text-blue-700 dark:text-blue-300 select-all break-all">{{ $webhookUrl }}</code>
+            <button type="button"
+                @click="navigator.clipboard.writeText('{{ $webhookUrl }}'); copied = true; setTimeout(()=>copied=false,2000)"
+                class="text-xs px-2 py-1 rounded-lg bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300 hover:bg-blue-200 transition font-medium flex-shrink-0">
+                <span x-show="!copied">Copy</span>
+                <span x-show="copied" x-cloak class="text-green-600">Copied!</span>
+            </button>
+        </div>
     </div>
-@endif
+</div>
 
-<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-
-    {{-- Left column: Webhook URL + Setup + Add Site --}}
-    <div class="xl:col-span-1 space-y-5">
-
-        {{-- Webhook Endpoint --}}
-        <div class="bg-white dark:bg-gray-800 rounded-2xl border border-border dark:border-gray-700 shadow-sm p-5">
-            <h3 class="font-heading font-semibold text-textprimary dark:text-gray-100 mb-1">Webhook URL</h3>
-            <p class="text-xs text-textsecondary dark:text-gray-400 mb-4">Use this URL in your WooCommerce webhook settings.</p>
-
-            <div x-data="{ copied: false }" class="relative">
-                <div class="flex items-center gap-2 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-border dark:border-gray-600 px-3 py-2.5">
-                    <code class="text-xs text-primary dark:text-blue-400 flex-1 break-all select-all">{{ $webhookUrl }}</code>
-                    <button type="button"
-                            @click="navigator.clipboard.writeText('{{ $webhookUrl }}'); copied = true; setTimeout(() => copied = false, 2000)"
-                            class="flex-shrink-0 p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-textsecondary dark:text-gray-400 hover:text-textprimary dark:hover:text-gray-200">
-                        <svg x-show="!copied" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                        </svg>
-                        <svg x-show="copied" x-cloak class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                        </svg>
-                    </button>
-                </div>
-                <p x-show="copied" x-cloak class="text-xs text-green-600 dark:text-green-400 mt-1 text-right">Copied!</p>
-            </div>
-
-            <div class="mt-4 space-y-2 text-xs text-textsecondary dark:text-gray-400">
-                <p class="font-semibold text-textprimary dark:text-gray-300">Request format:</p>
-                <p>• Method: <code class="bg-gray-100 dark:bg-gray-700 px-1.5 rounded">POST</code></p>
-                <p>• Header: <code class="bg-gray-100 dark:bg-gray-700 px-1.5 rounded">X-API-KEY: your_api_key</code></p>
-                <p>• Body: WooCommerce order JSON payload</p>
-            </div>
-        </div>
-
-        {{-- Setup Instructions --}}
-        <div class="bg-white dark:bg-gray-800 rounded-2xl border border-border dark:border-gray-700 shadow-sm p-5">
-            <h3 class="font-heading font-semibold text-textprimary dark:text-gray-100 mb-3">Setup Guide</h3>
-            <ol class="space-y-3 text-xs text-textsecondary dark:text-gray-400">
-                <li class="flex gap-2.5">
-                    <span class="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center font-bold flex-shrink-0 text-[10px]">1</span>
-                    <span>Add a new site below and copy the generated API key.</span>
-                </li>
-                <li class="flex gap-2.5">
-                    <span class="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center font-bold flex-shrink-0 text-[10px]">2</span>
-                    <span>In WordPress, go to <strong class="text-textprimary dark:text-gray-300">WooCommerce → Settings → Advanced → Webhooks</strong>.</span>
-                </li>
-                <li class="flex gap-2.5">
-                    <span class="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center font-bold flex-shrink-0 text-[10px]">3</span>
-                    <span>Add a new webhook: Topic <strong class="text-textprimary dark:text-gray-300">Order Created</strong>, Delivery URL = the webhook URL above.</span>
-                </li>
-                <li class="flex gap-2.5">
-                    <span class="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center font-bold flex-shrink-0 text-[10px]">4</span>
-                    <span>Install a custom plugin or use WP hooks to add the <code class="bg-gray-100 dark:bg-gray-700 px-1.5 rounded">X-API-KEY</code> header to outgoing webhook requests.</span>
-                </li>
-                <li class="flex gap-2.5">
-                    <span class="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center font-bold flex-shrink-0 text-[10px]">5</span>
-                    <span>Test by creating a WooCommerce order — it should appear in your Orders list within seconds.</span>
-                </li>
-            </ol>
-        </div>
-
-        {{-- Add New Site --}}
-        <div class="bg-white dark:bg-gray-800 rounded-2xl border border-border dark:border-gray-700 shadow-sm p-5">
-            <h3 class="font-heading font-semibold text-textprimary dark:text-gray-100 mb-4">Connect a Site</h3>
-
-            <form method="POST" action="{{ route('admin.integrations.wordpress.store') }}" class="space-y-3">
-                @csrf
-                <div>
-                    <label class="block text-xs font-medium text-textsecondary dark:text-gray-400 mb-1.5">Site Name</label>
-                    <input type="text" name="name" value="{{ old('name') }}" required
-                           placeholder="My WooCommerce Store"
-                           class="w-full px-3 py-2.5 text-sm rounded-xl border @error('name') border-red-400 @else border-border dark:border-gray-600 @enderror bg-gray-50 dark:bg-gray-700/50 text-textprimary dark:text-gray-100 placeholder-textsecondary dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all">
-                    @error('name') <p class="text-xs text-danger mt-1">{{ $message }}</p> @enderror
-                </div>
-
-                <div>
-                    <label class="block text-xs font-medium text-textsecondary dark:text-gray-400 mb-1.5">Site URL</label>
-                    <input type="url" name="site_url" value="{{ old('site_url') }}" required
-                           placeholder="https://example.com"
-                           class="w-full px-3 py-2.5 text-sm rounded-xl border @error('site_url') border-red-400 @else border-border dark:border-gray-600 @enderror bg-gray-50 dark:bg-gray-700/50 text-textprimary dark:text-gray-100 placeholder-textsecondary dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all">
-                    @error('site_url') <p class="text-xs text-danger mt-1">{{ $message }}</p> @enderror
-                </div>
-
-                <button type="submit"
-                        class="w-full py-2.5 text-sm font-semibold bg-primary hover:bg-primary/90 text-white rounded-xl transition-colors">
-                    Connect Site &amp; Generate API Key
-                </button>
-            </form>
-        </div>
-
+{{-- ── Sites Table ───────────────────────────────────────────────────────── --}}
+<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden mb-6">
+    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+        <h3 class="text-sm font-bold text-gray-900 dark:text-white">Connected Sites
+            <span class="ml-2 px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">{{ $sites->count() }}</span>
+        </h3>
     </div>
 
-    {{-- Right column: Connected Sites + Sync Logs --}}
-    <div class="xl:col-span-2 space-y-5">
+    @if($sites->isEmpty())
+    <div class="px-6 py-16 text-center">
+        <div class="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center mx-auto mb-3">
+            <svg class="w-7 h-7 text-gray-300 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253"/>
+            </svg>
+        </div>
+        <p class="text-sm font-semibold text-gray-500 dark:text-gray-400">No sites connected yet</p>
+        <button @click="openAdd()"
+            class="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-white text-xs font-semibold hover:bg-primary/90 transition">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+            Add Your First Site
+        </button>
+    </div>
+    @else
+    <div class="overflow-x-auto">
+        <table class="w-full min-w-[700px]">
+            <thead class="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
+                <tr>
+                    <th class="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Site</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Type</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Last Order Sync</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Last Product Sync</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Status</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50 dark:divide-gray-700/50">
+                @foreach($sites as $site)
+                @php
+                    $typeBadge = match($site->type ?? 'wordpress') {
+                        'woocommerce' => 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+                        'cartflow'    => 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400',
+                        'landing_page'=> 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+                        default       => 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+                    };
+                    $typeLabel = match($site->type ?? 'wordpress') {
+                        'woocommerce'  => 'WooCommerce',
+                        'cartflow'     => 'CartFlow',
+                        'landing_page' => 'Landing Page',
+                        default        => 'WordPress',
+                    };
+                    $siteJson = json_encode([
+                        'id'              => $site->id,
+                        'name'            => $site->name,
+                        'site_url'        => $site->site_url,
+                        'type'            => $site->type ?? 'wordpress',
+                        'consumer_key'    => $site->consumer_key,
+                        'consumer_secret' => $site->consumer_secret,
+                        'mobile_number'   => $site->mobile_number,
+                        'invoice_title'   => $site->invoice_title,
+                        'invoice_address' => $site->invoice_address,
+                        'logo_url'        => $site->logo_url,
+                    ]);
+                @endphp
+                <tr class="hover:bg-gray-50/80 dark:hover:bg-gray-700/20 transition-colors">
 
-        {{-- Connected Sites --}}
-        <div class="bg-white dark:bg-gray-800 rounded-2xl border border-border dark:border-gray-700 shadow-sm overflow-hidden">
-            <div class="px-5 py-4 border-b border-border dark:border-gray-700 flex items-center justify-between">
-                <h3 class="font-heading font-semibold text-textprimary dark:text-gray-100">Connected Sites
-                    <span class="ml-2 px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-textsecondary dark:text-gray-400">{{ $sites->count() }}</span>
-                </h3>
-            </div>
+                    {{-- Site --}}
+                    <td class="px-5 py-3">
+                        <div class="flex items-center gap-3">
+                            <img src="{{ $site->logo_url }}" alt="{{ $site->name }}"
+                                 class="w-10 h-10 rounded-xl object-contain bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 flex-shrink-0">
+                            <div class="min-w-0">
+                                <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ $site->name }}</p>
+                                <a href="{{ $site->site_url }}" target="_blank"
+                                   class="text-xs text-primary dark:text-blue-400 hover:underline truncate block max-w-[180px]">
+                                    {{ $site->site_url }}
+                                </a>
+                            </div>
+                        </div>
+                    </td>
 
-            @if($sites->isEmpty())
-            <div class="px-5 py-12 text-center">
-                <svg class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/>
+                    {{-- Type --}}
+                    <td class="px-4 py-3">
+                        <span class="px-2.5 py-1 rounded-lg text-xs font-semibold {{ $typeBadge }}">{{ $typeLabel }}</span>
+                    </td>
+
+                    {{-- Last Order Sync --}}
+                    <td class="px-4 py-3">
+                        <div class="space-y-1">
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                {{ $site->last_order_sync_at ? $site->last_order_sync_at->diffForHumans() : 'Never' }}
+                            </p>
+                            <p class="text-xs text-gray-400">{{ number_format($site->total_synced) }} orders synced</p>
+                            <button id="sync-orders-{{ $site->id }}"
+                                onclick="syncOrders({{ $site->id }})"
+                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/>
+                                </svg>
+                                Sync Now
+                            </button>
+                        </div>
+                    </td>
+
+                    {{-- Last Product Sync --}}
+                    <td class="px-4 py-3">
+                        <div class="space-y-1">
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                {{ $site->last_product_sync_at ? $site->last_product_sync_at->diffForHumans() : 'Never' }}
+                            </p>
+                            <button onclick="syncProducts({{ $site->id }})" title="Coming Soon"
+                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-50 text-teal-600 dark:bg-teal-900/20 dark:text-teal-400 text-xs font-semibold hover:bg-teal-100 transition opacity-60 cursor-not-allowed">
+                                Sync Now
+                            </button>
+                        </div>
+                    </td>
+
+                    {{-- Status toggle --}}
+                    <td class="px-4 py-3">
+                        <button onclick="toggleActive({{ $site->id }})"
+                            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {{ $site->is_active ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600' }}">
+                            <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform {{ $site->is_active ? 'translate-x-6' : 'translate-x-1' }}"></span>
+                        </button>
+                        <p class="text-xs mt-1 {{ $site->is_active ? 'text-green-600 dark:text-green-400' : 'text-gray-400' }}">
+                            {{ $site->is_active ? 'Active' : 'Inactive' }}
+                        </p>
+                    </td>
+
+                    {{-- Actions --}}
+                    <td class="px-4 py-3">
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <button onclick="testConnection({{ $site->id }})"
+                                class="px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-xs font-medium text-gray-600 dark:text-gray-300 hover:border-blue-400 hover:text-blue-600 transition whitespace-nowrap">
+                                Test
+                            </button>
+                            <button @click="openEdit({{ $siteJson }})"
+                                class="px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-xs font-medium text-gray-600 dark:text-gray-300 hover:border-primary hover:text-primary transition">
+                                Edit
+                            </button>
+                            <button onclick="deleteSite({{ $site->id }}, '{{ addslashes($site->name) }}')"
+                                class="px-2.5 py-1.5 rounded-lg border border-red-200 dark:border-red-800 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition">
+                                Delete
+                            </button>
+                        </div>
+                    </td>
+
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+    @endif
+</div>
+
+{{-- ── Sync Log ──────────────────────────────────────────────────────────── --}}
+<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+        <h3 class="text-sm font-bold text-gray-900 dark:text-white">Recent Sync Logs</h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Last 10 sync attempts across all connected sites.</p>
+    </div>
+
+    @if($logs->isEmpty())
+    <div class="px-6 py-10 text-center">
+        <p class="text-sm text-gray-400 dark:text-gray-500">No sync attempts recorded yet.</p>
+    </div>
+    @else
+    <div class="overflow-x-auto">
+        <table class="w-full min-w-[500px]">
+            <thead class="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
+                <tr>
+                    <th class="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Site</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Status</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Orders</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Message</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Time</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50 dark:divide-gray-700/50">
+                @foreach($logs as $log)
+                @php
+                    $logBadge = match($log->status) {
+                        'success'   => 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+                        'failed'    => 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+                        'duplicate' => 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+                        default     => 'bg-gray-100 text-gray-600',
+                    };
+                @endphp
+                <tr class="hover:bg-gray-50/50 dark:hover:bg-gray-700/20 transition-colors">
+                    <td class="px-5 py-2.5 text-xs font-medium text-gray-900 dark:text-gray-200">{{ $log->site?->name ?? '—' }}</td>
+                    <td class="px-4 py-2.5">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold {{ $logBadge }}">{{ ucfirst($log->status) }}</span>
+                        @if($log->order)
+                            <a href="{{ route('admin.orders.show', $log->order) }}" class="ml-1 text-[10px] text-primary dark:text-blue-400 hover:underline">{{ $log->order->order_number }}</a>
+                        @endif
+                    </td>
+                    <td class="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400 font-mono">#{{ $log->source_order_id }}</td>
+                    <td class="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400 max-w-[200px] truncate">{{ $log->message }}</td>
+                    <td class="px-4 py-2.5 text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">{{ $log->created_at->diffForHumans() }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+    @endif
+</div>
+
+{{-- ══════════════════════════════ ADD / EDIT MODAL ══════════════════════════════ --}}
+<div x-show="showModal"
+     x-transition:enter="transition ease-out duration-200"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     x-transition:leave="transition ease-in duration-150"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0"
+     class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+     x-cloak>
+
+    {{-- Backdrop --}}
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="showModal = false"></div>
+
+    {{-- Panel --}}
+    <div class="relative bg-white dark:bg-gray-800 rounded-t-3xl sm:rounded-2xl shadow-2xl
+                w-full sm:max-w-lg max-h-[95vh] overflow-y-auto z-10">
+
+        {{-- Header --}}
+        <div class="sticky top-0 z-10 flex items-center justify-between px-6 py-4
+                    border-b border-gray-100 dark:border-gray-700
+                    bg-white dark:bg-gray-800 rounded-t-3xl sm:rounded-t-2xl">
+            <h3 class="text-base font-bold text-gray-900 dark:text-white"
+                x-text="editMode ? 'Edit Site' : 'Add New Site'"></h3>
+            <button @click="showModal = false"
+                class="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
-                <p class="text-sm text-textsecondary dark:text-gray-400">No sites connected yet.</p>
-                <p class="text-xs text-textsecondary dark:text-gray-500 mt-1">Add a site using the form on the left.</p>
-            </div>
-            @else
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="bg-gray-50 dark:bg-gray-700/50 border-b border-border dark:border-gray-700">
-                        <tr>
-                            <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Site</th>
-                            <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">API Key</th>
-                            <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                            <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Synced</th>
-                            <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Last Sync</th>
-                            <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-border dark:divide-gray-700">
-                        @foreach($sites as $site)
-                        <tr class="hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors" x-data="{ key: '{{ $site->api_key }}', masked: true }">
-                            <td class="px-5 py-3">
-                                <p class="font-medium text-textprimary dark:text-gray-100 text-xs">{{ $site->name }}</p>
-                                <a href="{{ $site->site_url }}" target="_blank" class="text-xs text-primary dark:text-blue-400 hover:underline truncate block max-w-[160px]">{{ $site->site_url }}</a>
-                            </td>
-                            <td class="px-4 py-3">
-                                <div class="flex items-center gap-1.5">
-                                    <code class="text-xs font-mono text-textsecondary dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-lg">
-                                        <span x-text="masked ? key.substring(0,8)+'••••••••••••••••' : key"></span>
-                                    </code>
-                                    <button type="button" @click="masked = !masked" class="text-textsecondary dark:text-gray-500 hover:text-textprimary dark:hover:text-gray-300 transition-colors">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                            <path x-show="masked" stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/>
-                                            <path x-show="masked" stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                            <path x-show="!masked" x-cloak stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"/>
-                                        </svg>
-                                    </button>
-                                    <button type="button"
-                                            @click="navigator.clipboard.writeText(key)"
-                                            class="text-textsecondary dark:text-gray-500 hover:text-primary dark:hover:text-blue-400 transition-colors"
-                                            title="Copy key">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                                        </svg>
-                                    </button>
-                                </div>
-                            </td>
-                            <td class="px-4 py-3">
-                                @if($site->is_active)
-                                    <span class="px-2 py-0.5 text-[10px] font-medium rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Active</span>
-                                @else
-                                    <span class="px-2 py-0.5 text-[10px] font-medium rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">Inactive</span>
-                                @endif
-                            </td>
-                            <td class="px-4 py-3 text-xs text-textsecondary dark:text-gray-400">{{ number_format($site->total_synced) }}</td>
-                            <td class="px-4 py-3 text-xs text-textsecondary dark:text-gray-400 whitespace-nowrap">
-                                {{ $site->last_sync_at ? $site->last_sync_at->diffForHumans() : 'Never' }}
-                            </td>
-                            <td class="px-4 py-3">
-                                <div class="flex items-center gap-2">
-                                    <button type="button"
-                                            @click="if(confirm('Regenerate API key for {{ addslashes($site->name) }}? The old key will stop working immediately.')) {
-                                                fetch('{{ route('admin.integrations.wordpress.regenerate', $site) }}', {
-                                                    method: 'POST',
-                                                    headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'application/json' }
-                                                }).then(r=>r.json()).then(d=>{ if(d.success) { key = d.api_key; masked = true; } });
-                                            }"
-                                            class="text-xs px-2 py-1 rounded-lg border border-border dark:border-gray-600 text-textsecondary dark:text-gray-400 hover:border-amber-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors whitespace-nowrap">
-                                        Regenerate
-                                    </button>
-                                    <form method="POST" action="{{ route('admin.integrations.wordpress.destroy', $site) }}"
-                                          onsubmit="return confirm('Delete {{ addslashes($site->name) }}? This will stop syncing orders from this site.')">
-                                        @csrf @method('DELETE')
-                                        <button type="submit" class="text-xs px-2 py-1 rounded-lg border border-red-200 dark:border-red-800 text-danger hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                                            Delete
-                                        </button>
-                                    </form>
-                                </div>
-                            </td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-            @endif
+            </button>
         </div>
 
-        {{-- Sync Logs --}}
-        <div class="bg-white dark:bg-gray-800 rounded-2xl border border-border dark:border-gray-700 shadow-sm overflow-hidden">
-            <div class="px-5 py-4 border-b border-border dark:border-gray-700">
-                <h3 class="font-heading font-semibold text-textprimary dark:text-gray-100">Recent Sync Logs</h3>
-                <p class="text-xs text-textsecondary dark:text-gray-400 mt-0.5">Last 50 sync attempts across all connected sites.</p>
+        {{-- Form --}}
+        <form @submit.prevent="submitForm()" class="p-6 space-y-5" enctype="multipart/form-data">
+
+            {{-- Site Name --}}
+            <div class="space-y-1.5">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Site Name <span class="text-red-500">*</span></label>
+                <input type="text" x-model="form.site_name" required placeholder="e.g. My Main Store"
+                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
+                           bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white placeholder-gray-400
+                           focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition">
             </div>
 
-            @if($logs->isEmpty())
-            <div class="px-5 py-10 text-center">
-                <p class="text-sm text-textsecondary dark:text-gray-400">No sync attempts recorded yet.</p>
+            {{-- Site URL --}}
+            <div class="space-y-1.5">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Website URL <span class="text-red-500">*</span></label>
+                <input type="url" x-model="form.site_url" required placeholder="https://yoursite.com"
+                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
+                           bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white placeholder-gray-400
+                           focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition">
+                <p class="text-xs text-gray-400">NB: WordPress Timezone must be Asia/Dhaka</p>
             </div>
-            @else
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="bg-gray-50 dark:bg-gray-700/50 border-b border-border dark:border-gray-700">
-                        <tr>
-                            <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Site</th>
-                            <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">WP Order</th>
-                            <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Result</th>
-                            <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Message</th>
-                            <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Time</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-border dark:divide-gray-700">
-                        @foreach($logs as $log)
-                        @php
-                            $logBg = match($log->status) {
-                                'success'   => 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-                                'failed'    => 'bg-red-100 text-danger dark:bg-red-900/30 dark:text-red-400',
-                                'duplicate' => 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-                            };
-                        @endphp
-                        <tr class="hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors">
-                            <td class="px-5 py-2.5 text-xs font-medium text-textprimary dark:text-gray-200">{{ $log->site?->name ?? '—' }}</td>
-                            <td class="px-4 py-2.5 text-xs font-mono text-textsecondary dark:text-gray-400">#{{ $log->source_order_id }}</td>
-                            <td class="px-4 py-2.5">
-                                <span class="px-2 py-0.5 text-[10px] font-medium rounded-full {{ $logBg }}">{{ ucfirst($log->status) }}</span>
-                                @if($log->order)
-                                    <a href="{{ route('admin.orders.show', $log->order) }}" class="ml-1 text-[10px] text-primary dark:text-blue-400 hover:underline">{{ $log->order->order_number }}</a>
-                                @endif
-                            </td>
-                            <td class="px-4 py-2.5 text-xs text-textsecondary dark:text-gray-400 max-w-[200px] truncate">{{ $log->message }}</td>
-                            <td class="px-4 py-2.5 text-xs text-textsecondary dark:text-gray-400 whitespace-nowrap">{{ $log->created_at->diffForHumans() }}</td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+
+            {{-- Type --}}
+            <div class="space-y-1.5">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Type <span class="text-red-500">*</span></label>
+                <select x-model="form.type"
+                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
+                           bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white
+                           focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition">
+                    <option value="wordpress">WordPress</option>
+                    <option value="woocommerce">WooCommerce</option>
+                    <option value="cartflow">CartFlow</option>
+                    <option value="landing_page">Landing Page</option>
+                </select>
             </div>
-            @endif
+
+            {{-- Consumer Key + Secret --}}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="space-y-1.5">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Consumer Key</label>
+                    <input type="text" x-model="form.consumer_key" placeholder="ck_xxxxxxxxxx"
+                        class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
+                               bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white placeholder-gray-400
+                               focus:outline-none focus:ring-2 focus:ring-primary/30 transition">
+                </div>
+                <div class="space-y-1.5">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Consumer Secret</label>
+                    <div class="relative">
+                        <input :type="showSecret ? 'text' : 'password'" x-model="form.consumer_secret" placeholder="cs_xxxxxxxxxx"
+                            class="w-full px-4 py-2.5 pr-10 rounded-xl border border-gray-200 dark:border-gray-600
+                                   bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white placeholder-gray-400
+                                   focus:outline-none focus:ring-2 focus:ring-primary/30 transition">
+                        <button type="button" @click="showSecret = !showSecret"
+                            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                            <svg x-show="!showSecret" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            <svg x-show="showSecret" x-cloak class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Mobile Number --}}
+            <div class="space-y-1.5">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Mobile Number</label>
+                <input type="text" x-model="form.mobile_number" placeholder="01XXXXXXXXX"
+                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
+                           bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white placeholder-gray-400
+                           focus:outline-none focus:ring-2 focus:ring-primary/30 transition">
+            </div>
+
+            {{-- Invoice Title --}}
+            <div class="space-y-1.5">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Title (For Invoice)</label>
+                <input type="text" x-model="form.invoice_title" placeholder="Your Store Name"
+                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
+                           bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white placeholder-gray-400
+                           focus:outline-none focus:ring-2 focus:ring-primary/30 transition">
+            </div>
+
+            {{-- Invoice Address --}}
+            <div class="space-y-1.5">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Address (For Invoice)</label>
+                <textarea x-model="form.invoice_address" rows="2" placeholder="Your business address"
+                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
+                           bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white placeholder-gray-400
+                           focus:outline-none focus:ring-2 focus:ring-primary/30 transition resize-none"></textarea>
+            </div>
+
+            {{-- Logo --}}
+            <div class="space-y-1.5">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Logo</label>
+                <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-600
+                                overflow-hidden flex items-center justify-center bg-gray-50 dark:bg-gray-700 flex-shrink-0">
+                        <img x-show="logoPreview" :src="logoPreview" class="w-full h-full object-contain">
+                        <svg x-show="!logoPreview" class="w-8 h-8 text-gray-300 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <label class="cursor-pointer inline-flex items-center gap-2 px-4 py-2.5 rounded-xl
+                                      border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700
+                                      text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 transition">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+                            </svg>
+                            Choose Logo
+                            <input type="file" accept="image/*" class="hidden" @change="handleLogo($event)">
+                        </label>
+                        <p class="text-xs text-gray-400 mt-1">PNG, JPG max 1MB</p>
+                    </div>
+                </div>
+            </div>
+
+        </form>
+
+        {{-- Footer --}}
+        <div class="sticky bottom-0 z-10 px-6 py-4 border-t border-gray-100 dark:border-gray-700
+                    bg-white dark:bg-gray-800 flex items-center justify-between">
+            <button type="button" @click="testModalConnection()"
+                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
+                       text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 011.06 0z"/>
+                </svg>
+                Test Connection
+            </button>
+            <div class="flex items-center gap-3">
+                <button type="button" @click="showModal = false"
+                    class="px-5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
+                           text-sm font-medium text-gray-700 dark:text-gray-300
+                           hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                    Cancel
+                </button>
+                <button type="button" @click="submitForm()" :disabled="submitting"
+                    class="px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold
+                           hover:bg-primary/90 active:scale-95 transition shadow-sm
+                           disabled:opacity-60 disabled:cursor-not-allowed">
+                    <span x-show="!submitting" x-text="editMode ? 'Update Site' : 'Add Site'"></span>
+                    <span x-show="submitting" x-cloak>Saving...</span>
+                </button>
+            </div>
         </div>
 
     </div>
 </div>
+
+</div>{{-- end x-data --}}
+
+{{-- Toast --}}
+<div id="wp-toast"
+     class="fixed bottom-5 right-5 z-[60] flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-lg text-sm font-medium text-white transition-all duration-300 opacity-0 translate-y-2 pointer-events-none"
+     style="background:#22c55e">
+    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+    </svg>
+    <span id="wp-toast-msg">Done</span>
+</div>
+
+@push('scripts')
+<script>
+function wpToast(message, type = 'success') {
+    const toast = document.getElementById('wp-toast');
+    const msg   = document.getElementById('wp-toast-msg');
+    if (!toast || !msg) return;
+    toast.style.background = type === 'success' ? '#22c55e' : '#ef4444';
+    msg.textContent = message;
+    toast.classList.remove('opacity-0', 'translate-y-2');
+    toast.classList.add('opacity-100', 'translate-y-0');
+    setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        toast.classList.remove('opacity-100', 'translate-y-0');
+    }, 3500);
+}
+
+async function syncOrders(siteId) {
+    const btn = document.getElementById('sync-orders-' + siteId);
+    if (!btn) return;
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.textContent = 'Syncing...';
+    try {
+        const res  = await fetch('/admin/integrations/wordpress/' + siteId + '/sync-orders', {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content }
+        });
+        const data = await res.json();
+        if (data.success) {
+            wpToast(data.synced + ' orders synced!', 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            wpToast(data.message || 'Sync failed', 'error');
+        }
+    } catch(e) {
+        wpToast('Network error', 'error');
+    } finally {
+        btn.disabled  = false;
+        btn.innerHTML = orig;
+    }
+}
+
+async function syncProducts(siteId) {
+    const res  = await fetch('/admin/integrations/wordpress/' + siteId + '/sync-products', {
+        method: 'POST',
+        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content }
+    });
+    const data = await res.json();
+    wpToast(data.message || 'Product sync coming soon.', 'success');
+}
+
+async function testConnection(siteId) {
+    wpToast('Testing connection...', 'success');
+    try {
+        const res  = await fetch('/admin/integrations/wordpress/' + siteId + '/test', {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content }
+        });
+        const data = await res.json();
+        if (data.connected) {
+            wpToast('Connected successfully!', 'success');
+        } else {
+            wpToast('Connection failed: ' + (data.message || 'Unknown error'), 'error');
+        }
+    } catch(e) {
+        wpToast('Network error', 'error');
+    }
+}
+
+async function toggleActive(siteId) {
+    const res  = await fetch('/admin/integrations/wordpress/' + siteId + '/toggle', {
+        method: 'PATCH',
+        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content }
+    });
+    const data = await res.json();
+    if (data.success) {
+        setTimeout(() => location.reload(), 300);
+    }
+}
+
+async function deleteSite(siteId, siteName) {
+    if (!confirm('Delete "' + siteName + '"? This cannot be undone.')) return;
+    const res  = await fetch('/admin/integrations/wordpress/' + siteId, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+            'Accept': 'application/json'
+        }
+    });
+    const data = await res.json();
+    if (data.success) {
+        wpToast('Site deleted', 'success');
+        setTimeout(() => location.reload(), 1000);
+    }
+}
+</script>
+@endpush
 
 @endsection

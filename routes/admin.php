@@ -157,10 +157,17 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::redirect('wordpress', '/admin/integrations/wordpress')->name('wordpress');
 
         // Integrations
-        Route::get('integrations/wordpress', [IntegrationController::class, 'wordpressIndex'])->name('integrations.wordpress');
-        Route::post('integrations/wordpress', [IntegrationController::class, 'wordpressStore'])->name('integrations.wordpress.store');
-        Route::delete('integrations/wordpress/{site}', [IntegrationController::class, 'wordpressDestroy'])->name('integrations.wordpress.destroy');
-        Route::post('integrations/wordpress/{site}/regenerate', [IntegrationController::class, 'regenerateKey'])->name('integrations.wordpress.regenerate');
+        Route::prefix('integrations/wordpress')->name('integrations.wordpress.')->group(function () {
+            Route::get('/',                    [IntegrationController::class, 'wordpressIndex'])->name('index');
+            Route::post('/',                   [IntegrationController::class, 'wordpressStore'])->name('store');
+            Route::put('/{site}',              [IntegrationController::class, 'wordpressUpdate'])->name('update');
+            Route::delete('/{site}',           [IntegrationController::class, 'wordpressDestroy'])->name('destroy');
+            Route::patch('/{site}/toggle',     [IntegrationController::class, 'toggleActive'])->name('toggle');
+            Route::post('/{site}/sync-orders', [IntegrationController::class, 'syncOrders'])->name('syncOrders');
+            Route::post('/{site}/sync-products',[IntegrationController::class, 'syncProducts'])->name('syncProducts');
+            Route::post('/{site}/test',        [IntegrationController::class, 'testConnection'])->name('test');
+            Route::post('/{site}/regenerate',  [IntegrationController::class, 'regenerateKey'])->name('regenerate');
+        });
     });
 
 });
