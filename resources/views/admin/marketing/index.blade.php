@@ -103,7 +103,7 @@ $platformConfig = [
                 {{ $activeCount === 5 ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' : 'bg-gray-100 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600' }}">
         <span class="w-2 h-2 rounded-full {{ $activeCount === 5 ? 'bg-green-500' : ($activeCount > 0 ? 'bg-yellow-400' : 'bg-gray-400') }}"></span>
         <span class="text-xs font-semibold {{ $activeCount === 5 ? 'text-green-700 dark:text-green-400' : 'text-gray-600 dark:text-gray-300' }}">
-            {{ $activeCount }} / 5 Active
+            All Active: {{ $activeCount }}/5
         </span>
     </div>
 </div>
@@ -112,12 +112,12 @@ $platformConfig = [
 <div class="flex items-center gap-4 px-5 py-4 rounded-2xl mb-6 border"
      style="background: linear-gradient(135deg, #eff6ff 0%, #eef2ff 100%); border-color: #c7d2fe;">
     <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center flex-shrink-0 shadow-sm">
-        <svg class="w-4.5 h-4.5 w-[18px] h-[18px] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+        <svg class="w-[18px] h-[18px] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/>
         </svg>
     </div>
     <p class="text-sm font-medium text-blue-700 dark:text-blue-300">
-        Active integrations inject automatically into every storefront page. Toggle ON/OFF without losing saved credentials.
+        Active integrations inject automatically into every storefront page
     </p>
 </div>
 
@@ -322,34 +322,34 @@ $platformConfig = [
                     </div>
                     @endif
 
-                </div>
+                    {{-- ── Card Footer ── --}}
+                    <div class="flex items-center justify-between pt-4
+                                border-t border-gray-100 dark:border-gray-700">
+                        <p class="text-xs text-gray-400 dark:text-gray-500 min-w-0">
+                            @if($px?->updated_at && $px?->pixel_id)
+                                Last saved: {{ $px->updated_at->diffForHumans() }}
+                            @else
+                                Not configured yet
+                            @endif
+                        </p>
+                        <button type="submit"
+                                :disabled="saving"
+                                class="inline-flex items-center gap-2 px-6 py-2.5
+                                       bg-primary hover:bg-primary/90 active:scale-95
+                                       text-white text-sm font-semibold rounded-xl
+                                       transition-all duration-150 shadow-sm
+                                       disabled:opacity-60 disabled:cursor-not-allowed flex-shrink-0">
+                            <svg x-show="saving" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <svg x-show="saved" x-cloak class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                            </svg>
+                            <span x-text="saved ? '✓ Saved!' : (saving ? 'Saving…' : 'Save Changes')"></span>
+                        </button>
+                    </div>
 
-                {{-- ── Form Footer ── --}}
-                <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/30 border-t border-gray-100 dark:border-gray-700
-                            flex items-center justify-between gap-4">
-                    <p class="text-xs text-gray-400 dark:text-gray-500 min-w-0">
-                        @if($px?->pixel_id && $px?->updated_at)
-                            Last saved: {{ $px->updated_at->diffForHumans() }}
-                        @else
-                            Not configured yet
-                        @endif
-                    </p>
-                    <button type="submit"
-                            :disabled="saving"
-                            class="inline-flex items-center gap-2 px-6 py-2.5
-                                   bg-primary hover:bg-primary/90 active:scale-95
-                                   text-white text-sm font-semibold rounded-xl
-                                   transition-all duration-150 shadow-sm
-                                   disabled:opacity-60 disabled:cursor-not-allowed flex-shrink-0">
-                        <svg x-show="saving" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <svg x-show="saved" x-cloak class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                        </svg>
-                        <span x-text="saved ? 'Saved!' : (saving ? 'Saving…' : 'Save Changes')"></span>
-                    </button>
                 </div>
             </form>
 
