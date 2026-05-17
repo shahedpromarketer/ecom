@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\Product;
 use App\Models\SyncLog;
 use App\Models\WordPressSite;
 use Illuminate\Http\Request;
@@ -113,107 +115,123 @@ class IntegrationController extends Controller
 
     public function syncOrders(WordPressSite $site)
     {
-        if (!$site->consumer_key || !$site->consumer_secret) {
-            return response()->json(['success' => false, 'message' => 'Consumer key/secret not configured.']);
-        }
-
-        $credentials = base64_encode("{$site->consumer_key}:{$site->consumer_secret}");
-        $apiUrl = rtrim($site->site_url, '/') . '/wp-json/wc/v3/orders?per_page=100&status=any';
-
         try {
-            $response = Http::withHeaders(['Authorization' => "Basic {$credentials}"])
-                ->timeout(30)
-                ->get($apiUrl);
-        } catch (\Throwable $e) {
-            return response()->json(['success' => false, 'message' => 'Connection error: ' . $e->getMessage()]);
-        }
+            $credentials = base64_encode($site->consumer_key . ':' . $site->consumer_secret);
 
-        if (!$response->successful()) {
-            return response()->json(['success' => false, 'message' => 'WooCommerce API error (HTTP ' . $response->status() . ')']);
-        }
-
-        $wcOrders = $response->json();
-        if (!is_array($wcOrders)) {
-            return response()->json(['success' => false, 'message' => 'Invalid API response.']);
-        }
-
-        $synced = 0;
-        $failed = 0;
-        $statusMap = [
-            'pending'    => 'pending',
-            'processing' => 'confirmed',
-            'completed'  => 'completed',
-            'cancelled'  => 'cancelled',
-            'on-hold'    => 'hold',
-            'refunded'   => 'returned',
-        ];
-
-        foreach ($wcOrders as $wcOrder) {
-            $sourceOrderId = (string) ($wcOrder['id'] ?? '');
-            if (!$sourceOrderId) {
-                continue;
-            }
-
-            if (SyncLog::where('site_id', $site->id)
-                       ->where('source_order_id', $sourceOrderId)
-                       ->where('status', 'success')
-                       ->exists()) {
-                continue;
-            }
-
-            DB::beginTransaction();
-            try {
-                $billing = $wcOrder['billing'] ?? [];
-                $name    = trim(($billing['first_name'] ?? '') . ' ' . ($billing['last_name'] ?? '')) ?: 'Unknown';
-                $phone   = $billing['phone'] ?? '';
-                $address = implode(', ', array_filter([$billing['address_1'] ?? '', $billing['address_2'] ?? '']));
-
-                $order = Order::create([
-                    'source_order_id'   => $sourceOrderId,
-                    'status'            => $statusMap[$wcOrder['status'] ?? ''] ?? 'pending',
-                    'shipping_name'     => $name,
-                    'shipping_phone'    => $phone,
-                    'shipping_address'  => $address,
-                    'shipping_area'     => $billing['state'] ?? '',
-                    'shipping_district' => $billing['city'] ?? '',
-                    'total'             => (float) ($wcOrder['total'] ?? 0),
-                    'subtotal'          => (float) ($wcOrder['total'] ?? 0),
-                    'payment_method'    => $wcOrder['payment_method'] ?? 'cod',
-                    'payment_status'    => ($wcOrder['status'] === 'completed') ? 'paid' : 'unpaid',
-                    'source'            => 'wordpress',
-                    'source_url'        => $site->site_url,
-                    'notes'             => "Auto-synced from {$site->name}",
+            $response = Http::timeout(30)
+                ->withoutVerifying()
+                ->withHeaders([
+                    'Authorization' => 'Basic ' . $credentials,
+                ])
+                ->get($site->site_url . '/wp-json/wc/v3/orders', [
+                    'per_page' => 100,
+                    'status'   => 'any',
+                    'orderby'  => 'date',
+                    'order'    => 'desc',
                 ]);
 
-                SyncLog::create([
-                    'site_id'         => $site->id,
-                    'order_id'        => $order->id,
-                    'source_order_id' => $sourceOrderId,
-                    'status'          => 'success',
-                    'message'         => "Synced from {$site->name}",
+            if ($response->failed()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'API Error: ' . $response->status() . ' - ' . $response->body()
                 ]);
-
-                DB::commit();
-                $synced++;
-            } catch (\Throwable $e) {
-                DB::rollBack();
-                SyncLog::create([
-                    'site_id'         => $site->id,
-                    'source_order_id' => $sourceOrderId,
-                    'status'          => 'failed',
-                    'message'         => $e->getMessage(),
-                ]);
-                $failed++;
             }
+
+            $orders = $response->json();
+            $synced = 0;
+            $failed = 0;
+
+            foreach ($orders as $wcOrder) {
+                try {
+                    $exists = Order::where('source_order_id', $wcOrder['id'])
+                        ->where('source', 'woocommerce')
+                        ->exists();
+
+                    if ($exists) continue;
+
+                    $billing = $wcOrder['billing'];
+                    $phone   = $billing['phone'] ?? '';
+
+                    $phone = preg_replace('/[^0-9]/', '', $phone);
+                    if (strlen($phone) > 11) {
+                        $phone = substr($phone, -11);
+                    }
+
+                    $order = Order::create([
+                        'order_number'      => 'CLT' . date('Ymd') . '-WC' . $wcOrder['id'],
+                        'status'            => 'pending',
+                        'shipping_name'     => trim($billing['first_name'] . ' ' . $billing['last_name']),
+                        'shipping_phone'    => $phone ?: '01000000000',
+                        'shipping_division' => $billing['state'] ?? 'Dhaka',
+                        'shipping_district' => $billing['city'] ?? 'Dhaka',
+                        'shipping_area'     => $billing['city'] ?? '',
+                        'shipping_address'  => $billing['address_1'] ?? '',
+                        'subtotal'          => $wcOrder['subtotal'] ?? $wcOrder['total'],
+                        'discount'          => $wcOrder['discount_total'] ?? 0,
+                        'shipping_charge'   => $wcOrder['shipping_total'] ?? 0,
+                        'total'             => $wcOrder['total'],
+                        'payment_method'    => 'cod',
+                        'payment_status'    => $wcOrder['payment_method'] === 'cod' ? 'unpaid' : 'paid',
+                        'source'            => 'woocommerce',
+                        'source_order_id'   => (string) $wcOrder['id'],
+                        'source_url'        => $site->site_url,
+                        'print_status'      => 'unprinted',
+                    ]);
+
+                    foreach ($wcOrder['line_items'] as $item) {
+                        $product = Product::where('name', 'like', '%' . $item['name'] . '%')
+                            ->orWhereHas('variants', fn($q) => $q->where('sku', $item['sku']))
+                            ->first();
+
+                        OrderItem::create([
+                            'order_id'     => $order->id,
+                            'product_id'   => $product?->id ?? null,
+                            'product_name' => $item['name'],
+                            'qty'          => $item['quantity'],
+                            'unit_price'   => $item['price'],
+                            'total'        => $item['total'],
+                        ]);
+                    }
+
+                    SyncLog::create([
+                        'site_id'         => $site->id,
+                        'order_id'        => $order->id,
+                        'source_order_id' => (string) $wcOrder['id'],
+                        'status'          => 'success',
+                        'message'         => 'Order synced successfully',
+                    ]);
+
+                    $synced++;
+
+                } catch (\Exception $e) {
+                    SyncLog::create([
+                        'site_id'         => $site->id,
+                        'source_order_id' => (string) ($wcOrder['id'] ?? ''),
+                        'status'          => 'failed',
+                        'message'         => $e->getMessage(),
+                    ]);
+                    $failed++;
+                }
+            }
+
+            $site->update([
+                'last_order_sync_at' => now(),
+                'total_synced'       => $site->total_synced + $synced,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'synced'  => $synced,
+                'failed'  => $failed,
+                'message' => "$synced orders synced, $failed failed"
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Connection error: ' . $e->getMessage()
+            ]);
         }
-
-        $site->update([
-            'last_order_sync_at' => now(),
-            'last_sync_at'       => now(),
-            'total_synced'       => $site->total_synced + $synced,
-        ]);
-
-        return response()->json(['success' => true, 'synced' => $synced, 'failed' => $failed]);
     }
 
     public function syncProducts(WordPressSite $site)
