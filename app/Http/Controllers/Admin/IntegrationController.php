@@ -208,7 +208,7 @@ class IntegrationController extends Controller
                         'site_id'         => $site->id,
                         'source_order_id' => (string) ($wcOrder['id'] ?? ''),
                         'status'          => 'failed',
-                        'message'         => $e->getMessage(),
+                        'message'         => substr($e->getMessage(), 0, 500),
                     ]);
                     $failed++;
                 }
