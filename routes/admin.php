@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\Admin\ApiTokenController;
 use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\BannerController;
@@ -152,6 +153,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Settings
         Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
         Route::post('settings', [SettingsController::class, 'update'])->name('settings.update');
+
+        // API Tokens
+        Route::get('settings/api-tokens', [ApiTokenController::class, 'index'])->name('settings.api-tokens');
+        Route::post('settings/api-tokens', [ApiTokenController::class, 'store'])->name('settings.api-tokens.store');
+        Route::delete('settings/api-tokens/{token}', [ApiTokenController::class, 'destroy'])->name('settings.api-tokens.destroy');
+        Route::patch('settings/api-tokens/{token}/toggle', [ApiTokenController::class, 'toggle'])->name('settings.api-tokens.toggle');
 
         // WordPress redirect shortcut
         Route::redirect('wordpress', '/admin/integrations/wordpress')->name('wordpress');
