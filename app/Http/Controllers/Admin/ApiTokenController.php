@@ -4,54 +4,38 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ApiToken;
-use Illuminate\Http\Request;
 
 class ApiTokenController extends Controller
 {
     public function index()
     {
-        $tokens = ApiToken::with('creator')->latest()->get();
+        $token = ApiToken::where('is_active', true)
+            ->where('created_by', auth()->id())
+            ->first();
 
-        return view('admin.settings.api-tokens', compact('tokens'));
+        if (!$token) {
+            $token = ApiToken::create([
+                'name'       => 'Clothonic Plugin Token',
+                'token'      => bin2hex(random_bytes(32)),
+                'is_active'  => true,
+                'created_by' => auth()->id(),
+            ]);
+        }
+
+        return view('admin.settings.api-tokens', compact('token'));
     }
 
-    public function store(Request $request)
+    public function regenerate()
     {
-        $request->validate([
-            'name'       => 'required|string|max:255',
-            'expires_at' => 'nullable|date|after:now',
-            'abilities'  => 'nullable|array',
+        ApiToken::where('created_by', auth()->id())->delete();
+
+        ApiToken::create([
+            'name'       => 'Clothonic Plugin Token',
+            'token'      => bin2hex(random_bytes(32)),
+            'is_active'  => true,
+            'created_by' => auth()->id(),
         ]);
-
-        $expiresAt = $request->filled('expires_at')
-            ? \Carbon\Carbon::parse($request->expires_at)->endOfDay()
-            : null;
-
-        $abilities = $request->input('abilities', ['orders:create', 'orders:read']);
-
-        $token = ApiToken::generate($request->name, $abilities, $expiresAt);
-
-        return response()->json([
-            'success'  => true,
-            'token'    => $token->plainToken,
-            'token_id' => $token->id,
-        ]);
-    }
-
-    public function destroy(ApiToken $token)
-    {
-        $token->delete();
 
         return response()->json(['success' => true]);
-    }
-
-    public function toggle(ApiToken $token)
-    {
-        $token->update(['is_active' => !$token->is_active]);
-
-        return response()->json([
-            'success'   => true,
-            'is_active' => $token->is_active,
-        ]);
     }
 }

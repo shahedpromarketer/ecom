@@ -154,11 +154,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
         Route::post('settings', [SettingsController::class, 'update'])->name('settings.update');
 
-        // API Tokens
+        // API Token
         Route::get('settings/api-tokens', [ApiTokenController::class, 'index'])->name('settings.api-tokens');
-        Route::post('settings/api-tokens', [ApiTokenController::class, 'store'])->name('settings.api-tokens.store');
-        Route::delete('settings/api-tokens/{token}', [ApiTokenController::class, 'destroy'])->name('settings.api-tokens.destroy');
-        Route::patch('settings/api-tokens/{token}/toggle', [ApiTokenController::class, 'toggle'])->name('settings.api-tokens.toggle');
+        Route::post('settings/api-tokens/regenerate', [ApiTokenController::class, 'regenerate'])->name('settings.api-tokens.regenerate');
 
         // WordPress redirect shortcut
         Route::redirect('wordpress', '/admin/integrations/wordpress')->name('wordpress');

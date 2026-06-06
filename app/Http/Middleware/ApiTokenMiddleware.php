@@ -19,9 +19,7 @@ class ApiTokenMiddleware
             return response()->json(['error' => 'Missing API token'], 401);
         }
 
-        $hashed = hash('sha256', $plain);
-
-        $apiToken = ApiToken::where('token', $hashed)
+        $apiToken = ApiToken::where('token', $plain)
             ->where('is_active', true)
             ->first();
 
