@@ -64,7 +64,7 @@
 </div>
 
 {{-- ── Filter Panel ─────────────────────────────────────────────────────────── --}}
-<div x-data="{ filterOpen: false }" class="mb-4">
+<div x-data="{ filterOpen: false, loading: false }" class="mb-4">
 
     <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden">
 
@@ -77,6 +77,10 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75"/>
                 </svg>
                 <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Filtering</span>
+                <svg x-show="loading" class="w-4 h-4 animate-spin text-primary" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
                 @if($hasFilters)
                     <span class="w-2 h-2 rounded-full bg-accent"></span>
                 @endif
@@ -98,13 +102,14 @@
              x-transition:leave-end="opacity-0 -translate-y-1"
              class="border-t border-gray-100 dark:border-gray-700">
 
-            <form method="GET" action="{{ route('admin.orders.index') }}" class="p-6 space-y-6">
+            <form method="GET" action="{{ route('admin.orders.index') }}" class="p-6 space-y-6"
+                  x-on:submit="loading = true">
 
                 {{-- ROW 1: Date Range Dropdowns --}}
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div class="space-y-1.5">
                         <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Order Created At</label>
-                        <select name="created_range"
+                        <select name="created_range" onchange="this.form.submit()"
                                 class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
                                        bg-primary text-white text-sm
                                        focus:outline-none focus:ring-2 focus:ring-primary/30">
@@ -121,7 +126,7 @@
                     </div>
                     <div class="space-y-1.5">
                         <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Courier Submitted At</label>
-                        <select name="courier_range"
+                        <select name="courier_range" onchange="this.form.submit()"
                                 class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
                                        bg-primary text-white text-sm
                                        focus:outline-none focus:ring-2 focus:ring-primary/30">
@@ -138,7 +143,7 @@
                             Status Added At
                             <span class="text-gray-400 font-normal normal-case ml-1">(Max 90 days)</span>
                         </label>
-                        <select name="status_range"
+                        <select name="status_range" onchange="this.form.submit()"
                                 class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
                                        bg-primary text-white text-sm
                                        focus:outline-none focus:ring-2 focus:ring-primary/30">
@@ -151,7 +156,7 @@
                     </div>
                     <div class="space-y-1.5">
                         <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Note Added At</label>
-                        <select name="note_range"
+                        <select name="note_range" onchange="this.form.submit()"
                                 class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
                                        bg-primary text-white text-sm
                                        focus:outline-none focus:ring-2 focus:ring-primary/30">
@@ -167,7 +172,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div class="space-y-1.5">
                         <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</label>
-                        <select name="status"
+                        <select name="status" onchange="this.form.submit()"
                                 class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
                                        bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white
                                        focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
@@ -198,7 +203,7 @@
                     </div>
                     <div class="space-y-1.5">
                         <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Order Source</label>
-                        <select name="source"
+                        <select name="source" onchange="this.form.submit()"
                                 class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
                                        bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white
                                        focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
@@ -212,6 +217,8 @@
                         <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Order Tag</label>
                         <input type="text" name="order_tag" value="{{ request('order_tag') }}"
                                placeholder="Search tag..."
+                               x-data="{ timer: null }"
+                               x-on:input="clearTimeout(timer); timer = setTimeout(() => $el.form.submit(), 800)"
                                class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
                                       bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white
                                       placeholder-gray-400 dark:placeholder-gray-500
@@ -219,7 +226,7 @@
                     </div>
                     <div class="space-y-1.5">
                         <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Courier</label>
-                        <select name="courier"
+                        <select name="courier" onchange="this.form.submit()"
                                 class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
                                        bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white
                                        focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
@@ -238,7 +245,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div class="space-y-1.5">
                         <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Courier Status</label>
-                        <select name="courier_status"
+                        <select name="courier_status" onchange="this.form.submit()"
                                 class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
                                        bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white
                                        focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
@@ -251,7 +258,7 @@
                     </div>
                     <div class="space-y-1.5">
                         <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Payment Status</label>
-                        <select name="payment_status"
+                        <select name="payment_status" onchange="this.form.submit()"
                                 class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
                                        bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white
                                        focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
@@ -264,7 +271,7 @@
                     </div>
                     <div class="space-y-1.5">
                         <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Print Status</label>
-                        <select name="print_status"
+                        <select name="print_status" onchange="this.form.submit()"
                                 class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
                                        bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white
                                        focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
@@ -278,6 +285,8 @@
                         <input type="text" name="district" value="{{ request('district') }}"
                                placeholder="Search district..."
                                list="districts-list"
+                               x-data="{ timer: null }"
+                               x-on:input="clearTimeout(timer); timer = setTimeout(() => $el.form.submit(), 800)"
                                class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
                                       bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white
                                       placeholder-gray-400 dark:placeholder-gray-500
@@ -294,7 +303,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div class="space-y-1.5">
                         <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Product Category</label>
-                        <select name="category"
+                        <select name="category" onchange="this.form.submit()"
                                 class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
                                        bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white
                                        focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
@@ -306,7 +315,7 @@
                     </div>
                     <div class="space-y-1.5">
                         <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">UTM Source</label>
-                        <select name="utm_source"
+                        <select name="utm_source" onchange="this.form.submit()"
                                 class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
                                        bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white
                                        focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
@@ -322,6 +331,8 @@
                         <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Amount Min (৳)</label>
                         <input type="number" name="amount_min" value="{{ request('amount_min') }}"
                                placeholder="0" min="0"
+                               x-data="{ timer: null }"
+                               x-on:input="clearTimeout(timer); timer = setTimeout(() => $el.form.submit(), 1000)"
                                class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
                                       bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white
                                       placeholder-gray-400 dark:placeholder-gray-500
@@ -331,6 +342,8 @@
                         <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Amount Max (৳)</label>
                         <input type="number" name="amount_max" value="{{ request('amount_max') }}"
                                placeholder="99999" min="0"
+                               x-data="{ timer: null }"
+                               x-on:input="clearTimeout(timer); timer = setTimeout(() => $el.form.submit(), 1000)"
                                class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
                                       bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white
                                       placeholder-gray-400 dark:placeholder-gray-500
@@ -343,12 +356,14 @@
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" name="cod_changed" value="1"
                                {{ request('cod_changed') ? 'checked' : '' }}
+                               onchange="this.form.submit()"
                                class="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary/30">
                         <span class="text-sm text-gray-600 dark:text-gray-400">COD Changed</span>
                     </label>
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" name="duplicates" value="1"
                                {{ request('duplicates') ? 'checked' : '' }}
+                               onchange="this.form.submit()"
                                class="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary/30">
                         <span class="text-sm text-gray-600 dark:text-gray-400">Duplicates Only</span>
                     </label>
@@ -362,12 +377,6 @@
                               hover:bg-gray-700 transition-colors">
                         ✕ Clear Filter
                     </a>
-                    <button type="submit"
-                            class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl
-                                   bg-primary text-white text-xs font-semibold
-                                   hover:bg-primary/90 transition-colors">
-                        Apply Filters
-                    </button>
                     <a href="{{ route('admin.orders.index', array_merge(request()->query(), ['view'=>'items'])) }}"
                        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl
                               bg-teal-600 text-white text-xs font-semibold hover:bg-teal-700 transition-colors">
