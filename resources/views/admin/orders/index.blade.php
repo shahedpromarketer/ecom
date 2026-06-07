@@ -510,23 +510,23 @@
         @forelse($orders as $sl => $order)
         <tr class="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
             data-order-id="{{ $order->id }}"
-            data-total="{{ $order->grand_total ?? 0 }}"
+            data-total="{{ $order->total ?? 0 }}"
             data-paid="{{ $order->paid_amount ?? 0 }}"
-            data-due="{{ ($order->grand_total ?? 0) - ($order->paid_amount ?? 0) }}">
+            data-due="{{ ($order->total ?? 0) - ($order->paid_amount ?? 0) }}">
 
             {{-- Status --}}
             <td class="px-3 py-3 align-top">
                 <a href="{{ route('admin.orders.show', $order->id) }}"
                     class="inline-block px-2 py-1 rounded-lg text-xs font-semibold
-                    @if($order->order_status == 'pending') bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400
-                    @elseif($order->order_status == 'confirmed') bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400
-                    @elseif($order->order_status == 'delivered' || $order->order_status == 'completed') bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400
-                    @elseif($order->order_status == 'cancelled' || $order->order_status == 'failed') bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400
-                    @elseif($order->order_status == 'processing') bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
-                    @elseif($order->order_status == 'hold') bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400
+                    @if($order->status == 'pending') bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400
+                    @elseif($order->status == 'confirmed') bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400
+                    @elseif($order->status == 'delivered' || $order->status == 'completed') bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400
+                    @elseif($order->status == 'cancelled' || $order->status == 'failed') bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400
+                    @elseif($order->status == 'processing') bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                    @elseif($order->status == 'hold') bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400
                     @else bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300
                     @endif">
-                    {{ ucfirst($order->order_status) }}
+                    {{ ucfirst($order->status) }}
                 </a>
                 <div class="text-xs text-gray-400 mt-1">sl: {{ $sl + 1 }}</div>
             </td>
@@ -550,8 +550,8 @@
             <td class="px-3 py-3 align-top text-center">
                 <button type="button" onclick="quickAddNote({{ $order->id }})"
                     class="w-6 h-6 flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 text-blue-500 rounded-lg hover:bg-blue-200 mx-auto text-xs">+</button>
-                @if($order->notes && $order->notes->count() > 0)
-                <span class="text-xs text-gray-400 mt-0.5 block">{{ $order->notes->count() }}</span>
+                @if($order->orderNotes && $order->orderNotes->count() > 0)
+                <span class="text-xs text-gray-400 mt-0.5 block">{{ $order->orderNotes->count() }}</span>
                 @endif
             </td>
 
@@ -582,14 +582,14 @@
             {{-- Name & Number --}}
             <td class="px-3 py-3 align-top">
                 <div class="flex items-center gap-1 mb-1">
-                    <span class="font-semibold text-gray-800 dark:text-white text-sm">{{ $order->customer->full_name ?? 'N/A' }}</span>
-                    <button type="button" onclick="copyText('{{ addslashes($order->customer->full_name ?? '') }}')" class="text-gray-400 hover:text-gray-600 text-xs">📋</button>
+                    <span class="font-semibold text-gray-800 dark:text-white text-sm">{{ $order->shipping_name ?? 'N/A' }}</span>
+                    <button type="button" onclick="copyText('{{ addslashes($order->shipping_name ?? '') }}')" class="text-gray-400 hover:text-gray-600 text-xs">📋</button>
                 </div>
                 <div class="flex items-center gap-1">
-                    <span class="bg-gray-900 dark:bg-gray-700 text-white text-xs px-2 py-0.5 rounded-lg font-mono">{{ $order->customer->primary_mobile ?? 'N/A' }}</span>
-                    <a href="https://wa.me/880{{ ltrim($order->customer->primary_mobile ?? '', '0') }}" target="_blank" class="w-6 h-6 flex items-center justify-center bg-green-500 text-white rounded-lg text-xs hover:bg-green-600">💬</a>
-                    <a href="tel:{{ $order->customer->primary_mobile ?? '' }}" class="w-6 h-6 flex items-center justify-center bg-blue-500 text-white rounded-lg text-xs hover:bg-blue-600">📞</a>
-                    <button type="button" onclick="copyText('{{ $order->customer->primary_mobile ?? '' }}')" class="w-6 h-6 flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-xs">📋</button>
+                    <span class="bg-gray-900 dark:bg-gray-700 text-white text-xs px-2 py-0.5 rounded-lg font-mono">{{ $order->shipping_phone ?? 'N/A' }}</span>
+                    <a href="https://wa.me/880{{ ltrim($order->shipping_phone ?? '', '0') }}" target="_blank" class="w-6 h-6 flex items-center justify-center bg-green-500 text-white rounded-lg text-xs hover:bg-green-600">💬</a>
+                    <a href="tel:{{ $order->shipping_phone ?? '' }}" class="w-6 h-6 flex items-center justify-center bg-blue-500 text-white rounded-lg text-xs hover:bg-blue-600">📞</a>
+                    <button type="button" onclick="copyText('{{ $order->shipping_phone ?? '' }}')" class="w-6 h-6 flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-xs">📋</button>
                 </div>
                 <div class="text-xs text-gray-400 mt-1">Source: {{ $order->source ?? 'Direct' }}</div>
             </td>
@@ -606,23 +606,23 @@
             {{-- Address --}}
             <td class="px-3 py-3 align-top">
                 <div class="flex items-start gap-1">
-                    <span class="text-xs text-gray-700 dark:text-gray-300 max-w-[150px]">{{ $order->customer->address ?? 'N/A' }}{{ ($order->customer->district ?? '') ? ', '.$order->customer->district : '' }}</span>
-                    <button type="button" onclick="copyText('{{ addslashes(($order->customer->address ?? '').(($order->customer->district ?? '') ? ', '.$order->customer->district : '')) }}')" class="text-gray-400 hover:text-gray-600 text-xs flex-shrink-0">📋</button>
+                    <span class="text-xs text-gray-700 dark:text-gray-300 max-w-[150px]">{{ $order->shipping_address ?? 'N/A' }}{{ $order->shipping_district ? ', '.$order->shipping_district : '' }}</span>
+                    <button type="button" onclick="copyText('{{ addslashes(($order->shipping_address ?? '').($order->shipping_district ? ', '.$order->shipping_district : '')) }}')" class="text-gray-400 hover:text-gray-600 text-xs flex-shrink-0">📋</button>
                 </div>
             </td>
 
             {{-- Courier --}}
             <td class="px-3 py-3 align-top text-xs">
                 @php
-                    $courierName = $order->courier->name ?? 'New';
-                    $customerTotal = $order->customer ? $order->customer->orders()->count() : 0;
-                    $customerSuccess = $order->customer ? $order->customer->orders()->whereIn('order_status',['delivered','completed'])->count() : 0;
-                    $customerFailed = $order->customer ? $order->customer->orders()->whereIn('order_status',['cancelled','failed','returned'])->count() : 0;
+                    $courierName = $order->shipment->courier_name ?? 'New';
+                    $customerTotal = \App\Models\Order::where('shipping_phone', $order->shipping_phone)->count();
+                    $customerSuccess = \App\Models\Order::where('shipping_phone', $order->shipping_phone)->whereIn('status',['delivered','completed'])->count();
+                    $customerFailed = \App\Models\Order::where('shipping_phone', $order->shipping_phone)->whereIn('status',['cancelled','failed','returned'])->count();
                     $percent = $customerTotal > 0 ? round(($customerSuccess/$customerTotal)*100) : 0;
                 @endphp
                 <div class="text-gray-600 dark:text-gray-400 mb-1">
                     To: {{ $customerTotal }} Co: {{ $customerSuccess }}
-                    <span class="px-1 py-0.5 rounded text-white text-xs {{ $order->courier_id ? 'bg-[#1B2A4A]' : 'bg-gray-400' }}">{{ $courierName }}</span>
+                    <span class="px-1 py-0.5 rounded text-white text-xs {{ $order->shipment ? 'bg-[#1B2A4A]' : 'bg-gray-400' }}">{{ $courierName }}</span>
                 </div>
                 <div class="w-24 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-1">
                     <div class="h-full rounded-full {{ $percent >= 70 ? 'bg-green-500' : ($percent >= 40 ? 'bg-yellow-500' : 'bg-red-500') }}"
@@ -635,10 +635,10 @@
 
             {{-- Summary --}}
             <td class="px-3 py-3 align-top text-xs">
-                <div class="text-gray-700 dark:text-gray-300">Total: <span class="font-bold">৳{{ number_format($order->grand_total ?? 0, 0) }}</span></div>
-                <div class="text-green-600">Less: <span class="font-bold">৳{{ number_format($order->discount_value ?? 0, 0) }}</span></div>
+                <div class="text-gray-700 dark:text-gray-300">Total: <span class="font-bold">৳{{ number_format($order->total ?? 0, 0) }}</span></div>
+                <div class="text-green-600">Less: <span class="font-bold">৳{{ number_format($order->discount ?? 0, 0) }}</span></div>
                 <div class="text-blue-600">Paid: <span class="font-bold">৳{{ number_format($order->paid_amount ?? 0, 0) }}</span></div>
-                <div class="text-red-500">Due: <span class="font-bold">৳{{ number_format(($order->grand_total ?? 0) - ($order->paid_amount ?? 0), 0) }}</span></div>
+                <div class="text-red-500">Due: <span class="font-bold">৳{{ number_format(($order->total ?? 0) - ($order->paid_amount ?? 0), 0) }}</span></div>
             </td>
 
             {{-- Employee --}}

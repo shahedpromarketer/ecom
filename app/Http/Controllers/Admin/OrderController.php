@@ -49,7 +49,7 @@ class OrderController extends Controller
         $perPage = in_array((int) $request->get('per_page', 10), [10, 25, 50, 100])
             ? (int) $request->get('per_page', 10) : 10;
 
-        $query = Order::with(['items.product.images', 'customer', 'assignedTo', 'notes', 'courier'])->latest();
+        $query = Order::with(['items.product.images', 'assignedTo', 'orderNotes', 'shipment'])->latest();
 
         // Status filter
         if ($request->filled('status')) {
