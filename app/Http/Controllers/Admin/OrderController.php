@@ -506,7 +506,7 @@ class OrderController extends Controller
             'alt_phone'         => $request->alternative_mobile,
             'email'             => $request->email,
             'shipping_address'  => $request->address,
-            'shipping_district' => $request->district,
+            'shipping_district' => $request->district ?? $order->shipping_district,
             'status'            => $request->order_status,
             'payment_method'    => $request->payment_method ?? $order->payment_method,
             'discount'          => $discountAmt,
