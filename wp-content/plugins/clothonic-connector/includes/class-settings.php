@@ -9,6 +9,27 @@ class Clothonic_Settings {
         add_action('admin_init',            [__CLASS__, 'register_settings']);
         add_action('admin_enqueue_scripts', [__CLASS__, 'enqueue_scripts']);
         add_action('wp_ajax_clothonic_test_connection', [__CLASS__, 'ajax_test_connection']);
+
+        // Auto-store CRM URL whenever the token is saved
+        add_action('update_option_clothonic_access_token', [__CLASS__, 'auto_set_crm_url'], 10, 2);
+        add_action('add_option_clothonic_access_token',    [__CLASS__, 'auto_set_crm_url_on_add'], 10, 2);
+    }
+
+    /**
+     * Fires when the token option is updated — store the CRM URL automatically.
+     */
+    public static function auto_set_crm_url($old_value, $new_value)
+    {
+        if (!empty($new_value)) {
+            update_option('clothonic_crm_url', Clothonic_API::CRM_URL);
+        }
+    }
+
+    public static function auto_set_crm_url_on_add($option, $value)
+    {
+        if (!empty($value)) {
+            update_option('clothonic_crm_url', Clothonic_API::CRM_URL);
+        }
     }
 
     public static function add_menu()
@@ -26,9 +47,6 @@ class Clothonic_Settings {
 
     public static function register_settings()
     {
-        register_setting('clothonic_options', 'clothonic_crm_url', [
-            'sanitize_callback' => 'esc_url_raw',
-        ]);
         register_setting('clothonic_options', 'clothonic_access_token', [
             'sanitize_callback' => 'sanitize_text_field',
         ]);
@@ -71,10 +89,8 @@ class Clothonic_Settings {
             wp_send_json_error(['message' => 'Unauthorized']);
         }
 
-        $token   = sanitize_text_field($_POST['token'] ?? '');
-        $crm_url = esc_url_raw($_POST['crm_url'] ?? '');
-
-        $result = Clothonic_API::test_connection($token, $crm_url);
+        $token  = sanitize_text_field($_POST['token'] ?? '');
+        $result = Clothonic_API::test_connection($token);
 
         if ($result['success']) {
             wp_send_json_success(['message' => $result['message']]);
@@ -85,7 +101,6 @@ class Clothonic_Settings {
 
     public static function render_page()
     {
-        $crm_url   = get_option('clothonic_crm_url', '');
         $token     = get_option('clothonic_access_token', '');
         $duplicate = get_option('clothonic_check_duplicate', '1');
         $hours     = get_option('clothonic_duplicate_hours', '24');
@@ -105,29 +120,16 @@ class Clothonic_Settings {
             <form method="post" action="options.php" id="clothonic-form">
                 <?php settings_fields('clothonic_options'); ?>
 
-                <!-- CONNECTION CARD -->
+                <!-- ACCESS TOKEN CARD -->
                 <div class="clothonic-card">
                     <div class="clothonic-card-header">
-                        <div class="clothonic-card-icon">🔗</div>
+                        <div class="clothonic-card-icon">🔑</div>
                         <div>
-                            <h3>CRM Connection</h3>
-                            <p>Enter your Clothonic CRM URL and Access Token</p>
+                            <h3>Access Token</h3>
+                            <p>Get this token from Clothonic CRM → Settings → API Token</p>
                         </div>
                     </div>
                     <div class="clothonic-card-body">
-
-                        <div class="clothonic-field">
-                            <label for="clothonic_crm_url">CRM URL *</label>
-                            <input type="url"
-                                   id="clothonic_crm_url"
-                                   name="clothonic_crm_url"
-                                   value="<?php echo esc_attr($crm_url); ?>"
-                                   placeholder="https://your-crm-domain.com"
-                                   class="clothonic-input">
-                            <span class="clothonic-help">
-                                Your Clothonic CRM domain (without trailing slash)
-                            </span>
-                        </div>
 
                         <div class="clothonic-field">
                             <label for="clothonic_token_input">Access Token *</label>

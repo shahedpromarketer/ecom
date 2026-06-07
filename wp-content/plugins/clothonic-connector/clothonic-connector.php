@@ -46,7 +46,7 @@ register_activation_hook(__FILE__, function () {
     require_once ABSPATH . 'wp-admin/includes/upgrade.php';
     dbDelta($sql);
 
-    add_option('clothonic_crm_url', '');
+    add_option('clothonic_crm_url', Clothonic_API::CRM_URL);
     add_option('clothonic_access_token', '');
     add_option('clothonic_check_duplicate', '1');
     add_option('clothonic_duplicate_hours', '24');

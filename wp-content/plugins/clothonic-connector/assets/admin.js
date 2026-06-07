@@ -27,16 +27,11 @@ jQuery(document).ready(function ($) {
     // Test connection
     window.testConnection = function () {
         var token   = $('input[name="clothonic_access_token"]').val().trim();
-        var crmUrl  = $('input[name="clothonic_crm_url"]').val().trim();
         var $status = $('#connection-status');
         var $btn    = $('#test-connection-btn');
 
         if (!token) {
             $status.attr('class', 'error').text('❌ Please enter an access token first');
-            return;
-        }
-        if (!crmUrl) {
-            $status.attr('class', 'error').text('❌ Please enter the CRM URL first');
             return;
         }
 
@@ -47,10 +42,9 @@ jQuery(document).ready(function ($) {
             url:  clothonic_ajax.ajax_url,
             type: 'POST',
             data: {
-                action:  'clothonic_test_connection',
-                token:   token,
-                crm_url: crmUrl,
-                nonce:   clothonic_ajax.nonce,
+                action: 'clothonic_test_connection',
+                token:  token,
+                nonce:  clothonic_ajax.nonce,
             },
             success: function (res) {
                 if (res.success) {

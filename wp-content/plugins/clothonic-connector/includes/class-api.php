@@ -3,20 +3,24 @@ if (!defined('ABSPATH')) exit;
 
 class Clothonic_API {
 
+    const CRM_URL = 'https://laravel.netpilotdigital.com';
+
+    private static function get_crm_url(): string
+    {
+        // Use stored URL if present (allows future override), fallback to constant
+        $stored = rtrim(get_option('clothonic_crm_url', ''), '/');
+        return $stored ?: self::CRM_URL;
+    }
+
     public static function send_order(array $data): array
     {
-        $token   = get_option('clothonic_access_token', '');
-        $crm_url = rtrim(get_option('clothonic_crm_url', ''), '/');
+        $token = get_option('clothonic_access_token', '');
 
         if (empty($token)) {
             return ['success' => false, 'message' => 'No access token configured'];
         }
 
-        if (empty($crm_url)) {
-            return ['success' => false, 'message' => 'No CRM URL configured'];
-        }
-
-        $endpoint = $crm_url . '/api/orders/receive';
+        $endpoint = self::get_crm_url() . '/api/orders/receive';
 
         $response = wp_remote_post($endpoint, [
             'timeout' => 30,
@@ -45,24 +49,17 @@ class Clothonic_API {
         ];
     }
 
-    public static function test_connection(string $token = '', string $crm_url = ''): array
+    public static function test_connection(string $token = ''): array
     {
         if (empty($token)) {
             $token = get_option('clothonic_access_token', '');
-        }
-        if (empty($crm_url)) {
-            $crm_url = rtrim(get_option('clothonic_crm_url', ''), '/');
         }
 
         if (empty($token)) {
             return ['success' => false, 'message' => 'Access token is empty'];
         }
 
-        if (empty($crm_url)) {
-            return ['success' => false, 'message' => 'CRM URL is empty'];
-        }
-
-        $endpoint = $crm_url . '/api/ping';
+        $endpoint = self::get_crm_url() . '/api/ping';
 
         $response = wp_remote_get($endpoint, [
             'timeout' => 10,
