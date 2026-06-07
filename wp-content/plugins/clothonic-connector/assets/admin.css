@@ -1,0 +1,362 @@
+/* Clothonic CRM Connector – Admin Styles */
+
+.clothonic-wrap {
+    max-width: 780px;
+    margin: 20px auto;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* ── Header ── */
+.clothonic-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 0 16px;
+    border-bottom: 2px solid #1B2A4A;
+    margin-bottom: 24px;
+}
+
+.clothonic-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.clothonic-logo-text {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1B2A4A;
+}
+
+.clothonic-badge {
+    background: #F59E0B;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.02em;
+}
+
+.clothonic-version {
+    color: #9CA3AF;
+    font-size: 12px;
+    margin: 0;
+}
+
+/* ── Card ── */
+.clothonic-card {
+    background: #fff;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+
+.clothonic-card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px 20px;
+    border-bottom: 1px solid #F3F4F6;
+    background: #FAFAFA;
+}
+
+.clothonic-card-icon {
+    font-size: 20px;
+    line-height: 1;
+    margin-top: 2px;
+}
+
+.clothonic-card-header h3 {
+    margin: 0 0 3px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1B2A4A;
+}
+
+.clothonic-card-header p {
+    margin: 0;
+    font-size: 12px;
+    color: #6B7280;
+}
+
+.clothonic-card-body {
+    padding: 20px;
+}
+
+/* ── Fields ── */
+.clothonic-field {
+    margin-bottom: 18px;
+}
+
+.clothonic-field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 6px;
+}
+
+.clothonic-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #D1D5DB;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #111827;
+    background: #fff;
+    box-sizing: border-box;
+    transition: border-color .15s, box-shadow .15s;
+}
+
+.clothonic-input:focus {
+    outline: none;
+    border-color: #1B2A4A;
+    box-shadow: 0 0 0 3px rgba(27,42,74,.10);
+}
+
+.clothonic-input-sm {
+    width: 90px;
+}
+
+.clothonic-input-group {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+}
+
+.clothonic-input-group .clothonic-input {
+    flex: 1;
+}
+
+.clothonic-btn-icon {
+    padding: 0 14px;
+    border: 1px solid #D1D5DB;
+    border-radius: 8px;
+    background: #F9FAFB;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background .15s, border-color .15s;
+    display: flex;
+    align-items: center;
+}
+
+.clothonic-btn-icon:hover {
+    background: #F3F4F6;
+    border-color: #9CA3AF;
+}
+
+.clothonic-help {
+    display: block;
+    font-size: 11px;
+    color: #9CA3AF;
+    margin-top: 5px;
+}
+
+.clothonic-help-inline {
+    font-size: 12px;
+    color: #6B7280;
+}
+
+/* ── Test connection row ── */
+.clothonic-test-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+#connection-status {
+    font-size: 13px;
+    font-weight: 500;
+}
+#connection-status.success { color: #10B981; }
+#connection-status.error   { color: #EF4444; }
+#connection-status.loading { color: #6B7280; }
+
+/* ── Buttons ── */
+.clothonic-btn {
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 1;
+}
+
+.clothonic-btn-primary {
+    background: #1B2A4A;
+    color: #fff;
+}
+.clothonic-btn-primary:hover { background: #243660; }
+
+.clothonic-btn-outline {
+    background: #fff;
+    color: #1B2A4A;
+    border: 1.5px solid #1B2A4A;
+}
+.clothonic-btn-outline:hover { background: #F8F9FC; }
+
+/* ── Toggle ── */
+.clothonic-toggle-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid #F3F4F6;
+    margin-bottom: 16px;
+}
+
+.clothonic-toggle-row strong {
+    display: block;
+    font-size: 14px;
+    color: #111827;
+    margin-bottom: 3px;
+}
+
+.clothonic-toggle-row p {
+    margin: 0;
+    font-size: 12px;
+    color: #6B7280;
+}
+
+.clothonic-toggle {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 26px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+.clothonic-toggle input { opacity: 0; width: 0; height: 0; }
+
+.clothonic-toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: #D1D5DB;
+    border-radius: 26px;
+    transition: .25s;
+}
+
+.clothonic-toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    left: 3px;
+    bottom: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: .25s;
+    box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+
+.clothonic-toggle input:checked + .clothonic-toggle-slider { background: #1B2A4A; }
+.clothonic-toggle input:checked + .clothonic-toggle-slider::before { transform: translateX(22px); }
+
+/* ── Hours row ── */
+.clothonic-hours-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* ── Info box ── */
+.clothonic-info-box {
+    background: #EFF6FF;
+    border: 1px solid #BFDBFE;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-top: 12px;
+}
+.clothonic-info-box strong {
+    font-size: 13px;
+    color: #1E40AF;
+    display: block;
+    margin-bottom: 6px;
+}
+.clothonic-info-box ul {
+    margin: 0 0 6px;
+    padding-left: 16px;
+}
+.clothonic-info-box li {
+    font-size: 12px;
+    color: #1E40AF;
+    margin-bottom: 3px;
+}
+.clothonic-info-box p {
+    margin: 0;
+    font-size: 12px;
+    color: #3B82F6;
+}
+
+/* ── Footer ── */
+.clothonic-footer {
+    padding: 8px 0 16px;
+}
+
+/* ── Sync log table ── */
+.clothonic-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.clothonic-table th {
+    text-align: left;
+    padding: 10px 12px;
+    background: #F9FAFB;
+    border-bottom: 1px solid #E5E7EB;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: #6B7280;
+}
+
+.clothonic-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #F3F4F6;
+    color: #374151;
+    vertical-align: middle;
+}
+
+.clothonic-table tr:last-child td { border-bottom: none; }
+
+.clothonic-table a {
+    color: #1B2A4A;
+    text-decoration: none;
+    font-weight: 600;
+}
+.clothonic-table a:hover { text-decoration: underline; }
+
+/* ── Status badges ── */
+.clothonic-status {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .02em;
+}
+.clothonic-status-success { background: #D1FAE5; color: #065F46; }
+.clothonic-status-failed  { background: #FEE2E2; color: #991B1B; }
+.clothonic-status-pending { background: #FEF3C7; color: #92400E; }
+
+.clothonic-empty {
+    text-align: center;
+    color: #9CA3AF;
+    font-size: 13px;
+    padding: 24px 0;
+    margin: 0;
+}

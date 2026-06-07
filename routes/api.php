@@ -6,6 +6,14 @@ use Illuminate\Support\Facades\Route;
 
 // WordPress plugin order sync (API token auth)
 Route::middleware('api.token')->group(function () {
+    Route::get('/ping', function () {
+        return response()->json([
+            'success' => true,
+            'message' => 'Connected to Clothonic CRM',
+            'version' => '1.0.0',
+        ]);
+    })->name('api.ping');
+
     Route::post('/orders/receive', [OrderReceiveController::class, 'store'])
         ->name('api.orders.receive');
     Route::get('/orders', [OrderReceiveController::class, 'index'])
