@@ -18,9 +18,10 @@ Alpine.store('theme', {
     },
 });
 
-// ─── Sidebar (mobile toggle only) ─────────────────────────────────────────────
+// ─── Sidebar ──────────────────────────────────────────────────────────────────
 Alpine.data('sidebar', () => ({
     mobileOpen: false,
+    collapsed: localStorage.getItem('sidebarCollapsed') === 'true',
 
     toggle() {
         this.mobileOpen = !this.mobileOpen;
@@ -28,6 +29,11 @@ Alpine.data('sidebar', () => ({
 
     closeMobile() {
         this.mobileOpen = false;
+    },
+
+    collapseToggle() {
+        this.collapsed = !this.collapsed;
+        localStorage.setItem('sidebarCollapsed', this.collapsed);
     },
 }));
 

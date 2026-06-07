@@ -7,14 +7,17 @@ use Illuminate\Database\Eloquent\Model;
 class Order extends Model
 {
     protected $fillable = [
-        'user_id', 'order_number', 'status', 'subtotal', 'discount',
-        'shipping_charge', 'total', 'payment_method', 'payment_status',
-        'coupon_id', 'shipping_name', 'shipping_phone', 'shipping_division',
-        'shipping_district', 'shipping_area', 'shipping_address', 'notes',
-        'source', 'source_url', 'source_order_id',
+        'user_id', 'order_number', 'status', 'subtotal', 'discount', 'discount_type',
+        'shipping_charge', 'courier_charge', 'total', 'paid_amount',
+        'payment_method', 'payment_status',
+        'coupon_id', 'shipping_name', 'shipping_phone', 'alt_phone', 'email',
+        'shipping_division', 'shipping_district', 'shipping_area', 'shipping_address',
+        'notes', 'courier_note', 'packing_note',
+        'source', 'source_url', 'source_order_id', 'source_website',
         'utm_source', 'utm_medium', 'utm_campaign',
-        'order_tag', 'print_status', 'hold_reason',
+        'order_tag', 'customer_tag', 'print_status', 'hold_reason',
         'assigned_to', 'cod_changed', 'is_duplicate',
+        'reference_no', 'skip_followup', 'user_ip',
     ];
 
     protected $casts = [
@@ -23,9 +26,12 @@ class Order extends Model
         'subtotal'       => 'decimal:2',
         'discount'       => 'decimal:2',
         'shipping_charge'=> 'decimal:2',
+        'courier_charge' => 'decimal:2',
         'total'          => 'decimal:2',
+        'paid_amount'    => 'decimal:2',
         'cod_changed'    => 'boolean',
         'is_duplicate'   => 'boolean',
+        'skip_followup'  => 'boolean',
     ];
 
     protected static function boot()
@@ -72,6 +78,18 @@ class Order extends Model
     public function orderReturn()
     {
         return $this->hasOne(OrderReturn::class, 'order_id');
+    }
+
+    public function notes()
+    {
+        return $this->hasMany(OrderNote::class)->latest();
+    }
+
+    public function activityLogs()
+    {
+        return $this->hasMany(ActivityLog::class, 'subject_id')
+            ->where('subject_type', static::class)
+            ->latest();
     }
 
     public function scopeByStatus($query, string $status)

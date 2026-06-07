@@ -10,6 +10,25 @@
     <script>if(localStorage.getItem('adminTheme')==='dark')document.documentElement.classList.add('dark');</script>
     @vite(['resources/css/admin.css'])
     @stack('styles')
+    <style>
+        .nav-collapsed .sidebar-section-label { display: none !important; }
+        .nav-collapsed > div > span { display: none !important; }
+        .nav-collapsed a span.truncate,
+        .nav-collapsed button span.truncate { display: none !important; }
+        .nav-collapsed a, .nav-collapsed > a {
+            justify-content: center !important;
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+            margin-left: 0.25rem;
+            margin-right: 0.25rem;
+            border-left: 0 !important;
+        }
+        .nav-collapsed a svg { flex-shrink: 0; }
+        .nav-collapsed div[x-data] button { justify-content: center; padding-left: 0.5rem; padding-right: 0.5rem; }
+        .nav-collapsed div[x-data] a { justify-content: center !important; padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+        .nav-collapsed div[x-data] { display: none !important; }
+        [x-cloak] { display: none !important; }
+    </style>
 </head>
 <body class="font-body bg-gray-50 dark:bg-gray-900 transition-colors duration-200" x-data="sidebar">
 
@@ -28,35 +47,55 @@
 
 {{-- ══════════════════════════ SIDEBAR ══════════════════════════ --}}
 <aside id="admin-sidebar"
-       class="fixed inset-y-0 left-0 z-50 w-64 flex flex-col
+       class="fixed inset-y-0 left-0 z-50 flex flex-col
               bg-[#1B2A4A] border-r border-white/5
               -translate-x-full lg:translate-x-0
-              transition-transform duration-300 ease-in-out"
-       :class="{ 'translate-x-0': mobileOpen }">
+              transition-all duration-300 ease-in-out"
+       :class="{ 'translate-x-0': mobileOpen, 'w-16': collapsed, 'w-64': !collapsed }">
 
     {{-- Logo --}}
-    <div class="flex items-center gap-2 h-16 px-5 border-b border-white/10 flex-shrink-0">
-        <span class="font-heading text-xl font-bold text-white whitespace-nowrap">Clothonic</span>
-        <span class="text-xs bg-accent text-white px-1.5 py-0.5 rounded font-medium flex-shrink-0">Admin</span>
+    <div class="flex items-center h-16 px-3 border-b border-white/10 flex-shrink-0 overflow-hidden"
+         :class="collapsed ? 'justify-center' : 'gap-2 px-5 justify-between'">
+        <div class="flex items-center gap-2 overflow-hidden" x-show="!collapsed">
+            <span class="font-heading text-xl font-bold text-white whitespace-nowrap">Clothonic</span>
+            <span class="text-xs bg-accent text-white px-1.5 py-0.5 rounded font-medium flex-shrink-0">Admin</span>
+        </div>
+        <button @click="collapseToggle()" class="hidden lg:flex w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 items-center justify-center text-white/70 hover:text-white transition-colors flex-shrink-0" title="Toggle sidebar">
+            <svg class="w-4 h-4 transition-transform duration-300" :class="collapsed ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 9l-3 3m0 0l3 3m-3-3h7.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+        </button>
+        <div x-show="collapsed" class="hidden lg:block">
+            <button @click="collapseToggle()" class="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/70 hover:text-white transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/>
+                </svg>
+            </button>
+        </div>
     </div>
 
     {{-- Navigation --}}
-    <nav id="sidebar" class="flex-1 overflow-y-auto overflow-x-hidden py-4">
+    <nav id="sidebar" class="flex-1 overflow-y-auto overflow-x-hidden py-4" :class="{'nav-collapsed': collapsed}">
 
         @php
             $navItem = fn(string $route) =>
                 request()->routeIs($route)
                     ? 'bg-white/10 text-white border-l-[3px] border-accent pl-[13px]'
                     : 'text-white/70 hover:bg-white/10 hover:text-white pl-4';
+            $navItemCollapsed = fn(string $route) =>
+                request()->routeIs($route)
+                    ? 'bg-white/10 text-white'
+                    : 'text-white/70 hover:bg-white/10 hover:text-white';
         @endphp
 
         {{-- MAIN --}}
         <div class="px-4 mb-1 mt-1">
-            <span class="text-white/30 text-xs font-semibold uppercase tracking-widest">Main</span>
+            <span class="text-white/30 text-xs font-semibold uppercase tracking-widest sidebar-section-label">Main</span>
         </div>
 
         <a href="{{ route('admin.dashboard') }}"
-           class="flex items-center gap-3 py-3 pr-4 text-sm font-medium transition-colors duration-150 {{ $navItem('admin.dashboard') }}">
+           class="flex items-center gap-3 py-3 pr-4 text-sm font-medium transition-colors duration-150 {{ $navItem('admin.dashboard') }}"
+           title="Dashboard">
             <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/>
             </svg>
@@ -405,11 +444,11 @@
 
     {{-- Sidebar footer --}}
     <div class="flex-shrink-0 border-t border-white/10 p-3">
-        <div class="flex items-center gap-3 px-2">
-            <div class="w-8 h-8 bg-accent rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs font-bold">
+        <div class="flex items-center gap-3 px-2" :class="collapsed ? 'justify-center' : ''">
+            <div class="w-8 h-8 bg-accent rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs font-bold" :title="collapsed ? '{{ auth()->user()->name ?? 'Admin' }}' : ''">
                 {{ substr(auth()->user()->name ?? 'A', 0, 1) }}
             </div>
-            <div class="min-w-0">
+            <div class="min-w-0" x-show="!collapsed">
                 <p class="text-white text-xs font-medium truncate">{{ auth()->user()->name ?? 'Admin' }}</p>
                 <p class="text-white/40 text-xs truncate">Administrator</p>
             </div>
@@ -419,7 +458,8 @@
 </aside>
 
 {{-- ══════════════════════════ MAIN ══════════════════════════ --}}
-<div class="flex flex-col min-h-screen lg:ml-64">
+<div class="flex flex-col min-h-screen transition-all duration-300"
+     :class="collapsed ? 'lg:ml-16' : 'lg:ml-64'">
 
     {{-- Top Header --}}
     <header class="sticky top-0 z-30

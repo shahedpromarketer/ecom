@@ -5,11 +5,16 @@ use Illuminate\Database\Eloquent\Model;
 class ActivityLog extends Model
 {
     protected $fillable = [
-        'user_id', 'action', 'subject_type', 'subject_id',
-        'description', 'properties', 'ip_address', 'user_agent',
+        'user_id', 'action', 'action_performed', 'subject_type', 'subject_id',
+        'description', 'properties', 'old_data', 'updated_data',
+        'ip_address', 'user_agent',
     ];
 
-    protected $casts = ['properties' => 'array'];
+    protected $casts = [
+        'properties'   => 'array',
+        'old_data'     => 'array',
+        'updated_data' => 'array',
+    ];
 
     public function user()
     {
@@ -21,18 +26,27 @@ class ActivityLog extends Model
         return $query->where('subject_type', $type)->where('subject_id', $id);
     }
 
-    public static function log(string $action, $subject, string $description, array $properties = []): void
-    {
+    public static function log(
+        string $action,
+        $subject,
+        string $description,
+        array $properties = [],
+        array $oldData = [],
+        array $updatedData = []
+    ): void {
         try {
             static::create([
-                'user_id'      => auth()->id(),
-                'action'       => $action,
-                'subject_type' => get_class($subject),
-                'subject_id'   => $subject->id,
-                'description'  => $description,
-                'properties'   => $properties,
-                'ip_address'   => request()->ip(),
-                'user_agent'   => request()->userAgent(),
+                'user_id'          => auth()->id(),
+                'action'           => $action,
+                'action_performed' => $action,
+                'subject_type'     => get_class($subject),
+                'subject_id'       => $subject->id,
+                'description'      => $description,
+                'properties'       => $properties,
+                'old_data'         => $oldData ?: null,
+                'updated_data'     => $updatedData ?: null,
+                'ip_address'       => request()->ip(),
+                'user_agent'       => request()->userAgent(),
             ]);
         } catch (\Exception $e) {
             \Log::error('ActivityLog failed: ' . $e->getMessage());

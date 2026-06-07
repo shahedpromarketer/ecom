@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\InvoiceController;
 use App\Http\Controllers\Admin\InvoiceSetupController;
 use App\Http\Controllers\Admin\MarketingController;
 use App\Http\Controllers\Admin\OrderController;
+use App\Http\Controllers\Admin\OrderNoteController;
 use App\Http\Controllers\Admin\PaymentsController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ReportController;
@@ -66,13 +67,20 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('orders/export-csv', [OrderController::class, 'exportCsv'])->name('orders.exportCsv');
         Route::get('orders/bulk-print', [OrderController::class, 'bulkPrint'])->name('orders.bulkPrint');
 
+        Route::patch('orders/{order}', [OrderController::class, 'update'])->name('orders.update');
         Route::patch('orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
+        Route::post('orders/{order}/items', [OrderController::class, 'addItem'])->name('orders.addItem');
+        Route::delete('orders/items/{item}', [OrderController::class, 'removeItem'])->name('orders.removeItem');
         Route::patch('orders/{order}/note', [OrderController::class, 'addNote'])->name('orders.addNote');
         Route::post('orders/{order}/notes', [OrderController::class, 'addNote'])->name('orders.notes.add');
         Route::delete('orders/notes/{note}', [OrderController::class, 'deleteNote'])->name('orders.deleteNote');
         Route::post('orders/{order}/shipment', [OrderController::class, 'createShipment'])->name('orders.createShipment');
         Route::post('orders/{order}/submit-courier', [OrderController::class, 'submitCourier'])->name('orders.submitCourier');
         Route::post('orders/{order}/return', [ReturnController::class, 'store'])->name('returns.store');
+        Route::get('orders/{id}/products-search', [OrderController::class, 'productSearch'])->name('orders.productSearch');
+        Route::post('orders/{id}/notes', [OrderNoteController::class, 'store'])->name('orders.notes.store');
+        Route::delete('orders/{id}/notes/{noteId}', [OrderNoteController::class, 'destroy'])->name('orders.notes.destroy');
+        Route::post('orders/{id}/customer-notes', [OrderNoteController::class, 'storeCustomer'])->name('orders.customerNotes.store');
         Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
 

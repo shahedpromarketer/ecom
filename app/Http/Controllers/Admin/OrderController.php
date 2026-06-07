@@ -284,11 +284,14 @@ class OrderController extends Controller
     {
         $order->load([
             'items.product.images',
+            'items.product.variants',
             'items.variant',
             'user',
             'coupon',
             'shipment',
             'orderNotes.user',
+            'notes.user',
+            'activityLogs.user',
             'orderReturn',
             'assignedEmployee',
         ]);
@@ -298,7 +301,25 @@ class OrderController extends Controller
         $currentStep    = array_search($order->status, $statusSteps);
         if ($currentStep === false) $currentStep = -1;
 
-        return view('admin.orders.show', compact('order', 'activeCouriers', 'statusSteps', 'currentStep'));
+        $admins    = \App\Models\User::orderBy('name')->get();
+        $districts = [
+            'Bagerhat','Bandarban','Barguna','Barishal','Bhola','Bogura','Brahmanbaria',
+            'Chandpur','Chapai Nawabganj','Chattogram','Chuadanga','Cox\'s Bazar','Cumilla',
+            'Dhaka','Dinajpur','Faridpur','Feni','Gaibandha','Gazipur','Gopalganj',
+            'Habiganj','Jamalpur','Jashore','Jhalokati','Jhenaidah','Joypurhat',
+            'Khagrachhari','Khulna','Kishoreganj','Kurigram','Kushtia','Lakshmipur',
+            'Lalmonirhat','Madaripur','Magura','Manikganj','Meherpur','Moulvibazar',
+            'Munshiganj','Mymensingh','Naogaon','Narail','Narayanganj','Narsingdi',
+            'Natore','Netrokona','Nilphamari','Noakhali','Pabna','Panchagarh',
+            'Patuakhali','Pirojpur','Rajbari','Rajshahi','Rangamati','Rangpur',
+            'Satkhira','Shariatpur','Sherpur','Sirajganj','Sunamganj','Sylhet',
+            'Tangail','Thakurgaon',
+        ];
+
+        return view('admin.orders.show', compact(
+            'order', 'activeCouriers', 'statusSteps', 'currentStep',
+            'admins', 'districts'
+        ));
     }
 
     public function updateStatus(Request $request, Order $order)
@@ -318,6 +339,163 @@ class OrderController extends Controller
         );
 
         return back()->with('success', 'Status updated to ' . ucwords(str_replace('_', ' ', $request->status)));
+    }
+
+    public function addItem(Request $request, Order $order)
+    {
+        $request->validate([
+            'product_id'   => 'required|exists:products,id',
+            'product_name' => 'required|string|max:255',
+            'qty'          => 'required|integer|min:1',
+            'unit_price'   => 'required|numeric|min:0',
+            'total'        => 'required|numeric|min:0',
+        ]);
+
+        OrderItem::create([
+            'order_id'     => $order->id,
+            'product_id'   => $request->product_id,
+            'variant_id'   => $request->variant_id ?? null,
+            'product_name' => $request->product_name,
+            'qty'          => $request->qty,
+            'unit_price'   => $request->unit_price,
+            'total'        => $request->total,
+        ]);
+
+        $newSubtotal = $order->items()->sum('total');
+        $order->update(['subtotal' => $newSubtotal, 'total' => $newSubtotal - $order->discount + $order->shipping_charge]);
+
+        return response()->json(['success' => true]);
+    }
+
+    public function removeItem(OrderItem $item)
+    {
+        $order = $item->order;
+        $item->delete();
+        $newSubtotal = $order->items()->sum('total');
+        $order->update(['subtotal' => $newSubtotal, 'total' => $newSubtotal - $order->discount + $order->shipping_charge]);
+
+        return response()->json(['success' => true]);
+    }
+
+    public function update(Request $request, Order $order)
+    {
+        $request->validate([
+            'full_name'         => 'required|string|max:255',
+            'primary_mobile'    => 'required|string|max:20',
+            'alternative_mobile'=> 'nullable|string|max:20',
+            'email'             => 'nullable|email|max:255',
+            'address'           => 'nullable|string|max:500',
+            'district'          => 'nullable|string|max:100',
+            'order_status'      => 'required|in:' . implode(',', self::ALL_STATUSES),
+            'payment_method'    => 'nullable|string|max:50',
+            'discount_value'    => 'nullable|numeric|min:0',
+            'discount_type'     => 'nullable|in:fixed,percent',
+            'shipping_charge'   => 'nullable|numeric|min:0',
+            'paid_amount'       => 'nullable|numeric|min:0',
+            'courier_charge'    => 'nullable|numeric|min:0',
+            'courier_note'      => 'nullable|string|max:500',
+            'packing_note'      => 'nullable|string|max:500',
+            'order_tag'         => 'nullable|string|max:50',
+            'customer_tag'      => 'nullable|string|max:50',
+            'assigned_to'       => 'nullable|exists:users,id',
+            'reference_no'      => 'nullable|string|max:100',
+            'source_website'    => 'nullable|string|max:255',
+            'skip_followup'     => 'nullable|boolean',
+            'items'             => 'nullable|array',
+        ]);
+
+        $oldData = $order->toArray();
+
+        // Recalculate totals
+        $subtotal      = (float) ($request->subtotal ?? $order->subtotal);
+        $discountType  = $request->discount_type ?? 'fixed';
+        $discountVal   = (float) ($request->discount_value ?? 0);
+        $discountAmt   = $discountType === 'percent'
+            ? round($subtotal * $discountVal / 100, 2)
+            : $discountVal;
+        $shipping      = (float) ($request->shipping_charge ?? $order->shipping_charge);
+        $grandTotal    = max(0, $subtotal - $discountAmt + $shipping);
+        $paidAmount    = (float) ($request->paid_amount ?? $order->paid_amount ?? 0);
+
+        // Update order items if submitted
+        if ($request->has('items') && is_array($request->items)) {
+            foreach ($request->items as $itemData) {
+                if (!empty($itemData['id'])) {
+                    $item = OrderItem::find($itemData['id']);
+                    if ($item && $item->order_id === $order->id) {
+                        $qty   = (int) ($itemData['quantity'] ?? $item->qty);
+                        $price = (float) ($itemData['unit_price'] ?? $item->unit_price);
+                        $disc  = (float) ($itemData['discount'] ?? 0);
+                        $item->update([
+                            'qty'          => $qty,
+                            'unit_price'   => $price,
+                            'discount'     => $disc,
+                            'total'        => ($qty * $price) - $disc,
+                            'variant_info' => $itemData['variant'] ?? $item->variant_info,
+                        ]);
+                    }
+                } elseif (!empty($itemData['product_id'])) {
+                    $qty   = (int) ($itemData['quantity'] ?? 1);
+                    $price = (float) ($itemData['unit_price'] ?? 0);
+                    $disc  = (float) ($itemData['discount'] ?? 0);
+                    $product = Product::find($itemData['product_id']);
+                    OrderItem::create([
+                        'order_id'     => $order->id,
+                        'product_id'   => $itemData['product_id'],
+                        'product_name' => $product?->name ?? 'Product',
+                        'variant_info' => $itemData['variant'] ?? null,
+                        'qty'          => $qty,
+                        'unit_price'   => $price,
+                        'discount'     => $disc,
+                        'total'        => ($qty * $price) - $disc,
+                    ]);
+                }
+            }
+            $subtotal = $order->items()->sum('total');
+            $discountAmt = $discountType === 'percent'
+                ? round($subtotal * $discountVal / 100, 2)
+                : $discountVal;
+            $grandTotal = max(0, $subtotal - $discountAmt + $shipping);
+        }
+
+        $order->update([
+            'shipping_name'     => $request->full_name,
+            'shipping_phone'    => $request->primary_mobile,
+            'alt_phone'         => $request->alternative_mobile,
+            'email'             => $request->email,
+            'shipping_address'  => $request->address,
+            'shipping_district' => $request->district,
+            'status'            => $request->order_status,
+            'payment_method'    => $request->payment_method ?? $order->payment_method,
+            'discount'          => $discountAmt,
+            'discount_type'     => $discountType,
+            'shipping_charge'   => $shipping,
+            'subtotal'          => $subtotal,
+            'total'             => $grandTotal,
+            'paid_amount'       => $paidAmount,
+            'courier_charge'    => (float) ($request->courier_charge ?? 0),
+            'courier_note'      => $request->courier_note,
+            'packing_note'      => $request->packing_note,
+            'order_tag'         => $request->order_tag,
+            'customer_tag'      => $request->customer_tag,
+            'assigned_to'       => $request->assigned_to,
+            'reference_no'      => $request->reference_no,
+            'source_website'    => $request->source_website,
+            'skip_followup'     => (bool) $request->skip_followup,
+        ]);
+
+        ActivityLog::log(
+            'order_updated',
+            $order,
+            'Order updated by ' . auth()->user()->name,
+            [],
+            $oldData,
+            $order->fresh()->toArray()
+        );
+
+        Cache::forget('sidebar_order_counts');
+
+        return back()->with('success', 'Order updated successfully.');
     }
 
     public function submitCourier(Request $request, Order $order)
@@ -371,6 +549,35 @@ class OrderController extends Controller
         } catch (\Exception $e) {
             return back()->with('error', 'Courier API error: ' . $e->getMessage());
         }
+    }
+
+    public function productSearch(Request $request, $id)
+    {
+        $q        = $request->get('q', '');
+        $products = Product::where('status', 'active')
+            ->with(['variants', 'images'])
+            ->when($q, fn($query) => $query->where('name', 'like', "%{$q}%")
+                ->orWhere('sku', 'like', "%{$q}%"))
+            ->limit(10)
+            ->get()
+            ->map(fn($p) => [
+                'id'        => $p->id,
+                'name'      => $p->name,
+                'image_url' => $p->images->where('is_primary', true)->first()
+                    ? asset('storage/' . $p->images->where('is_primary', true)->first()->image_path)
+                    : ($p->images->first()
+                        ? asset('storage/' . $p->images->first()->image_path)
+                        : asset('images/no-image.png')),
+                'stock'     => $p->variants->sum('stock') ?? ($p->stock ?? 0),
+                'variants'  => $p->variants->map(fn($v) => [
+                    'id'    => $v->id,
+                    'name'  => trim(($v->size ?? '') . ' ' . ($v->color ?? '')),
+                    'price' => $v->price ?? $p->sale_price ?? $p->price,
+                    'stock' => $v->stock ?? 0,
+                ]),
+            ]);
+
+        return response()->json($products);
     }
 
     public function searchProducts(Request $request)
