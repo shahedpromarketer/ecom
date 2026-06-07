@@ -398,7 +398,7 @@
                     </tr>
                 </thead>
                 <tbody id="orderNotesBody">
-                    @forelse($order->notes->where('type','order')->values() as $i => $note)
+                    @forelse($order->orderNotes->filter(fn($n) => $n->type === 'order') as $i => $note)
                     <tr class="border-b dark:border-gray-800" id="note-row-{{ $note->id }}">
                         <td class="px-3 py-2 text-gray-500">{{ $i + 1 }}</td>
                         <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ $note->note }}</td>
@@ -442,7 +442,7 @@
                     </tr>
                 </thead>
                 <tbody id="customerNotesBody">
-                    @forelse($order->notes->where('type','customer')->values() as $i => $note)
+                    @forelse($order->orderNotes->filter(fn($n) => $n->type === 'customer') as $i => $note)
                     <tr class="border-b dark:border-gray-800" id="note-row-{{ $note->id }}">
                         <td class="px-3 py-2 text-gray-500">{{ $i + 1 }}</td>
                         <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ $note->note }}</td>

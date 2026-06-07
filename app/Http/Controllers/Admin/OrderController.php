@@ -290,7 +290,6 @@ class OrderController extends Controller
             'coupon',
             'shipment',
             'orderNotes.user',
-            'notes.user',
             'activityLogs.user',
             'orderReturn',
             'assignedEmployee',

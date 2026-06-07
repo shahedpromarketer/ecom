@@ -80,11 +80,6 @@ class Order extends Model
         return $this->hasOne(OrderReturn::class, 'order_id');
     }
 
-    public function notes()
-    {
-        return $this->hasMany(OrderNote::class)->latest();
-    }
-
     public function activityLogs()
     {
         return $this->hasMany(ActivityLog::class, 'subject_id')
