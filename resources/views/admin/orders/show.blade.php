@@ -330,6 +330,43 @@
                 class="w-full rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white">
         </div>
     </div>
+
+    {{-- Submit to Courier --}}
+    <div class="mt-4 pt-4 border-t dark:border-gray-700">
+        @if($order->shipment)
+        <div class="flex flex-wrap items-center gap-3">
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                🚚 <span class="capitalize">{{ $order->shipment->courier_name }}</span>
+            </span>
+            @if($order->shipment->tracking_code)
+            <span class="font-mono text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-lg text-gray-700 dark:text-gray-300">
+                {{ $order->shipment->tracking_code }}
+            </span>
+            <button type="button" onclick="copyText('{{ $order->shipment->tracking_code }}')" class="text-xs text-gray-400 hover:text-gray-600">📋</button>
+            @endif
+            <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-700 capitalize">{{ $order->shipment->status }}</span>
+        </div>
+        @else
+        <form method="POST" action="{{ route('admin.orders.submitCourier', $order) }}" class="flex flex-wrap items-center gap-3">
+            @csrf
+            <select name="courier"
+                class="rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]">
+                <option value="manual">Manual</option>
+                @foreach($activeCouriers as $c)
+                <option value="{{ $c->courier }}">{{ ucfirst($c->courier) }}</option>
+                @endforeach
+            </select>
+            <input type="number" name="delivery_fee" placeholder="Delivery Fee (৳)" min="0"
+                class="w-36 rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]">
+            <input type="text" name="tracking_code" placeholder="Tracking code (manual)"
+                class="w-44 rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]">
+            <button type="submit"
+                class="bg-[#1B2A4A] text-white px-6 py-2 rounded-xl text-sm font-semibold hover:bg-[#243a63] transition flex items-center gap-2">
+                🚚 Submit to Courier
+            </button>
+        </form>
+        @endif
+    </div>
 </div>
 
 {{-- CARD: ORDER NOTES --}}
@@ -464,49 +501,6 @@
     </div>
 </div>
 
-{{-- CARD: COURIER & SHIPMENT --}}
-<div class="bg-white dark:bg-gray-900 rounded-2xl shadow p-6" x-data="{ open: false }">
-    <div class="flex items-center justify-between cursor-pointer" @click="open = !open">
-        <h3 class="text-base font-semibold text-[#1B2A4A] dark:text-white">
-            Courier &amp; Shipment <span x-text="open ? '▲' : '▼'" class="text-xs text-gray-400 ml-1"></span>
-        </h3>
-    </div>
-    <div x-show="open" x-transition class="mt-4 border-t dark:border-gray-700 pt-4">
-        @if($order->shipment)
-            <div class="space-y-2">
-                <div class="flex justify-between"><span class="text-xs text-gray-500 dark:text-gray-400">Courier</span><span class="font-medium capitalize text-gray-700 dark:text-gray-300">{{ $order->shipment->courier_name }}</span></div>
-                @if($order->shipment->tracking_code)
-                <div class="flex justify-between items-center"><span class="text-xs text-gray-500 dark:text-gray-400">Tracking</span>
-                    <div class="flex items-center gap-1">
-                        <span class="font-mono text-xs">{{ $order->shipment->tracking_code }}</span>
-                        <button type="button" onclick="copyText('{{ $order->shipment->tracking_code }}')" class="text-xs">📋</button>
-                    </div>
-                </div>
-                @endif
-                <div class="flex justify-between"><span class="text-xs text-gray-500 dark:text-gray-400">Status</span><span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-700 capitalize">{{ $order->shipment->status }}</span></div>
-            </div>
-        @else
-            <form method="POST" action="{{ route('admin.orders.submitCourier', $order) }}" class="space-y-3">
-                @csrf
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Courier</label>
-                        <select name="courier" class="w-full rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white focus:outline-none">
-                            <option value="manual">Manual</option>
-                            @foreach($activeCouriers as $c)<option value="{{ $c->courier }}">{{ ucfirst($c->courier) }}</option>@endforeach
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Delivery Fee (৳)</label>
-                        <input type="number" name="delivery_fee" min="0" placeholder="0" class="w-full rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white">
-                    </div>
-                </div>
-                <input type="text" name="tracking_code" placeholder="Tracking code (manual)" class="w-full rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white">
-                <button type="submit" class="w-full py-2 text-xs font-semibold bg-[#1B2A4A] text-white rounded-xl hover:bg-[#243a63] transition">Assign Courier</button>
-            </form>
-        @endif
-    </div>
-</div>
 
 </div>{{-- END LEFT COLUMN --}}
 
