@@ -5,9 +5,14 @@ class Clothonic_Order_Sync {
 
     public static function init()
     {
+        // Primary hook — fires when checkout creates the order
         add_action('woocommerce_checkout_order_created', [__CLASS__, 'sync_order'], 10, 1);
-        // Fallback for older WooCommerce versions
-        add_action('woocommerce_new_order', [__CLASS__, 'sync_order_by_id'], 10, 1);
+
+        // Backup hook — fires for all new orders including REST API
+        add_action('woocommerce_new_order', [__CLASS__, 'sync_order_by_id'], 20, 1);
+
+        // Also hook into order status change to pending
+        add_action('woocommerce_order_status_pending', [__CLASS__, 'sync_order_by_id'], 10, 1);
     }
 
     public static function sync_order($order)
@@ -18,11 +23,11 @@ class Clothonic_Order_Sync {
 
     public static function sync_order_by_id($order_id)
     {
-        // woocommerce_checkout_order_created fires on newer WC; skip double-sync
+        if (get_post_meta($order_id, '_clothonic_synced', true)) return;
+
         $order = wc_get_order($order_id);
         if (!$order) return;
-        // Only process if the newer hook hasn't already handled it
-        if (get_post_meta($order_id, '_clothonic_synced', true)) return;
+
         self::process_sync($order);
     }
 
@@ -32,10 +37,10 @@ class Clothonic_Order_Sync {
 
         $items = [];
         foreach ($order->get_items() as $item) {
-            $product = $item->get_product();
-            $qty     = $item->get_quantity();
+            $product  = $item->get_product();
+            $qty      = $item->get_quantity();
             $subtotal = (float) $item->get_subtotal();
-            $items[] = [
+            $items[]  = [
                 'product_name' => $item->get_name(),
                 'sku'          => $product ? $product->get_sku() : '',
                 'qty'          => $qty,

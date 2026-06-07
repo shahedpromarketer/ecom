@@ -3,26 +3,24 @@ if (!defined('ABSPATH')) exit;
 
 class Clothonic_API {
 
-    const CRM_URL = 'https://laravel.netpilotdigital.com';
+    const ENDPOINT      = 'https://laravel.netpilotdigital.com/api/orders/receive';
+    const PING_ENDPOINT = 'https://laravel.netpilotdigital.com/api/ping';
+    const CRM_URL       = 'https://laravel.netpilotdigital.com';
 
-    private static function get_crm_url(): string
+    public static function get_token(): string
     {
-        // Use stored URL if present (allows future override), fallback to constant
-        $stored = rtrim(get_option('clothonic_crm_url', ''), '/');
-        return $stored ?: self::CRM_URL;
+        return get_option('clothonic_access_token', '');
     }
 
     public static function send_order(array $data): array
     {
-        $token = get_option('clothonic_access_token', '');
+        $token = self::get_token();
 
         if (empty($token)) {
             return ['success' => false, 'message' => 'No access token configured'];
         }
 
-        $endpoint = self::get_crm_url() . '/api/orders/receive';
-
-        $response = wp_remote_post($endpoint, [
+        $response = wp_remote_post(self::ENDPOINT, [
             'timeout' => 30,
             'headers' => [
                 'Authorization' => 'Bearer ' . $token,
@@ -45,24 +43,22 @@ class Clothonic_API {
 
         return [
             'success' => false,
-            'message' => $body['message'] ?? ('HTTP ' . $code),
+            'message' => $body['message'] ?? 'HTTP ' . $code,
         ];
     }
 
     public static function test_connection(string $token = ''): array
     {
         if (empty($token)) {
-            $token = get_option('clothonic_access_token', '');
+            $token = self::get_token();
         }
 
         if (empty($token)) {
             return ['success' => false, 'message' => 'Access token is empty'];
         }
 
-        $endpoint = self::get_crm_url() . '/api/ping';
-
-        $response = wp_remote_get($endpoint, [
-            'timeout' => 10,
+        $response = wp_remote_get(self::PING_ENDPOINT, [
+            'timeout' => 15,
             'headers' => [
                 'Authorization' => 'Bearer ' . $token,
                 'Accept'        => 'application/json',
@@ -77,9 +73,12 @@ class Clothonic_API {
         $body = json_decode(wp_remote_retrieve_body($response), true);
 
         if ($code === 200) {
-            return ['success' => true, 'message' => $body['message'] ?? 'Connected successfully!'];
+            return ['success' => true, 'message' => 'Connected to Clothonic CRM ✅'];
         }
 
-        return ['success' => false, 'message' => 'Connection failed: HTTP ' . $code];
+        return [
+            'success' => false,
+            'message' => 'Connection failed: ' . ($body['error'] ?? 'HTTP ' . $code),
+        ];
     }
 }
