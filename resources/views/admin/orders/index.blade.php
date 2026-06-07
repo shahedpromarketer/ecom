@@ -583,13 +583,11 @@
             <td class="px-3 py-3 align-top">
                 <div class="flex items-center gap-1 mb-1">
                     <span class="font-semibold text-gray-800 dark:text-white text-sm">{{ $order->shipping_name ?? 'N/A' }}</span>
-                    <button type="button" onclick="copyText('{{ addslashes($order->shipping_name ?? '') }}')" class="text-gray-400 hover:text-gray-600 text-xs">📋</button>
                 </div>
                 <div class="flex items-center gap-1">
                     <span class="bg-gray-900 dark:bg-gray-700 text-white text-xs px-2 py-0.5 rounded-lg font-mono">{{ $order->shipping_phone ?? 'N/A' }}</span>
                     <a href="https://wa.me/880{{ ltrim($order->shipping_phone ?? '', '0') }}" target="_blank" class="w-6 h-6 flex items-center justify-center bg-green-500 text-white rounded-lg text-xs hover:bg-green-600">💬</a>
                     <a href="tel:{{ $order->shipping_phone ?? '' }}" class="w-6 h-6 flex items-center justify-center bg-blue-500 text-white rounded-lg text-xs hover:bg-blue-600">📞</a>
-                    <button type="button" onclick="copyText('{{ $order->shipping_phone ?? '' }}')" class="w-6 h-6 flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-xs">📋</button>
                 </div>
                 <div class="text-xs text-gray-400 mt-1">Source: {{ $order->source ?? 'Direct' }}</div>
             </td>
@@ -607,7 +605,14 @@
             <td class="px-3 py-3 align-top">
                 <div class="flex items-start gap-1">
                     <span class="text-xs text-gray-700 dark:text-gray-300 max-w-[150px]">{{ $order->shipping_address ?? 'N/A' }}{{ $order->shipping_district ? ', '.$order->shipping_district : '' }}</span>
-                    <button type="button" onclick="copyText('{{ addslashes(($order->shipping_address ?? '').($order->shipping_district ? ', '.$order->shipping_district : '')) }}')" class="text-gray-400 hover:text-gray-600 text-xs flex-shrink-0">📋</button>
+                    <button type="button" onclick="copyOrderDetails(
+                        '{{ addslashes($order->shipping_name ?? '') }}',
+                        '{{ $order->shipping_phone ?? '' }}',
+                        '{{ addslashes(($order->shipping_address ?? '').($order->shipping_district ? ', '.$order->shipping_district : '')) }}',
+                        '{{ $order->id }}',
+                        '{{ number_format($order->total ?? 0, 0) }}',
+                        '{{ $order->payment_method ?? 'COD' }}'
+                    )" class="text-gray-400 hover:text-gray-600 flex-shrink-0">📋</button>
                 </div>
             </td>
 
@@ -942,6 +947,11 @@
 
     function copyText(text) {
         copyToClipboard(text);
+    }
+
+    function copyOrderDetails(name, phone, address, orderId, total, payment) {
+        const text = `নাম: ${name}\nফোন: ${phone}\nঠিকানা: ${address}\nঅর্ডার: #${orderId}\nমোট: ৳${total}\nপেমেন্ট: ${payment}`;
+        navigator.clipboard.writeText(text).then(() => showToast('Order details copied!', 'success'));
     }
 
     function quickAddNote(orderId) {
