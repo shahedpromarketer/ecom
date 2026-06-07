@@ -565,20 +565,6 @@
         </div>
     </header>
 
-    {{-- Breadcrumb --}}
-    @hasSection('breadcrumb')
-        <div class="border-b px-4 sm:px-6 py-2.5
-                    bg-white dark:bg-gray-800
-                    border-border dark:border-gray-700
-                    transition-colors duration-200">
-            <nav class="flex items-center gap-1.5 text-xs text-textsecondary dark:text-gray-400">
-                <a href="{{ route('admin.dashboard') }}"
-                   class="hover:text-primary dark:hover:text-accent transition-colors">Home</a>
-                @yield('breadcrumb')
-            </nav>
-        </div>
-    @endif
-
     {{-- Page Content --}}
     <main class="flex-1 p-4 sm:p-6">
         @yield('content')

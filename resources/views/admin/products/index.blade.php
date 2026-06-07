@@ -3,10 +3,6 @@
 @section('title', 'Products')
 @section('page-title', 'Products')
 
-@section('breadcrumb')
-    <span class="text-textsecondary">/</span>
-    <span class="text-textprimary font-medium">Products</span>
-@endsection
 
 @section('content')
 

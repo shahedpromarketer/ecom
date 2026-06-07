@@ -9,15 +9,6 @@
 @endif
 @endsection
 
-@section('breadcrumb')
-    <span class="text-textsecondary">/</span>
-    <span class="text-textprimary font-medium">
-        @if(request('status')){{ ucwords(str_replace('_', ' ', request('status'))) }} Orders
-        @elseif(request('cod_changed'))COD Changed Orders
-        @else All Orders
-        @endif
-    </span>
-@endsection
 
 @section('content')
 
