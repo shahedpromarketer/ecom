@@ -32,14 +32,13 @@ class OrderController extends Controller
         // Auto-pull new orders from active WooCommerce sites silently
         try {
             $sites = \App\Models\WordPressSite::where('is_active', true)
-                ->where('type', 'woocommerce')
+                ->whereIn('type', ['woocommerce', 'wordpress'])
                 ->whereNotNull('consumer_key')
                 ->whereNotNull('consumer_secret')
                 ->get();
 
             foreach ($sites as $site) {
-                if (!$site->last_order_sync_at ||
-                    $site->last_order_sync_at->diffInMinutes(now()) >= 1) {
+                if (true) {
                     app(IntegrationController::class)->pullNewOrders($site);
                 }
             }
