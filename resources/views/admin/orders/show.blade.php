@@ -514,8 +514,9 @@
 <div class="lg:col-span-1">
 <div class="bg-white dark:bg-gray-900 rounded-2xl shadow p-6 lg:sticky lg:top-4 space-y-4">
 
-    <div class="flex items-center justify-between">
-        <h3 class="text-base font-semibold text-[#1B2A4A] dark:text-white">Summary</h3>
+    {{-- Summary Header --}}
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold text-gray-800 dark:text-white">Summary</h3>
         <button type="button" onclick="copyOrderInfo()"
             class="bg-[#F59E0B] text-white px-3 py-1.5 rounded-xl text-xs font-medium hover:bg-yellow-500 transition flex items-center gap-1">
             📋 Copy Info
@@ -523,128 +524,120 @@
     </div>
 
     {{-- Invoice Meta --}}
-    <div class="space-y-2 text-sm border-b dark:border-gray-700 pb-4">
-        <div class="flex justify-between">
-            <span class="text-gray-500 dark:text-gray-400 text-xs">Invoice ID</span>
-            <span class="font-bold text-[#1B2A4A] dark:text-white">#{{ str_pad($order->id, 5, '0', STR_PAD_LEFT) }}</span>
+    <div class="space-y-1 mb-4 text-sm">
+        <div><span class="font-bold text-gray-800 dark:text-white">Invoice ID: </span><span class="text-gray-700 dark:text-gray-300">#{{ str_pad($order->id, 5, '0', STR_PAD_LEFT) }}</span></div>
+        <div><span class="font-bold text-gray-800 dark:text-white">Created Date: </span><span class="text-gray-600 dark:text-gray-400">{{ $order->created_at->format('d/m/Y g:ia') }}</span></div>
+        <div><span class="font-bold text-gray-800 dark:text-white">Last Update: </span><span class="text-gray-600 dark:text-gray-400">{{ $order->updated_at->format('d/m/Y g:ia') }}</span></div>
+        <div class="flex items-center gap-2">
+            <span class="font-bold text-gray-800 dark:text-white">User IP: </span>
+            <span class="text-gray-600 dark:text-gray-400">{{ $order->user_ip ?? 'N/A' }}</span>
+            @if($order->user_ip)
+            <button type="button" onclick="blockIP('{{ $order->user_ip }}')" class="text-blue-500 text-xs hover:underline">(Block IP)</button>
+            @endif
         </div>
-        <div class="flex justify-between">
-            <span class="text-gray-500 dark:text-gray-400 text-xs">Created</span>
-            <span class="text-xs text-gray-600 dark:text-gray-400">{{ $order->created_at->format('d/m/Y H:i') }}</span>
-        </div>
-        <div class="flex justify-between">
-            <span class="text-gray-500 dark:text-gray-400 text-xs">Last Update</span>
-            <span class="text-xs text-gray-600 dark:text-gray-400">{{ $order->updated_at->format('d/m/Y H:i') }}</span>
-        </div>
-        <div class="flex justify-between items-center">
-            <span class="text-gray-500 dark:text-gray-400 text-xs">User IP</span>
-            <div class="flex items-center gap-1">
-                <span class="text-xs text-gray-600 dark:text-gray-400 font-mono">{{ $order->user_ip ?? 'N/A' }}</span>
-                @if($order->user_ip)
-                <button type="button" onclick="blockIP('{{ $order->user_ip }}')" class="text-xs text-red-500 hover:underline">(Block)</button>
-                @endif
-            </div>
-        </div>
-        <div>
-            <label class="text-xs text-gray-500 dark:text-gray-400 block mb-1">Assigned To</label>
-            <select name="assigned_to" class="w-full rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs bg-white dark:bg-gray-800 dark:text-white">
+        <div class="flex items-center gap-2">
+            <span class="font-bold text-gray-800 dark:text-white">Assigned To: </span>
+            <select name="assigned_to" class="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs bg-white dark:bg-gray-800 dark:text-white">
                 <option value="">Unassigned</option>
                 @foreach($admins as $admin)
                 <option value="{{ $admin->id }}" {{ $order->assigned_to == $admin->id ? 'selected' : '' }}>{{ $admin->name }}</option>
                 @endforeach
             </select>
-        </div>
-        <div>
-            <label class="text-xs text-gray-500 dark:text-gray-400 block mb-1">Reference No</label>
-            <input type="text" name="reference_no" value="{{ old('reference_no', $order->reference_no) }}"
-                class="w-full rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs bg-white dark:bg-gray-800 dark:text-white">
-        </div>
-        <div>
-            <label class="text-xs text-gray-500 dark:text-gray-400 block mb-1">Source Website</label>
-            <input type="text" name="source_website" value="{{ old('source_website', $order->source_website) }}"
-                class="w-full rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs bg-white dark:bg-gray-800 dark:text-white">
+            <a href="#" class="text-[#F59E0B] text-xs hover:underline whitespace-nowrap">(Transfer To)</a>
         </div>
     </div>
 
-    {{-- Financial Calculator (Alpine.js reactive) --}}
-    <div class="space-y-3 text-sm">
-        <div class="flex justify-between items-center">
-            <span class="text-gray-500 dark:text-gray-400 text-xs">Subtotal</span>
-            <span class="font-semibold dark:text-white">৳<span x-text="subtotal.toFixed(2)"></span></span>
-            <input type="hidden" name="subtotal" :value="subtotal" id="subtotalInput">
-        </div>
-
-        <div class="flex justify-between items-center gap-2">
-            <span class="text-gray-500 dark:text-gray-400 text-xs flex items-center gap-1">
-                Discount
-                <button type="button" @click="discountType = discountType === 'fixed' ? 'percent' : 'fixed'"
-                    class="px-2 py-0.5 rounded-lg text-xs border border-gray-300 dark:border-gray-600 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
-                    x-text="discountType === 'fixed' ? '৳' : '%'"></button>
-            </span>
-            <input type="number" name="discount_value" x-model="discountValue" step="0.01" min="0"
-                class="w-24 text-right rounded-xl border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs bg-white dark:bg-gray-800 dark:text-white">
-            <input type="hidden" name="discount_type" :value="discountType">
-        </div>
-
-        <div class="flex justify-between items-center gap-2">
-            <span class="text-gray-500 dark:text-gray-400 text-xs">Shipping Charge</span>
-            <input type="number" name="shipping_charge" x-model="shipping" step="0.01" min="0"
-                class="w-24 text-right rounded-xl border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs bg-white dark:bg-gray-800 dark:text-white">
-        </div>
-
-        <div class="flex justify-between items-center pt-2 border-t dark:border-gray-700">
-            <span class="font-semibold text-gray-700 dark:text-white text-sm">Grand Total</span>
-            <span class="font-bold text-[#1B2A4A] dark:text-white text-base">৳<span x-text="grandTotal.toFixed(2)"></span></span>
-            <input type="hidden" name="grand_total" :value="grandTotal">
-        </div>
-
-        <div class="flex justify-between items-center gap-2">
-            <span class="text-gray-500 dark:text-gray-400 text-xs">Paid Amount</span>
-            <div class="flex items-center gap-1">
-                <input type="number" name="paid_amount" x-model="paid" step="0.01" min="0"
-                    class="w-24 text-right rounded-xl border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs bg-white dark:bg-gray-800 dark:text-white">
-                <button type="button" onclick="openAddPaymentModal()"
-                    class="text-xs text-[#F59E0B] whitespace-nowrap hover:underline">+ Add</button>
-            </div>
-        </div>
-
-        <div class="flex justify-between items-center pt-2 border-t dark:border-gray-700">
-            <span class="font-semibold text-gray-700 dark:text-white text-sm">Due</span>
-            <span class="font-bold text-base" :class="due > 0 ? 'text-red-500' : 'text-green-500'">৳<span x-text="due.toFixed(2)"></span></span>
-            <input type="hidden" name="due" :value="due">
-        </div>
-
-        <div class="flex justify-between items-center gap-2">
-            <span class="text-gray-500 dark:text-gray-400 text-xs">Courier Charged to Me</span>
-            <input type="number" name="courier_charge" x-model="courierCharge" step="0.01" min="0"
-                class="w-24 text-right rounded-xl border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs bg-white dark:bg-gray-800 dark:text-white">
-        </div>
-
-        {{-- Coupon --}}
-        <div class="flex gap-2">
-            <input type="text" name="coupon_code" placeholder="Coupon code..."
-                value="{{ $order->coupon?->code ?? old('coupon_code') }}"
-                class="flex-1 rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs bg-white dark:bg-gray-800 dark:text-white">
-            <button type="button" onclick="applyCoupon()"
-                class="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-white rounded-xl text-xs hover:bg-gray-200 transition">Apply</button>
-        </div>
-
-        {{-- Skip Followup --}}
-        <label class="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" name="skip_followup" value="1" {{ $order->skip_followup ? 'checked' : '' }}
-                class="rounded border-gray-300 text-[#1B2A4A]">
-            <span class="text-xs text-gray-600 dark:text-gray-400">Skip/Done Followup</span>
-        </label>
-
-        {{-- Action Buttons --}}
-        <button type="submit" class="w-full bg-[#1B2A4A] text-white py-3 rounded-xl text-sm font-semibold hover:bg-[#243a63] transition mt-2">
-            ✔ Update Order
-        </button>
-        <a href="{{ route('admin.invoices.generatePrint', $order) }}" target="_blank"
-            class="w-full block text-center border-2 border-[#1B2A4A] dark:border-gray-600 text-[#1B2A4A] dark:text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition">
-            🖨 Invoice Print
-        </a>
+    {{-- Reference No --}}
+    <div class="mb-1">
+        <label class="text-sm font-bold text-gray-800 dark:text-white block mb-1">Reference No</label>
+        <input type="text" name="reference_no" value="{{ $order->reference_no ?? '' }}"
+            class="w-full rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-sm bg-white dark:bg-gray-800 dark:text-white">
     </div>
+
+    {{-- Source Website --}}
+    <div class="mb-4">
+        <span class="text-sm font-bold text-gray-800 dark:text-white">Source Website: </span>
+        <span class="text-sm text-gray-600 dark:text-gray-400">{{ $order->source_website ?? $order->source ?? '' }}</span>
+    </div>
+
+    {{-- Financial Table --}}
+    <table class="w-full text-sm mb-4 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+        <tbody>
+            <tr class="border-b border-gray-200 dark:border-gray-700">
+                <td class="px-3 py-2 font-bold text-gray-800 dark:text-white bg-gray-50 dark:bg-gray-800">Subtotal:</td>
+                <td class="px-3 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-900" x-text="'৳' + subtotal.toFixed(2) + ' Tk'">৳{{ number_format($order->subtotal ?? 0, 2) }} Tk</td>
+            </tr>
+            <input type="hidden" name="subtotal" :value="subtotal">
+            <tr class="border-b border-gray-200 dark:border-gray-700">
+                <td class="px-3 py-2 font-bold text-gray-800 dark:text-white bg-gray-50 dark:bg-gray-800">
+                    Discount:
+                    <button type="button" @click="discountType = discountType === 'fixed' ? 'percent' : 'fixed'"
+                        class="ml-1 px-1.5 py-0.5 rounded border border-gray-300 dark:border-gray-600 text-xs dark:text-white"
+                        x-text="discountType === 'fixed' ? '৳' : '%'">৳</button>
+                </td>
+                <td class="px-3 py-2 bg-white dark:bg-gray-900">
+                    <input type="number" name="discount_value" x-model="discountValue" step="0.01" min="0"
+                        class="w-full rounded border border-gray-200 dark:border-gray-700 px-2 py-1 text-sm bg-white dark:bg-gray-800 dark:text-white text-right">
+                    <input type="hidden" name="discount_type" :value="discountType">
+                </td>
+            </tr>
+            <tr class="border-b border-gray-200 dark:border-gray-700">
+                <td class="px-3 py-2 font-bold text-gray-800 dark:text-white bg-gray-50 dark:bg-gray-800">Shipping Charge ℹ️:</td>
+                <td class="px-3 py-2 bg-white dark:bg-gray-900">
+                    <input type="number" name="shipping_charge" x-model="shipping" step="0.01" min="0"
+                        class="w-full rounded border border-gray-200 dark:border-gray-700 px-2 py-1 text-sm bg-white dark:bg-gray-800 dark:text-white text-right">
+                </td>
+            </tr>
+            <tr class="border-b border-gray-200 dark:border-gray-700">
+                <td class="px-3 py-2 font-bold text-gray-800 dark:text-white bg-gray-50 dark:bg-gray-800">Grand Total:</td>
+                <td class="px-3 py-2 font-bold text-gray-800 dark:text-white bg-white dark:bg-gray-900" x-text="'৳' + grandTotal.toFixed(2) + ' Tk'"></td>
+                <input type="hidden" name="grand_total" :value="grandTotal">
+            </tr>
+            <tr class="border-b border-gray-200 dark:border-gray-700">
+                <td class="px-3 py-2 font-bold text-gray-800 dark:text-white bg-gray-50 dark:bg-gray-800">Paid Amount:</td>
+                <td class="px-3 py-2 bg-white dark:bg-gray-900">
+                    <input type="number" name="paid_amount" x-model="paid" step="0.01" min="0"
+                        class="w-full rounded border border-gray-200 dark:border-gray-700 px-2 py-1 text-sm bg-white dark:bg-gray-800 dark:text-white text-right mb-1">
+                    <a href="#" onclick="openAddPaymentModal()" class="text-[#F59E0B] text-xs hover:underline">Add Payment</a>
+                </td>
+            </tr>
+            <tr class="border-b border-gray-200 dark:border-gray-700">
+                <td class="px-3 py-2 font-bold text-gray-800 dark:text-white bg-gray-50 dark:bg-gray-800">Due:</td>
+                <td class="px-3 py-2 font-bold bg-white dark:bg-gray-900" :class="due > 0 ? 'text-red-500' : 'text-green-500'" x-text="'৳' + due.toFixed(2) + ' Tk'"></td>
+                <input type="hidden" name="due" :value="due">
+            </tr>
+            <tr>
+                <td class="px-3 py-2 font-bold text-gray-800 dark:text-white bg-gray-50 dark:bg-gray-800">Courier Charged to Me ℹ️:</td>
+                <td class="px-3 py-2 bg-white dark:bg-gray-900">
+                    <input type="number" name="courier_charge" x-model="courierCharge" step="0.01" min="0"
+                        class="w-full rounded border border-gray-200 dark:border-gray-700 px-2 py-1 text-sm bg-white dark:bg-gray-800 dark:text-white text-right">
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    {{-- Apply Coupon --}}
+    <div class="flex justify-end mb-3">
+        <a href="#" onclick="applyCoupon()" class="text-[#F59E0B] text-sm hover:underline">Apply Coupon</a>
+    </div>
+
+    {{-- Skip Followup --}}
+    <label class="flex items-center gap-2 cursor-pointer mb-4">
+        <input type="checkbox" name="skip_followup" value="1" {{ $order->skip_followup ? 'checked' : '' }}
+            class="rounded border-gray-300 text-[#1B2A4A]">
+        <span class="text-sm text-gray-600 dark:text-gray-400">Skip/Done Followup</span>
+    </label>
+
+    {{-- Buttons --}}
+    <button type="submit"
+        class="w-full bg-[#1B2A4A] text-white py-3 rounded-xl text-sm font-semibold hover:bg-[#243a63] transition mb-2">
+        ✔ Update
+    </button>
+    <p class="text-xs text-gray-400 mb-2">NB: (*) marked are required field.</p>
+    <a href="{{ route('admin.invoices.generatePrint', $order) }}" target="_blank"
+        class="w-full block text-center bg-[#0d9488] text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-teal-700 transition">
+        🖨 Invoice Print
+    </a>
 
 </div>
 </div>
