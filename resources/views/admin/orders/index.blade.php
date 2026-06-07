@@ -501,7 +501,7 @@
             <th class="px-3 py-3 text-left">Name & Number</th>
             <th class="px-3 py-3 text-left">Date</th>
             <th class="px-3 py-3 text-left">Address</th>
-            <th class="px-3 py-3"></th>
+            <th class="px-2 py-3 w-8"></th>
             <th class="px-3 py-3 text-left">Courier</th>
             <th class="px-3 py-3 text-left">Summary</th>
             <th class="px-3 py-3 text-left">Employee</th>
@@ -610,7 +610,7 @@
             </td>
 
             {{-- Copy --}}
-            <td class="px-3 py-3 align-top text-center">
+            <td class="px-2 py-3 align-top text-center w-8">
                 <button type="button" onclick="copyOrderDetails(
                     '{{ addslashes($order->shipping_name ?? '') }}',
                     '{{ $order->shipping_phone ?? '' }}',
@@ -618,7 +618,7 @@
                     '{{ $order->id }}',
                     '{{ number_format($order->total ?? 0, 0) }}',
                     '{{ $order->payment_method ?? 'COD' }}'
-                )" class="w-7 h-7 flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-500 hover:bg-gray-200 rounded-lg text-xs mx-auto" title="Copy order details">📋</button>
+                )" class="w-7 h-7 flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-xs" title="Copy details">📋</button>
             </td>
 
             {{-- Courier --}}
