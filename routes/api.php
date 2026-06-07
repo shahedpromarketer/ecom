@@ -23,3 +23,7 @@ Route::middleware('api.token')->group(function () {
 // Legacy webhook route (site api_key auth)
 Route::post('/wordpress/sync', [WordPressSyncController::class, 'receiveOrder'])
     ->name('api.wordpress.sync');
+
+// WooCommerce native webhook (no API key — HMAC signature from X-WC-Webhook-Signature)
+Route::post('/woocommerce/webhook', [WordPressSyncController::class, 'receiveWebhook'])
+    ->name('api.woocommerce.webhook');

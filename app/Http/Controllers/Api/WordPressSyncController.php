@@ -167,6 +167,136 @@ class WordPressSyncController extends Controller
         }
     }
 
+    public function receiveWebhook(Request $request)
+    {
+        $topic         = $request->header('X-WC-Webhook-Topic', '');
+        $webhookSource = $request->header('X-WC-Webhook-Source', '');
+
+        \Log::info('WooCommerce native webhook received', [
+            'topic'  => $topic,
+            'source' => $webhookSource,
+        ]);
+
+        // Ignore non-order topics
+        if ($topic && !in_array($topic, ['order.created', 'order.updated', ''])) {
+            return response()->json(['success' => true, 'message' => 'Topic ignored']);
+        }
+
+        $data = $request->all();
+        $sourceOrderId = (string) ($data['id'] ?? '');
+
+        if (!$sourceOrderId) {
+            return response()->json(['error' => 'Missing order ID'], 422);
+        }
+
+        $existing = Order::where('source_order_id', $sourceOrderId)->first();
+
+        // Skip duplicate creates; allow updates
+        if ($existing && $topic !== 'order.updated') {
+            return response()->json([
+                'success'      => true,
+                'duplicate'    => true,
+                'order_number' => $existing->order_number,
+            ]);
+        }
+
+        $billing     = $data['billing'] ?? [];
+        $phone       = preg_replace('/[^0-9]/', '', $billing['phone'] ?? '');
+        $paymentMethod = $this->mapPaymentMethod($data['payment_method'] ?? 'cod');
+
+        $subtotal = 0;
+        foreach ($data['line_items'] ?? [] as $item) {
+            $subtotal += (float) ($item['subtotal'] ?? $item['total'] ?? 0);
+        }
+
+        $orderData = [
+            'shipping_name'     => trim(($billing['first_name'] ?? '') . ' ' . ($billing['last_name'] ?? '')),
+            'shipping_phone'    => $phone,
+            'shipping_district' => $billing['state'] ?? $billing['city'] ?? '',
+            'shipping_area'     => $billing['city'] ?? '',
+            'shipping_address'  => trim(($billing['address_1'] ?? '') . ' ' . ($billing['address_2'] ?? '')),
+            'subtotal'          => $subtotal,
+            'discount'          => (float) ($data['discount_total'] ?? 0),
+            'shipping_charge'   => (float) ($data['shipping_total'] ?? 0),
+            'total'             => (float) ($data['total'] ?? $subtotal),
+            'payment_method'    => $paymentMethod,
+            'payment_status'    => 'unpaid',
+            'status'            => 'pending',
+            'source'            => 'woocommerce',
+            'source_order_id'   => $sourceOrderId,
+            'source_website'    => $webhookSource,
+            'user_ip'           => $data['customer_ip_address'] ?? '',
+            'reference_no'      => (string) ($data['number'] ?? $sourceOrderId),
+            'notes'             => $data['customer_note'] ?? '',
+        ];
+
+        if ($existing) {
+            $existing->update($orderData);
+            $order = $existing->fresh();
+        } else {
+            $order = Order::create($orderData);
+        }
+
+        foreach ($data['line_items'] ?? [] as $item) {
+            $productId   = null;
+            $variantId   = null;
+            $productName = $item['name'] ?? 'Unknown Product';
+            $qty         = (int) ($item['quantity'] ?? 1);
+            $unitPrice   = (float) ($item['price'] ?? ($qty > 0 ? round(($item['subtotal'] ?? 0) / $qty, 2) : 0));
+
+            $sku = $item['sku'] ?? null;
+            if ($sku) {
+                $variant = ProductVariant::where('sku', $sku)->first();
+                if ($variant) {
+                    $variantId   = $variant->id;
+                    $productId   = $variant->product_id;
+                    $productName = $variant->product?->name ?? $productName;
+                } else {
+                    $product = Product::where('sku', $sku)->first();
+                    if ($product) {
+                        $productId   = $product->id;
+                        $productName = $product->name;
+                    }
+                }
+            }
+
+            OrderItem::updateOrCreate(
+                ['order_id' => $order->id, 'product_name' => $productName],
+                [
+                    'product_id'   => $productId,
+                    'variant_id'   => $variantId,
+                    'product_name' => $productName,
+                    'variant_info' => !empty($item['variation_id']) ? 'Variant #' . $item['variation_id'] : null,
+                    'qty'          => $qty,
+                    'unit_price'   => $unitPrice,
+                    'total'        => (float) ($item['subtotal'] ?? ($unitPrice * $qty)),
+                ]
+            );
+        }
+
+        // Update site stats if we can match the source
+        if ($webhookSource) {
+            $host = parse_url($webhookSource, PHP_URL_HOST);
+            $site = WordPressSite::where('site_url', 'like', "%{$host}%")->first();
+            if ($site) {
+                $site->increment('total_synced');
+                $site->update(['last_sync_at' => now()]);
+            }
+        }
+
+        \Log::info('WooCommerce webhook order processed', [
+            'order_id'     => $order->id,
+            'order_number' => $order->order_number,
+            'action'       => $existing ? 'updated' : 'created',
+        ]);
+
+        return response()->json([
+            'success'      => true,
+            'order_number' => $order->order_number,
+            'order_id'     => $order->id,
+        ]);
+    }
+
     private function mapPaymentMethod(string $wpMethod): string
     {
         return match (strtolower($wpMethod)) {
