@@ -29,6 +29,24 @@ class OrderController extends Controller
 
     public function index(Request $request)
     {
+        // Auto-pull new orders from active WooCommerce sites silently
+        try {
+            $sites = \App\Models\WordPressSite::where('is_active', true)
+                ->where('type', 'woocommerce')
+                ->whereNotNull('consumer_key')
+                ->whereNotNull('consumer_secret')
+                ->get();
+
+            foreach ($sites as $site) {
+                if (!$site->last_order_sync_at ||
+                    $site->last_order_sync_at->diffInMinutes(now()) >= 1) {
+                    app(IntegrationController::class)->pullNewOrders($site);
+                }
+            }
+        } catch (\Exception $e) {
+            // Silent fail — never break the orders page
+        }
+
         $perPage = in_array((int) $request->get('per_page', 10), [10, 25, 50, 100])
             ? (int) $request->get('per_page', 10) : 10;
 

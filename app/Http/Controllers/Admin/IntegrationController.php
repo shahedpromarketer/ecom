@@ -274,4 +274,98 @@ class IntegrationController extends Controller
 
         return response()->json(['success' => true, 'api_key' => $newKey]);
     }
+
+    public function pullNewOrders(WordPressSite $site): array
+    {
+        $credentials = base64_encode($site->consumer_key . ':' . $site->consumer_secret);
+
+        $params = [
+            'per_page' => 100,
+            'orderby'  => 'date',
+            'order'    => 'desc',
+        ];
+
+        if ($site->last_order_sync_at) {
+            $params['after'] = $site->last_order_sync_at->toIso8601String();
+        }
+
+        try {
+            $response = Http::timeout(10)
+                ->withoutVerifying()
+                ->withHeaders(['Authorization' => 'Basic ' . $credentials])
+                ->get(rtrim($site->site_url, '/') . '/wp-json/wc/v3/orders', $params);
+
+            if ($response->failed()) {
+                return ['synced' => 0];
+            }
+
+            $orders = $response->json();
+            if (!is_array($orders)) {
+                return ['synced' => 0];
+            }
+
+            $synced = 0;
+
+            foreach ($orders as $wcOrder) {
+                if (!is_array($wcOrder) || empty($wcOrder['id'])) continue;
+
+                if (Order::where('source_order_id', (string) $wcOrder['id'])
+                    ->where('source', 'woocommerce')->exists()) continue;
+
+                $billing = $wcOrder['billing'] ?? [];
+                $phone   = preg_replace('/[^0-9]/', '', $billing['phone'] ?? '');
+                if (strlen($phone) > 11) $phone = substr($phone, -11);
+                if (empty($phone)) $phone = '01000000000';
+
+                $order = Order::create([
+                    'order_number'      => 'CLT' . date('Ymd') . '-WC' . $wcOrder['id'],
+                    'status'            => 'pending',
+                    'shipping_name'     => trim(($billing['first_name'] ?? '') . ' ' . ($billing['last_name'] ?? '')),
+                    'shipping_phone'    => $phone,
+                    'shipping_division' => $billing['state'] ?? 'Dhaka',
+                    'shipping_district' => $billing['city'] ?? 'Dhaka',
+                    'shipping_area'     => $billing['city'] ?? '',
+                    'shipping_address'  => $billing['address_1'] ?? '',
+                    'subtotal'          => $wcOrder['subtotal'] ?? $wcOrder['total'],
+                    'discount'          => $wcOrder['discount_total'] ?? 0,
+                    'shipping_charge'   => $wcOrder['shipping_total'] ?? 0,
+                    'total'             => $wcOrder['total'],
+                    'payment_method'    => 'cod',
+                    'payment_status'    => 'unpaid',
+                    'source'            => 'woocommerce',
+                    'source_order_id'   => (string) $wcOrder['id'],
+                    'source_url'        => $site->site_url,
+                    'print_status'      => 'unprinted',
+                ]);
+
+                foreach ($wcOrder['line_items'] ?? [] as $item) {
+                    OrderItem::create([
+                        'order_id'     => $order->id,
+                        'product_id'   => null,
+                        'product_name' => $item['name'] ?? 'Unknown',
+                        'qty'          => $item['quantity'] ?? 1,
+                        'unit_price'   => $item['price'] ?? 0,
+                        'total'        => $item['total'] ?? 0,
+                    ]);
+                }
+
+                $synced++;
+            }
+
+            if ($synced > 0) {
+                $site->update([
+                    'last_order_sync_at' => now(),
+                    'total_synced'       => $site->total_synced + $synced,
+                ]);
+            } else {
+                // Update timestamp even when no new orders to avoid hammering every second
+                $site->update(['last_order_sync_at' => now()]);
+            }
+
+            return ['synced' => $synced];
+
+        } catch (\Exception $e) {
+            return ['synced' => 0, 'error' => $e->getMessage()];
+        }
+    }
 }
