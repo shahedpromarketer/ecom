@@ -331,42 +331,6 @@
         </div>
     </div>
 
-    {{-- Submit to Courier --}}
-    <div class="mt-4 pt-4 border-t dark:border-gray-700">
-        @if($order->shipment)
-        <div class="flex flex-wrap items-center gap-3">
-            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                🚚 <span class="capitalize">{{ $order->shipment->courier_name }}</span>
-            </span>
-            @if($order->shipment->tracking_code)
-            <span class="font-mono text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-lg text-gray-700 dark:text-gray-300">
-                {{ $order->shipment->tracking_code }}
-            </span>
-            <button type="button" onclick="copyText('{{ $order->shipment->tracking_code }}')" class="text-xs text-gray-400 hover:text-gray-600">📋</button>
-            @endif
-            <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-700 capitalize">{{ $order->shipment->status }}</span>
-        </div>
-        @else
-        <form method="POST" action="{{ route('admin.orders.submitCourier', $order) }}" class="flex flex-wrap items-center gap-3">
-            @csrf
-            <select name="courier"
-                class="rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]">
-                <option value="manual">Manual</option>
-                @foreach($activeCouriers as $c)
-                <option value="{{ $c->courier }}">{{ ucfirst($c->courier) }}</option>
-                @endforeach
-            </select>
-            <input type="number" name="delivery_fee" placeholder="Delivery Fee (৳)" min="0"
-                class="w-36 rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]">
-            <input type="text" name="tracking_code" placeholder="Tracking code (manual)"
-                class="w-44 rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]">
-            <button type="submit"
-                class="bg-[#1B2A4A] text-white px-6 py-2 rounded-xl text-sm font-semibold hover:bg-[#243a63] transition flex items-center gap-2">
-                🚚 Submit to Courier
-            </button>
-        </form>
-        @endif
-    </div>
 </div>
 
 {{-- CARD: ORDER NOTES --}}
