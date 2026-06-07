@@ -148,13 +148,13 @@ class OrderController extends Controller
     public function addNote(Request $request, Order $order)
     {
         $request->validate([
-            'note'                => 'required|string|max:2000',
+            'note_text'           => 'required|string|max:2000',
             'is_customer_visible' => 'boolean',
         ]);
 
         $note = $order->orderNotes()->create([
             'user_id'              => auth()->id(),
-            'note'                 => $request->note,
+            'note_text'            => $request->note_text,
             'is_customer_visible'  => $request->boolean('is_customer_visible'),
         ]);
         $note->load('user');
@@ -165,7 +165,7 @@ class OrderController extends Controller
             'success' => true,
             'note'    => [
                 'id'                   => $note->id,
-                'note'                 => $note->note,
+                'note_text'            => $note->note_text,
                 'is_customer_visible'  => $note->is_customer_visible,
                 'user_name'            => $note->user->name,
                 'user_initial'         => strtoupper(substr($note->user->name, 0, 1)),

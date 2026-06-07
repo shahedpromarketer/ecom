@@ -11,15 +11,13 @@ class OrderNoteController extends Controller
 {
     public function store(Request $request, $id)
     {
-        $request->validate(['note_text' => 'required|string|max:1000']);
-
-        $order = Order::findOrFail($id);
+        $request->validate(['note_text' => 'required|string']);
 
         $note = OrderNote::create([
-            'order_id' => $order->id,
-            'user_id'  => auth()->id(),
-            'note'     => $request->note_text,
-            'type'     => 'order',
+            'order_id'  => $id,
+            'user_id'   => auth()->id(),
+            'note_text' => $request->note_text,
+            'type'      => $request->type ?? 'order',
         ]);
 
         $note->load('user');
@@ -28,8 +26,8 @@ class OrderNoteController extends Controller
             'success' => true,
             'note'    => [
                 'id'         => $note->id,
-                'note_text'  => $note->note,
-                'user_name'  => $note->user->name ?? 'System',
+                'note_text'  => $note->note_text,
+                'user_name'  => $note->user->name ?? 'Admin',
                 'created_at' => $note->created_at->format('d M Y H:i'),
             ],
         ]);
@@ -45,15 +43,13 @@ class OrderNoteController extends Controller
 
     public function storeCustomer(Request $request, $id)
     {
-        $request->validate(['note_text' => 'required|string|max:1000']);
-
-        $order = Order::findOrFail($id);
+        $request->validate(['note_text' => 'required|string']);
 
         $note = OrderNote::create([
-            'order_id' => $order->id,
-            'user_id'  => auth()->id(),
-            'note'     => $request->note_text,
-            'type'     => 'customer',
+            'order_id'  => $id,
+            'user_id'   => auth()->id(),
+            'note_text' => $request->note_text,
+            'type'      => 'customer',
         ]);
 
         $note->load('user');
@@ -62,8 +58,8 @@ class OrderNoteController extends Controller
             'success' => true,
             'note'    => [
                 'id'         => $note->id,
-                'note_text'  => $note->note,
-                'user_name'  => $note->user->name ?? 'System',
+                'note_text'  => $note->note_text,
+                'user_name'  => $note->user->name ?? 'Admin',
                 'created_at' => $note->created_at->format('d M Y H:i'),
             ],
         ]);

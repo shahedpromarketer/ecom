@@ -401,7 +401,7 @@
                     @forelse($order->orderNotes->filter(fn($n) => $n->type === 'order') as $i => $note)
                     <tr class="border-b dark:border-gray-800" id="note-row-{{ $note->id }}">
                         <td class="px-3 py-2 text-gray-500">{{ $i + 1 }}</td>
-                        <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ $note->note }}</td>
+                        <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ $note->note_text }}</td>
                         <td class="px-3 py-2 text-gray-500">{{ $note->user->name ?? 'System' }}</td>
                         <td class="px-3 py-2 text-gray-400 text-xs">{{ $note->created_at->format('d M Y H:i') }}</td>
                         <td class="px-3 py-2 text-center">
@@ -445,7 +445,7 @@
                     @forelse($order->orderNotes->filter(fn($n) => $n->type === 'customer') as $i => $note)
                     <tr class="border-b dark:border-gray-800" id="note-row-{{ $note->id }}">
                         <td class="px-3 py-2 text-gray-500">{{ $i + 1 }}</td>
-                        <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ $note->note }}</td>
+                        <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ $note->note_text }}</td>
                         <td class="px-3 py-2 text-gray-500">{{ $note->user->name ?? 'System' }}</td>
                         <td class="px-3 py-2 text-gray-400 text-xs">{{ $note->created_at->format('d M Y H:i') }}</td>
                         <td class="px-3 py-2 text-center">

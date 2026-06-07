@@ -72,7 +72,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('orders/{order}/items', [OrderController::class, 'addItem'])->name('orders.addItem');
         Route::delete('orders/items/{item}', [OrderController::class, 'removeItem'])->name('orders.removeItem');
         Route::patch('orders/{order}/note', [OrderController::class, 'addNote'])->name('orders.addNote');
-        Route::post('orders/{order}/notes', [OrderController::class, 'addNote'])->name('orders.notes.add');
         Route::delete('orders/notes/{note}', [OrderController::class, 'deleteNote'])->name('orders.deleteNote');
         Route::post('orders/{order}/shipment', [OrderController::class, 'createShipment'])->name('orders.createShipment');
         Route::post('orders/{order}/submit-courier', [OrderController::class, 'submitCourier'])->name('orders.submitCourier');
