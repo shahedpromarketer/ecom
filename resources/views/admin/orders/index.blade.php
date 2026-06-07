@@ -425,8 +425,10 @@
   selectAll: false,
   toggleAll() {
     this.selectAll = !this.selectAll;
+    const checkboxes = document.querySelectorAll('.order-checkbox');
+    checkboxes.forEach(cb => cb.checked = this.selectAll);
     if (this.selectAll) {
-      this.selectedOrders = Array.from(document.querySelectorAll('input[name=selected]')).map(el => el.value);
+      this.selectedOrders = Array.from(checkboxes).map(el => el.value);
     } else {
       this.selectedOrders = [];
     }
@@ -489,286 +491,177 @@
 
     {{-- Table --}}
     <div class="overflow-x-auto">
-        <table class="w-full min-w-[900px]">
+        <table class="w-full text-sm">
+        <thead>
+        <tr class="bg-gray-50 dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400">
+            <th class="px-3 py-3 text-left">Status</th>
+            <th class="px-3 py-3"><input type="checkbox" id="selectAll" @click="toggleAll()" class="w-4 h-4 rounded border-gray-300 text-primary cursor-pointer"></th>
+            <th class="px-3 py-3 text-left">Notes</th>
+            <th class="px-3 py-3 text-left">ID & Products ↕</th>
+            <th class="px-3 py-3 text-left">Name & Number</th>
+            <th class="px-3 py-3 text-left">Date</th>
+            <th class="px-3 py-3 text-left">Address</th>
+            <th class="px-3 py-3 text-left">Courier</th>
+            <th class="px-3 py-3 text-left">Summary</th>
+            <th class="px-3 py-3 text-left">Employee</th>
+        </tr>
+        </thead>
+        <tbody>
+        @forelse($orders as $sl => $order)
+        <tr class="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
+            data-order-id="{{ $order->id }}"
+            data-total="{{ $order->grand_total ?? 0 }}"
+            data-paid="{{ $order->paid_amount ?? 0 }}"
+            data-due="{{ ($order->grand_total ?? 0) - ($order->paid_amount ?? 0) }}">
 
-            {{-- Head --}}
-            <thead>
-                <tr class="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
-                    <th class="px-4 py-3 text-left">
-                        <input type="checkbox" id="selectAll"
-                            :checked="selectAll"
-                            @click="toggleAll()"
-                            class="w-4 h-4 rounded border-gray-300 text-primary cursor-pointer">
-                    </th>
-                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-32">Status</th>
-                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">ID & Products</th>
-                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Customer</th>
-                    <th class="hidden md:table-cell px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-40">Date</th>
-                    <th class="hidden md:table-cell px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Address</th>
-                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-32">Payment</th>
-                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-8"></th>
-                </tr>
-            </thead>
+            {{-- Status --}}
+            <td class="px-3 py-3 align-top">
+                <a href="{{ route('admin.orders.show', $order->id) }}"
+                    class="inline-block px-2 py-1 rounded-lg text-xs font-semibold
+                    @if($order->order_status == 'pending') bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400
+                    @elseif($order->order_status == 'confirmed') bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400
+                    @elseif($order->order_status == 'delivered' || $order->order_status == 'completed') bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400
+                    @elseif($order->order_status == 'cancelled' || $order->order_status == 'failed') bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400
+                    @elseif($order->order_status == 'processing') bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                    @elseif($order->order_status == 'hold') bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400
+                    @else bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300
+                    @endif">
+                    {{ ucfirst($order->order_status) }}
+                </a>
+                <div class="text-xs text-gray-400 mt-1">sl: {{ $sl + 1 }}</div>
+            </td>
 
-            {{-- Body --}}
-            <tbody class="divide-y divide-gray-50 dark:divide-gray-700/50">
-                @forelse($orders as $order)
+            {{-- Checkbox --}}
+            <td class="px-3 py-3 align-top text-center">
+                <input type="checkbox" name="selected_orders[]" value="{{ $order->id }}"
+                    class="order-checkbox rounded"
+                    x-on:change="
+                        const id = '{{ $order->id }}';
+                        if ($event.target.checked) {
+                            if (!selectedOrders.includes(id)) selectedOrders.push(id);
+                        } else {
+                            selectedOrders = selectedOrders.filter(i => i !== id);
+                        }
+                        updateBulkSummary(selectedOrders);
+                    ">
+            </td>
+
+            {{-- Notes --}}
+            <td class="px-3 py-3 align-top text-center">
+                <button type="button" onclick="quickAddNote({{ $order->id }})"
+                    class="w-6 h-6 flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 text-blue-500 rounded-lg hover:bg-blue-200 mx-auto text-xs">+</button>
+                @if($order->notes && $order->notes->count() > 0)
+                <span class="text-xs text-gray-400 mt-0.5 block">{{ $order->notes->count() }}</span>
+                @endif
+            </td>
+
+            {{-- ID & Products --}}
+            <td class="px-3 py-3 align-top">
+                <a href="{{ route('admin.orders.show', $order->id) }}" class="text-blue-600 dark:text-blue-400 font-bold text-sm hover:underline">
+                    #{{ $order->id }}
+                </a>
+                @foreach($order->items->take(2) as $item)
+                <div class="flex items-center gap-2 mt-1">
+                    @if($item->product && $item->product->images->first())
+                    <img src="{{ asset('storage/'.$item->product->images->first()->image_path) }}" class="w-8 h-8 object-cover rounded-lg border dark:border-gray-700" alt="">
+                    @else
+                    <div class="w-8 h-8 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-gray-300 text-xs">?</div>
+                    @endif
+                    <div>
+                        <div class="text-xs text-gray-700 dark:text-gray-300 leading-tight max-w-[160px] truncate">{{ $item->quantity }}x {{ $item->product->name ?? 'N/A' }}</div>
+                        <div class="text-xs font-bold text-[#1B2A4A] dark:text-white">৳{{ number_format($item->unit_price, 0) }}Tk</div>
+                    </div>
+                </div>
+                @endforeach
+                @if($order->items->count() > 2)
+                <div class="text-xs text-gray-400 mt-1">+{{ $order->items->count() - 2 }} more</div>
+                @endif
+                <a href="{{ route('admin.orders.show', $order->id) }}" class="text-xs text-[#F59E0B] hover:underline mt-1 block">View Stock</a>
+            </td>
+
+            {{-- Name & Number --}}
+            <td class="px-3 py-3 align-top">
+                <div class="flex items-center gap-1 mb-1">
+                    <span class="font-semibold text-gray-800 dark:text-white text-sm">{{ $order->customer->full_name ?? 'N/A' }}</span>
+                    <button type="button" onclick="copyText('{{ addslashes($order->customer->full_name ?? '') }}')" class="text-gray-400 hover:text-gray-600 text-xs">📋</button>
+                </div>
+                <div class="flex items-center gap-1">
+                    <span class="bg-gray-900 dark:bg-gray-700 text-white text-xs px-2 py-0.5 rounded-lg font-mono">{{ $order->customer->primary_mobile ?? 'N/A' }}</span>
+                    <a href="https://wa.me/880{{ ltrim($order->customer->primary_mobile ?? '', '0') }}" target="_blank" class="w-6 h-6 flex items-center justify-center bg-green-500 text-white rounded-lg text-xs hover:bg-green-600">💬</a>
+                    <a href="tel:{{ $order->customer->primary_mobile ?? '' }}" class="w-6 h-6 flex items-center justify-center bg-blue-500 text-white rounded-lg text-xs hover:bg-blue-600">📞</a>
+                    <button type="button" onclick="copyText('{{ $order->customer->primary_mobile ?? '' }}')" class="w-6 h-6 flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-xs">📋</button>
+                </div>
+                <div class="text-xs text-gray-400 mt-1">Source: {{ $order->source ?? 'Direct' }}</div>
+            </td>
+
+            {{-- Date --}}
+            <td class="px-3 py-3 align-top text-xs text-gray-500 dark:text-gray-400">
+                <div>C:{{ $order->created_at->format('d/m/Y - h:ia') }}</div>
+                <div>U:{{ $order->updated_at->format('d/m/Y - h:ia') }}</div>
+                @if($order->assignedTo)
+                <div class="mt-1">By: <span class="font-medium text-gray-700 dark:text-gray-300">{{ $order->assignedTo->name }}</span></div>
+                @endif
+            </td>
+
+            {{-- Address --}}
+            <td class="px-3 py-3 align-top">
+                <div class="flex items-start gap-1">
+                    <span class="text-xs text-gray-700 dark:text-gray-300 max-w-[150px]">{{ $order->customer->address ?? 'N/A' }}{{ ($order->customer->district ?? '') ? ', '.$order->customer->district : '' }}</span>
+                    <button type="button" onclick="copyText('{{ addslashes(($order->customer->address ?? '').(($order->customer->district ?? '') ? ', '.$order->customer->district : '')) }}')" class="text-gray-400 hover:text-gray-600 text-xs flex-shrink-0">📋</button>
+                </div>
+            </td>
+
+            {{-- Courier --}}
+            <td class="px-3 py-3 align-top text-xs">
                 @php
-                    $serial = $orders->firstItem() + $loop->index;
-                    $statusColors = [
-                        'pending'        => 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400',
-                        'confirmed'      => 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400',
-                        'processing'     => 'bg-cyan-50 text-cyan-700 border-cyan-200',
-                        'hold'           => 'bg-orange-50 text-orange-700 border-orange-200',
-                        'hold_followup'  => 'bg-orange-50 text-orange-600 border-orange-200',
-                        'shipped'        => 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400',
-                        'delivered'      => 'bg-green-50 text-green-700 border-green-200',
-                        'completed'      => 'bg-emerald-50 text-emerald-700 border-emerald-200',
-                        'cancelled'      => 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:text-red-400',
-                        'pending_return' => 'bg-pink-50 text-pink-700 border-pink-200',
-                        'returned'       => 'bg-gray-100 text-gray-600 border-gray-200',
-                        'failed'         => 'bg-red-100 text-red-700 border-red-300',
-                    ];
-                    $statusLabels = [
-                        'pending'        => 'Pending',
-                        'confirmed'      => 'Confirmed',
-                        'processing'     => 'Processing',
-                        'hold'           => 'Hold',
-                        'hold_followup'  => 'Hold F/U',
-                        'shipped'        => 'In Courier',
-                        'delivered'      => 'Delivered',
-                        'completed'      => 'Completed',
-                        'cancelled'      => 'Cancelled',
-                        'pending_return' => 'Pend. Return',
-                        'returned'       => 'Returned',
-                        'failed'         => 'Failed',
-                    ];
-                    $phone = $order->shipping_phone;
-                    $waPhone = '880' . ltrim($phone, '0');
-                    $fullAddr = collect([$order->shipping_address, $order->shipping_area, $order->shipping_district])
-                        ->filter()->implode(', ');
+                    $courierName = $order->courier->name ?? 'New';
+                    $customerTotal = $order->customer ? $order->customer->orders()->count() : 0;
+                    $customerSuccess = $order->customer ? $order->customer->orders()->whereIn('order_status',['delivered','completed'])->count() : 0;
+                    $customerFailed = $order->customer ? $order->customer->orders()->whereIn('order_status',['cancelled','failed','returned'])->count() : 0;
+                    $percent = $customerTotal > 0 ? round(($customerSuccess/$customerTotal)*100) : 0;
                 @endphp
-                <tr class="hover:bg-gray-50/80 dark:hover:bg-gray-700/20 transition-colors duration-100 group {{ $order->is_duplicate ? 'border-l-4 border-amber-400' : '' }}"
-                    data-order-id="{{ $order->id }}"
-                    data-total="{{ $order->total }}"
-                    data-paid="{{ $order->payment_status === 'paid' ? $order->total : 0 }}"
-                    data-due="{{ $order->payment_status !== 'paid' ? $order->total : 0 }}">
+                <div class="text-gray-600 dark:text-gray-400 mb-1">
+                    To: {{ $customerTotal }} Co: {{ $customerSuccess }}
+                    <span class="px-1 py-0.5 rounded text-white text-xs {{ $order->courier_id ? 'bg-[#1B2A4A]' : 'bg-gray-400' }}">{{ $courierName }}</span>
+                </div>
+                <div class="w-24 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-1">
+                    <div class="h-full rounded-full {{ $percent >= 70 ? 'bg-green-500' : ($percent >= 40 ? 'bg-yellow-500' : 'bg-red-500') }}"
+                        style="width: {{ $percent }}%"></div>
+                </div>
+                <div class="text-gray-500 dark:text-gray-400">
+                    Su: {{ $customerSuccess }} Fa: {{ $customerFailed }}
+                </div>
+            </td>
 
-                    {{-- Checkbox --}}
-                    <td class="px-4 py-3">
-                        <input type="checkbox" name="selected" value="{{ $order->id }}"
-                            :checked="selectedOrders.includes('{{ $order->id }}')"
-                            x-on:change="
-                                const id = '{{ $order->id }}';
-                                if ($event.target.checked) {
-                                    if (!selectedOrders.includes(id)) selectedOrders.push(id);
-                                } else {
-                                    selectedOrders = selectedOrders.filter(i => i !== id);
-                                }
-                                updateBulkSummary(selectedOrders);
-                            "
-                            class="order-checkbox w-4 h-4 rounded border-gray-300 text-primary cursor-pointer">
-                    </td>
+            {{-- Summary --}}
+            <td class="px-3 py-3 align-top text-xs">
+                <div class="text-gray-700 dark:text-gray-300">Total: <span class="font-bold">৳{{ number_format($order->grand_total ?? 0, 0) }}</span></div>
+                <div class="text-green-600">Less: <span class="font-bold">৳{{ number_format($order->discount_value ?? 0, 0) }}</span></div>
+                <div class="text-blue-600">Paid: <span class="font-bold">৳{{ number_format($order->paid_amount ?? 0, 0) }}</span></div>
+                <div class="text-red-500">Due: <span class="font-bold">৳{{ number_format(($order->grand_total ?? 0) - ($order->paid_amount ?? 0), 0) }}</span></div>
+            </td>
 
-                    {{-- STATUS + ACTIONS --}}
-                    <td class="px-4 py-3">
-                        <div class="space-y-2">
-                            <span class="inline-flex px-2.5 py-1 rounded-lg text-xs font-semibold border {{ $statusColors[$order->status] ?? 'bg-gray-100 text-gray-600 border-gray-200' }}">
-                                {{ $statusLabels[$order->status] ?? ucfirst(str_replace('_', ' ', $order->status)) }}
-                            </span>
-                            <div class="flex items-center gap-1.5">
-                                <span class="text-xs text-gray-400">sl: {{ $serial }}</span>
-                                @if($order->cod_changed)
-                                    <span class="text-[10px] text-orange-600 dark:text-orange-400 font-medium">COD</span>
-                                @endif
-                                @if($order->is_duplicate)
-                                    <span class="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Dup</span>
-                                @endif
-                                <a href="{{ route('admin.invoices.generatePrint', $order) }}"
-                                   target="_blank"
-                                   class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-primary transition rounded">
-                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                              d="M17 17H7a2 2 0 01-2-2V9a2 2 0 012-2h10a2 2 0 012 2v6a2 2 0 01-2 2zm0 0v2a2 2 0 01-2 2H9a2 2 0 01-2-2v-2"/>
-                                    </svg>
-                                </a>
-                            </div>
-                        </div>
-                    </td>
-
-                    {{-- ID & PRODUCTS --}}
-                    <td class="px-4 py-3 max-w-xs">
-                        <a href="{{ route('admin.orders.show', $order) }}"
-                           class="text-sm font-bold text-primary hover:underline">
-                            #{{ $order->order_number }}
-                        </a>
-                        <div class="mt-1.5 space-y-1">
-                            @foreach($order->items->take(2) as $item)
-                            <div class="flex items-center gap-2">
-                                <div class="w-8 h-8 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
-                                    @if($item->product?->primaryImage)
-                                        <img src="{{ asset('storage/' . $item->product->primaryImage->image_path) }}"
-                                             class="w-full h-full object-cover"
-                                             alt="{{ $item->product_name }}">
-                                    @else
-                                        <div class="w-full h-full flex items-center justify-center text-gray-300">
-                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                            </svg>
-                                        </div>
-                                    @endif
-                                </div>
-                                <div class="min-w-0">
-                                    <p class="text-xs text-gray-700 dark:text-gray-300 truncate max-w-[160px]">
-                                        {{ $item->qty }}× {{ $item->product_name }}
-                                    </p>
-                                    <p class="text-xs text-gray-400">৳{{ number_format($item->unit_price) }}</p>
-                                </div>
-                            </div>
-                            @endforeach
-                            @if($order->items->count() > 2)
-                                <p class="text-xs text-gray-400">+{{ $order->items->count() - 2 }} more items</p>
-                            @endif
-                        </div>
-                        <div class="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-                            <span class="text-xs font-bold text-gray-900 dark:text-white">
-                                Total: ৳{{ number_format($order->total) }}
-                            </span>
-                            @if($order->discount > 0)
-                                <span class="text-xs text-green-600 ml-1">(-৳{{ number_format($order->discount) }})</span>
-                            @endif
-                        </div>
-                    </td>
-
-                    {{-- CUSTOMER --}}
-                    <td class="px-4 py-3">
-                        <div class="space-y-1.5">
-                            <p class="text-sm font-semibold text-gray-900 dark:text-white">
-                                {{ $order->shipping_name }}
-                            </p>
-                            <div class="flex items-center gap-1.5">
-                                <span class="px-2.5 py-1 bg-gray-900 dark:bg-gray-600 text-white text-xs font-mono rounded-lg">
-                                    {{ $phone }}
-                                </span>
-                                <a href="https://wa.me/{{ $waPhone }}"
-                                   target="_blank"
-                                   class="w-6 h-6 flex items-center justify-center bg-green-500 text-white rounded-lg hover:bg-green-600 transition">
-                                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                                    </svg>
-                                </a>
-                                <button onclick="copyToClipboard('{{ $phone }}')"
-                                    class="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-primary bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 transition">
-                                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                              d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                                    </svg>
-                                </button>
-                            </div>
-                            @if($order->source)
-                            <span class="text-xs text-gray-400">
-                                Source: {{ ucfirst(str_replace('_', ' ', $order->source)) }}
-                            </span>
-                            @endif
-                        </div>
-                    </td>
-
-                    {{-- DATE --}}
-                    <td class="hidden md:table-cell px-4 py-3">
-                        <div class="space-y-1 text-xs text-gray-500 dark:text-gray-400">
-                            <div>
-                                <span class="font-semibold text-gray-400">C:</span>
-                                {{ $order->created_at->format('d M Y · H:i') }}
-                            </div>
-                            <div>
-                                <span class="font-semibold text-gray-400">U:</span>
-                                {{ $order->updated_at->format('d M Y · H:i') }}
-                            </div>
-                            <div class="text-gray-400">{{ $order->created_at->diffForHumans() }}</div>
-                            @if($order->assignedEmployee)
-                            <div>
-                                <span class="font-semibold text-gray-400">By:</span>
-                                {{ $order->assignedEmployee->name }}
-                            </div>
-                            @endif
-                        </div>
-                    </td>
-
-                    {{-- ADDRESS --}}
-                    <td class="hidden md:table-cell px-4 py-3">
-                        <div class="flex items-start gap-1.5">
-                            <p class="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                                {{ $order->shipping_district }}
-                                @if($order->shipping_area), {{ $order->shipping_area }}@endif
-                            </p>
-                            @if($fullAddr)
-                            <button onclick="copyToClipboard('{{ addslashes($fullAddr) }}')"
-                                class="w-5 h-5 flex-shrink-0 flex items-center justify-center text-gray-300 hover:text-primary transition rounded">
-                                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                          d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                                </svg>
-                            </button>
-                            @endif
-                        </div>
-                    </td>
-
-                    {{-- PAYMENT --}}
-                    <td class="px-4 py-3">
-                        <div class="space-y-1">
-                            <span class="inline-flex px-2 py-0.5 rounded-md text-xs font-semibold
-                                @if($order->payment_method === 'bkash') bg-pink-50 text-pink-700 border border-pink-200
-                                @elseif($order->payment_method === 'nagad') bg-orange-50 text-orange-700 border border-orange-200
-                                @else bg-gray-100 text-gray-600 border border-gray-200 @endif">
-                                {{ strtoupper($order->payment_method) }}
-                            </span>
-                            <div>
-                                <span class="text-xs
-                                    @if($order->payment_status === 'paid') text-green-600 font-semibold
-                                    @elseif($order->payment_status === 'failed') text-red-500
-                                    @else text-gray-400 @endif">
-                                    {{ ucfirst($order->payment_status) }}
-                                </span>
-                            </div>
-                            @if($order->payment_status !== 'paid')
-                            <p class="text-xs text-red-500 font-semibold">Due: ৳{{ number_format($order->total) }}</p>
-                            @else
-                            <p class="text-xs text-green-600 font-semibold">Paid: ৳{{ number_format($order->total) }}</p>
-                            @endif
-                        </div>
-                    </td>
-
-                    {{-- ACTIONS --}}
-                    <td class="px-4 py-3">
-                        <a href="{{ route('admin.orders.show', $order) }}"
-                           class="w-8 h-8 flex items-center justify-center rounded-xl
-                                  bg-primary/10 text-primary hover:bg-primary hover:text-white
-                                  transition-all duration-150">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                            </svg>
-                        </a>
-                    </td>
-
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="8" class="px-6 py-16 text-center">
-                        <div class="flex flex-col items-center gap-3">
-                            <div class="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                                <svg class="w-7 h-7 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                          d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-                                </svg>
-                            </div>
-                            <p class="text-sm font-semibold text-gray-500 dark:text-gray-400">No orders found</p>
-                            <p class="text-xs text-gray-400">Try adjusting your filters</p>
-                        </div>
-                    </td>
-                </tr>
-                @endforelse
-            </tbody>
+            {{-- Employee --}}
+            <td class="px-3 py-3 align-top text-xs text-gray-600 dark:text-gray-400">
+                {{ $order->assignedTo->name ?? 'N/A' }}
+            </td>
+        </tr>
+        @empty
+        <tr>
+            <td colspan="10" class="px-6 py-16 text-center">
+                <div class="flex flex-col items-center gap-3">
+                    <div class="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                        <svg class="w-7 h-7 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                        </svg>
+                    </div>
+                    <p class="text-sm font-semibold text-gray-500 dark:text-gray-400">No orders found</p>
+                    <p class="text-xs text-gray-400">Try adjusting your filters</p>
+                </div>
+            </td>
+        </tr>
+        @endforelse
+        </tbody>
         </table>
     </div>
 
@@ -1047,6 +940,26 @@
         });
     }
 
+    function copyText(text) {
+        copyToClipboard(text);
+    }
+
+    function quickAddNote(orderId) {
+        const note = prompt('Add note for order #' + orderId + ':');
+        if (!note) return;
+        fetch('/admin/orders/' + orderId + '/notes', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({note_text: note, type: 'order'})
+        }).then(r => r.json()).then(d => {
+            if (d.success) showToast('Note added!', 'success');
+        });
+    }
+
     window.showToast = function (message, type) {
         const toast = document.getElementById('note-toast');
         const msg   = document.getElementById('note-toast-msg');
@@ -1066,11 +979,11 @@
     }
 
     function getSelectedIds() {
-        return Array.from(document.querySelectorAll('input[name=selected]:checked')).map(el => el.value);
+        return Array.from(document.querySelectorAll('.order-checkbox:checked')).map(el => el.value);
     }
 
     window.getSelectedOrders = function() {
-        return Array.from(document.querySelectorAll('input[name=selected]:checked')).map(el => el.value);
+        return Array.from(document.querySelectorAll('.order-checkbox:checked')).map(el => el.value);
     };
 
     async function bulkUpdateStatus(status) {
