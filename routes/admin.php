@@ -67,7 +67,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('orders/export-csv', [OrderController::class, 'exportCsv'])->name('orders.exportCsv');
         Route::get('orders/bulk-print', [OrderController::class, 'bulkPrint'])->name('orders.bulkPrint');
 
-        Route::patch('orders/{order}', [OrderController::class, 'update'])->name('orders.update');
+        Route::match(['PUT', 'PATCH'], 'orders/{order}', [OrderController::class, 'update'])->name('orders.update');
         Route::patch('orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
         Route::post('orders/{order}/items', [OrderController::class, 'addItem'])->name('orders.addItem');
         Route::delete('orders/items/{item}', [OrderController::class, 'removeItem'])->name('orders.removeItem');
