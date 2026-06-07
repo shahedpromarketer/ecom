@@ -248,9 +248,10 @@ class IntegrationController extends Controller
                     ->withoutVerifying()
                     ->withHeaders(['Authorization' => 'Basic ' . $credentials])
                     ->get($site->site_url . '/wp-json/wc/v3/products', [
-                        'per_page' => 50,
-                        'page'     => $page,
-                        'status'   => 'publish',
+                        'per_page'     => 50,
+                        'page'         => $page,
+                        'status'       => 'publish',
+                        'stock_status' => '',
                     ]);
 
                 if ($response->failed()) {
@@ -265,6 +266,29 @@ class IntegrationController extends Controller
 
                 foreach ($products as $wpProduct) {
                     try {
+                        // Resolve price from multiple fields (out-of-stock products may have empty 'price')
+                        if (! empty($wpProduct['price'])) {
+                            $price = (float) $wpProduct['price'];
+                        } elseif (! empty($wpProduct['sale_price'])) {
+                            $price = (float) $wpProduct['sale_price'];
+                        } elseif (! empty($wpProduct['regular_price'])) {
+                            $price = (float) $wpProduct['regular_price'];
+                        } else {
+                            $price = 0;
+                        }
+
+                        $regularPrice = ! empty($wpProduct['regular_price']) ? (float) $wpProduct['regular_price'] : $price;
+                        $salePrice    = ! empty($wpProduct['sale_price'])    ? (float) $wpProduct['sale_price']    : null;
+
+                        // Stock: prefer stock_quantity, fall back to stock_status flag
+                        if (isset($wpProduct['stock_quantity']) && $wpProduct['stock_quantity'] !== null) {
+                            $stock = (int) $wpProduct['stock_quantity'];
+                        } elseif (($wpProduct['stock_status'] ?? '') === 'instock') {
+                            $stock = 1;
+                        } else {
+                            $stock = 0;
+                        }
+
                         $existing = Product::where('wp_product_id', $wpProduct['id'])->first();
 
                         $slug = $wpProduct['slug'] ?? Str::slug($wpProduct['name']);
@@ -285,9 +309,9 @@ class IntegrationController extends Controller
                                 'slug'              => $slug,
                                 'description'       => $wpProduct['description'] ?? '',
                                 'short_description' => $wpProduct['short_description'] ?? '',
-                                'price'             => $wpProduct['price'] ?: ($wpProduct['regular_price'] ?? 0),
-                                'regular_price'     => $wpProduct['regular_price'] ?? 0,
-                                'sale_price'        => $wpProduct['sale_price'] ?: null,
+                                'price'             => $price,
+                                'regular_price'     => $regularPrice,
+                                'sale_price'        => $salePrice,
                                 'sku'               => $wpProduct['sku'] ?: null,
                                 'status'            => $wpProduct['status'] === 'publish' ? 'active' : 'inactive',
                             ]
