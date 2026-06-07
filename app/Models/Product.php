@@ -7,14 +7,16 @@ use Illuminate\Database\Eloquent\Model;
 class Product extends Model
 {
     protected $fillable = [
-        'name', 'slug', 'description', 'short_description', 'price', 'sale_price',
+        'wp_product_id', 'name', 'slug', 'description', 'short_description',
+        'price', 'regular_price', 'sale_price',
         'sku', 'status', 'is_featured', 'meta_title', 'meta_description',
     ];
 
     protected $casts = [
-        'is_featured' => 'boolean',
-        'price' => 'decimal:2',
-        'sale_price' => 'decimal:2',
+        'is_featured'   => 'boolean',
+        'price'         => 'decimal:2',
+        'regular_price' => 'decimal:2',
+        'sale_price'    => 'decimal:2',
     ];
 
     public function categories()

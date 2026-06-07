@@ -224,8 +224,9 @@
                             <p class="text-xs text-gray-500 dark:text-gray-400">
                                 {{ $site->last_product_sync_at ? $site->last_product_sync_at->diffForHumans() : 'Never' }}
                             </p>
-                            <button onclick="syncProducts({{ $site->id }})" title="Coming Soon"
-                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-50 text-teal-600 dark:bg-teal-900/20 dark:text-teal-400 text-xs font-semibold hover:bg-teal-100 transition opacity-60 cursor-not-allowed">
+                            <button id="sync-products-{{ $site->id }}"
+                                onclick="syncProducts({{ $site->id }})"
+                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-50 text-teal-600 dark:bg-teal-900/20 dark:text-teal-400 text-xs font-semibold hover:bg-teal-100 transition">
                                 Sync Now
                             </button>
                         </div>
@@ -558,12 +559,29 @@ async function syncOrders(siteId) {
 }
 
 async function syncProducts(siteId) {
-    const res  = await fetch('/admin/integrations/wordpress/' + siteId + '/sync-products', {
-        method: 'POST',
-        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content }
-    });
-    const data = await res.json();
-    wpToast(data.message || 'Product sync coming soon.', 'success');
+    const btn = document.getElementById('sync-products-' + siteId);
+    if (!btn) return;
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.textContent = 'Syncing...';
+    try {
+        const res  = await fetch('/admin/integrations/wordpress/' + siteId + '/sync-products', {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content }
+        });
+        const data = await res.json();
+        if (data.success) {
+            wpToast(data.synced + ' products synced!', 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            wpToast(data.message || 'Sync failed', 'error');
+        }
+    } catch(e) {
+        wpToast('Network error', 'error');
+    } finally {
+        btn.disabled  = false;
+        btn.innerHTML = orig;
+    }
 }
 
 async function testConnection(siteId) {

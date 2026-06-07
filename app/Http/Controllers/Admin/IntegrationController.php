@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class IntegrationController extends Controller
 {
@@ -236,7 +237,89 @@ class IntegrationController extends Controller
 
     public function syncProducts(WordPressSite $site)
     {
-        return response()->json(['success' => true, 'message' => 'Product sync coming soon.']);
+        try {
+            $credentials = base64_encode($site->consumer_key . ':' . $site->consumer_secret);
+            $page    = 1;
+            $synced  = 0;
+            $failed  = 0;
+
+            do {
+                $response = Http::timeout(30)
+                    ->withoutVerifying()
+                    ->withHeaders(['Authorization' => 'Basic ' . $credentials])
+                    ->get($site->site_url . '/wp-json/wc/v3/products', [
+                        'per_page' => 50,
+                        'page'     => $page,
+                        'status'   => 'publish',
+                    ]);
+
+                if ($response->failed()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'API Error: ' . $response->status() . ' - ' . $response->body(),
+                    ]);
+                }
+
+                $products = $response->json();
+                if (empty($products)) break;
+
+                foreach ($products as $wpProduct) {
+                    try {
+                        $existing = Product::where('wp_product_id', $wpProduct['id'])->first();
+
+                        $slug = $wpProduct['slug'] ?? Str::slug($wpProduct['name']);
+                        if (! $existing) {
+                            $base  = $slug;
+                            $count = 1;
+                            while (Product::where('slug', $slug)->exists()) {
+                                $slug = $base . '-' . $count++;
+                            }
+                        } else {
+                            $slug = $existing->slug;
+                        }
+
+                        Product::updateOrCreate(
+                            ['wp_product_id' => $wpProduct['id']],
+                            [
+                                'name'              => $wpProduct['name'],
+                                'slug'              => $slug,
+                                'description'       => $wpProduct['description'] ?? '',
+                                'short_description' => $wpProduct['short_description'] ?? '',
+                                'price'             => $wpProduct['price'] ?: ($wpProduct['regular_price'] ?? 0),
+                                'regular_price'     => $wpProduct['regular_price'] ?? 0,
+                                'sale_price'        => $wpProduct['sale_price'] ?: null,
+                                'sku'               => $wpProduct['sku'] ?: null,
+                                'status'            => $wpProduct['status'] === 'publish' ? 'active' : 'inactive',
+                            ]
+                        );
+
+                        $synced++;
+                    } catch (\Exception $e) {
+                        $failed++;
+                    }
+                }
+
+                $page++;
+            } while (count($products) === 50);
+
+            $site->update([
+                'last_product_sync_at'  => now(),
+                'total_products_synced' => ($site->total_products_synced ?? 0) + $synced,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'synced'  => $synced,
+                'failed'  => $failed,
+                'message' => "$synced products synced, $failed failed",
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Connection error: ' . $e->getMessage(),
+            ]);
+        }
     }
 
     public function testConnection(WordPressSite $site)
