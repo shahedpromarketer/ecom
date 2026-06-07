@@ -461,15 +461,12 @@
                 </button>
             </form>
             <div class="relative flex-shrink-0">
-                <select onchange="window.location.href=this.value"
+                <select onchange="window.location.href='?per_page='+this.value+'&{{ http_build_query(request()->except('per_page', 'page')) }}'"
                     class="appearance-none pl-2 pr-6 py-2 text-xs rounded-xl border border-gray-200
                            dark:border-gray-600 bg-white dark:bg-gray-700
                            text-gray-900 dark:text-white cursor-pointer min-w-[52px]">
-                    @foreach([10, 25, 50, 100] as $n)
-                    <option value="{{ request()->fullUrlWithQuery(['per_page' => $n, 'page' => 1]) }}"
-                        {{ request('per_page', 10) == $n ? 'selected' : '' }}>
-                        {{ $n }}
-                    </option>
+                    @foreach([10,25,50,100,150,200,250,300,500,1000,1500,2000] as $n)
+                    <option value="{{ $n }}" {{ request('per_page', 10) == $n ? 'selected' : '' }}>{{ $n }}</option>
                     @endforeach
                 </select>
                 <svg class="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none"

@@ -46,7 +46,7 @@ class OrderController extends Controller
             // Silent fail — never break the orders page
         }
 
-        $perPage = in_array((int) $request->get('per_page', 10), [10, 25, 50, 100])
+        $perPage = in_array((int) $request->get('per_page', 10), [10,25,50,100,150,200,250,300,500,1000,1500,2000])
             ? (int) $request->get('per_page', 10) : 10;
 
         $query = Order::with(['items.product.images', 'assignedTo', 'orderNotes', 'shipment'])->latest();
