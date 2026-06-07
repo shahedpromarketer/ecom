@@ -6,22 +6,6 @@
 
 @section('content')
 
-{{-- TOP BAR --}}
-<div class="flex items-center justify-end gap-3 mb-6 p-4 bg-white dark:bg-gray-900 rounded-2xl shadow">
-    <div class="flex items-center gap-2 flex-wrap">
-        <a href="{{ route('admin.orders.create') }}"
-            class="bg-[#1B2A4A] text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-[#243a63] transition">
-            + Create Order
-        </a>
-        <a href="{{ route('admin.invoices.generatePrint', $order) }}" target="_blank"
-            class="border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-xl text-sm hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-white transition">
-            🖨 Print
-        </a>
-        <span class="text-sm text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-xl">
-            #{{ str_pad($order->id, 5, '0', STR_PAD_LEFT) }}
-        </span>
-    </div>
-</div>
 
 {{-- ALERTS --}}
 @if(session('success'))
