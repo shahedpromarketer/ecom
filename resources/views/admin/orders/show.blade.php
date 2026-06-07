@@ -3,22 +3,11 @@
 @section('title', 'Order #' . $order->order_number)
 @section('page-title', 'Order Detail')
 
-@section('breadcrumb')
-    <span class="text-textsecondary">/</span>
-    <a href="{{ route('admin.orders.index') }}" class="hover:text-primary transition-colors">Orders</a>
-    <span class="text-textsecondary">/</span>
-    <span class="text-textprimary font-medium">{{ $order->order_number }}</span>
-@endsection
 
 @section('content')
 
 {{-- TOP BAR --}}
-<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 p-4 bg-white dark:bg-gray-900 rounded-2xl shadow">
-    <form action="{{ route('admin.orders.index') }}" method="GET" class="w-full sm:w-auto">
-        <input type="text" name="search" placeholder="Search Order ID or Mobile..."
-            value="{{ request('search') }}"
-            class="w-full sm:w-80 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]">
-    </form>
+<div class="flex items-center justify-end gap-3 mb-6 p-4 bg-white dark:bg-gray-900 rounded-2xl shadow">
     <div class="flex items-center gap-2 flex-wrap">
         <a href="{{ route('admin.orders.create') }}"
             class="bg-[#1B2A4A] text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-[#243a63] transition">
