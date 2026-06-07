@@ -182,59 +182,97 @@ class OrderController extends Controller
 
     public function create()
     {
-        $products = Product::where('status', 'active')->with('variants')->orderBy('name')->get();
-        $categories = Category::where('is_active', true)->orderBy('name')->get();
-        return view('admin.orders.create', compact('products', 'categories'));
+        $admins    = \App\Models\User::orderBy('name')->get();
+        $districts = [
+            'Bagerhat','Bandarban','Barguna','Barishal','Bhola','Bogura','Brahmanbaria',
+            'Chandpur','Chapai Nawabganj','Chattogram','Chuadanga','Cox\'s Bazar','Cumilla',
+            'Dhaka','Dinajpur','Faridpur','Feni','Gaibandha','Gazipur','Gopalganj',
+            'Habiganj','Jamalpur','Jashore','Jhalokati','Jhenaidah','Joypurhat',
+            'Khagrachari','Khulna','Kishoreganj','Kurigram','Kushtia','Lakshmipur',
+            'Lalmonirhat','Madaripur','Magura','Manikganj','Meherpur','Moulvibazar',
+            'Munshiganj','Mymensingh','Naogaon','Narail','Narayanganj','Narsingdi',
+            'Natore','Netrokona','Nilphamari','Noakhali','Pabna','Panchagarh',
+            'Patuakhali','Pirojpur','Rajbari','Rajshahi','Rangamati','Rangpur',
+            'Satkhira','Shariatpur','Sherpur','Sirajganj','Sunamganj','Sylhet',
+            'Tangail','Thakurgaon',
+        ];
+        return view('admin.orders.create', compact('admins', 'districts'));
     }
 
     public function store(Request $request)
     {
+        $shippingName  = $request->full_name ?? $request->shipping_name;
+        $shippingPhone = $request->primary_mobile ?? $request->shipping_phone;
+
+        $request->merge([
+            'shipping_name'  => $shippingName,
+            'shipping_phone' => $shippingPhone,
+        ]);
+
         $request->validate([
-            'shipping_name'    => 'required|string|max:255',
-            'shipping_phone'   => 'required|string|max:20',
-            'payment_method'   => 'required|in:cod,bkash,nagad,card',
-            'items'            => 'required|array|min:1',
+            'shipping_name'      => 'required|string|max:255',
+            'shipping_phone'     => 'required|string|max:20',
+            'payment_method'     => 'required|in:cod,bkash,nagad,rocket,card',
+            'items'              => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
-            'items.*.qty'      => 'required|integer|min:1',
+            'items.*.quantity'   => 'nullable|integer|min:1',
+            'items.*.qty'        => 'nullable|integer|min:1',
             'items.*.unit_price' => 'required|numeric|min:0',
         ]);
 
-        $subtotal  = collect($request->items)->sum(fn($i) => $i['unit_price'] * $i['qty']);
-        $discount  = (float) $request->discount ?? 0;
-        $shipping  = (float) $request->shipping_charge ?? 0;
-        $total     = $subtotal - $discount + $shipping;
+        $subtotal      = collect($request->items)->sum(fn($i) => ($i['unit_price'] ?? 0) * (($i['qty'] ?? $i['quantity']) ?? 1));
+        $discountType  = $request->discount_type ?? 'fixed';
+        $discountValue = (float)($request->discount_value ?? $request->discount ?? 0);
+        $discount      = $discountType === 'percent' ? ($subtotal * $discountValue / 100) : $discountValue;
+        $shipping      = (float)($request->shipping_charge ?? 0);
+        $total         = max(0, $subtotal - $discount + $shipping);
 
         $order = Order::create([
-            'shipping_name'     => $request->shipping_name,
-            'shipping_phone'    => $request->shipping_phone,
+            'shipping_name'     => $shippingName,
+            'shipping_phone'    => $shippingPhone,
+            'alt_phone'         => $request->alternative_mobile ?? $request->alt_phone,
+            'email'             => $request->email,
             'shipping_division' => $request->shipping_division,
-            'shipping_district' => $request->shipping_district,
+            'shipping_district' => $request->district ?? $request->shipping_district,
             'shipping_area'     => $request->shipping_area,
-            'shipping_address'  => $request->shipping_address,
+            'shipping_address'  => $request->address ?? $request->shipping_address,
             'subtotal'          => $subtotal,
             'discount'          => $discount,
+            'discount_type'     => $discountType,
             'shipping_charge'   => $shipping,
+            'courier_charge'    => (float)($request->courier_charge ?? 0),
             'total'             => $total,
+            'paid_amount'       => (float)($request->paid_amount ?? 0),
             'payment_method'    => $request->payment_method,
             'payment_status'    => $request->payment_status ?? 'unpaid',
-            'status'            => 'pending',
-            'source'            => $request->source ?? 'manual',
+            'status'            => $request->order_status ?? 'pending',
+            'source'            => $request->source_website ?? $request->source ?? 'manual',
+            'source_website'    => $request->source_website,
             'notes'             => $request->notes,
+            'courier_note'      => $request->courier_note,
+            'packing_note'      => $request->packing_note,
             'order_tag'         => $request->order_tag,
-            'assigned_to'       => auth()->id(),
+            'customer_tag'      => $request->customer_tag,
+            'reference_no'      => $request->reference_no,
+            'skip_followup'     => $request->boolean('skip_followup'),
+            'assigned_to'       => $request->assigned_to ?? auth()->id(),
         ]);
 
         foreach ($request->items as $item) {
-            $product = Product::find($item['product_id']);
+            $product  = Product::find($item['product_id']);
+            $qty      = (int)($item['qty'] ?? $item['quantity'] ?? 1);
+            $price    = (float)($item['unit_price'] ?? 0);
+            $rowDisc  = (float)($item['discount'] ?? 0);
             OrderItem::create([
                 'order_id'     => $order->id,
                 'product_id'   => $item['product_id'],
                 'variant_id'   => $item['variant_id'] ?? null,
-                'product_name' => $product?->name ?? $item['product_name'] ?? '',
-                'variant_info' => $item['variant_info'] ?? null,
-                'qty'          => $item['qty'],
-                'unit_price'   => $item['unit_price'],
-                'total'        => $item['unit_price'] * $item['qty'],
+                'product_name' => $product?->name ?? ($item['product_name'] ?? ''),
+                'variant_info' => $item['variant'] ?? $item['variant_info'] ?? null,
+                'qty'          => $qty,
+                'unit_price'   => $price,
+                'discount'     => $rowDisc,
+                'total'        => ($price * $qty) - $rowDisc,
             ]);
         }
 
