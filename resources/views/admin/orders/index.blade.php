@@ -501,6 +501,7 @@
             <th class="px-3 py-3 text-left">Name & Number</th>
             <th class="px-3 py-3 text-left">Date</th>
             <th class="px-3 py-3 text-left">Address</th>
+            <th class="px-3 py-3"></th>
             <th class="px-3 py-3 text-left">Courier</th>
             <th class="px-3 py-3 text-left">Summary</th>
             <th class="px-3 py-3 text-left">Employee</th>
@@ -605,15 +606,19 @@
             <td class="px-3 py-3 align-top">
                 <div class="flex items-start gap-1">
                     <span class="text-xs text-gray-700 dark:text-gray-300 max-w-[150px]">{{ $order->shipping_address ?? 'N/A' }}{{ $order->shipping_district ? ', '.$order->shipping_district : '' }}</span>
-                    <button type="button" onclick="copyOrderDetails(
-                        '{{ addslashes($order->shipping_name ?? '') }}',
-                        '{{ $order->shipping_phone ?? '' }}',
-                        '{{ addslashes(($order->shipping_address ?? '').($order->shipping_district ? ', '.$order->shipping_district : '')) }}',
-                        '{{ $order->id }}',
-                        '{{ number_format($order->total ?? 0, 0) }}',
-                        '{{ $order->payment_method ?? 'COD' }}'
-                    )" class="text-gray-400 hover:text-gray-600 flex-shrink-0">📋</button>
                 </div>
+            </td>
+
+            {{-- Copy --}}
+            <td class="px-3 py-3 align-top text-center">
+                <button type="button" onclick="copyOrderDetails(
+                    '{{ addslashes($order->shipping_name ?? '') }}',
+                    '{{ $order->shipping_phone ?? '' }}',
+                    '{{ addslashes(($order->shipping_address ?? '').($order->shipping_district ? ', '.$order->shipping_district : '')) }}',
+                    '{{ $order->id }}',
+                    '{{ number_format($order->total ?? 0, 0) }}',
+                    '{{ $order->payment_method ?? 'COD' }}'
+                )" class="w-7 h-7 flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-500 hover:bg-gray-200 rounded-lg text-xs mx-auto" title="Copy order details">📋</button>
             </td>
 
             {{-- Courier --}}
@@ -653,7 +658,7 @@
         </tr>
         @empty
         <tr>
-            <td colspan="10" class="px-6 py-16 text-center">
+            <td colspan="11" class="px-6 py-16 text-center">
                 <div class="flex flex-col items-center gap-3">
                     <div class="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
                         <svg class="w-7 h-7 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
