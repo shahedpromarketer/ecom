@@ -946,7 +946,7 @@
 
     function quickAddNote(orderId) {
         const note = prompt('Add note for order #' + orderId + ':');
-        if (!note) return;
+        if (!note || !note.trim()) return;
         fetch('/admin/orders/' + orderId + '/notes', {
             method: 'POST',
             headers: {
@@ -954,10 +954,29 @@
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                 'Accept': 'application/json'
             },
-            body: JSON.stringify({note_text: note, type: 'order'})
-        }).then(r => r.json()).then(d => {
-            if (d.success) showToast('Note added!', 'success');
-        });
+            body: JSON.stringify({note_text: note.trim(), type: 'order'})
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                showToast('Note added!', 'success');
+                const btn = document.querySelector('[onclick="quickAddNote(' + orderId + ')"]');
+                if (btn) {
+                    const countEl = btn.nextElementSibling;
+                    if (countEl) {
+                        countEl.textContent = parseInt(countEl.textContent || 0) + 1;
+                    } else {
+                        const span = document.createElement('span');
+                        span.className = 'text-xs text-gray-400 mt-0.5 block';
+                        span.textContent = '1';
+                        btn.parentNode.appendChild(span);
+                    }
+                }
+            } else {
+                showToast('Failed to add note', 'error');
+            }
+        })
+        .catch(() => showToast('Error adding note', 'error'));
     }
 
     window.showToast = function (message, type) {
