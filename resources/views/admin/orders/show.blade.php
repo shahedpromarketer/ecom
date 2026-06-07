@@ -108,52 +108,37 @@
                     @endforeach
                 </select>
             </div>
-            {{-- Division --}}
-            <div>
-                <label class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Division</label>
-                <select name="shipping_division"
-                    class="w-full rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]">
-                    @foreach(['Dhaka','Chittagong','Rajshahi','Khulna','Barishal','Sylhet','Rangpur','Mymensingh'] as $div)
-                    <option value="{{ $div }}" {{ ($order->shipping_division ?? 'Dhaka') === $div ? 'selected' : '' }}>{{ $div }}</option>
-                    @endforeach
-                </select>
-            </div>
         </div>
     </div>
 
-    {{-- Customer Insight Sub-card --}}
+    {{-- Customer Insight inline row --}}
     @php $phoneOrderCount = \App\Models\Order::where('shipping_phone', $order->shipping_phone)->count(); @endphp
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl mt-2">
-        <div>
-            <div class="text-xs text-gray-500 dark:text-gray-400">Total Orders</div>
-            <div class="text-sm font-bold text-[#1B2A4A] dark:text-white">
-                {{ $phoneOrderCount }}
-                <a href="{{ route('admin.orders.index', ['search' => $order->shipping_phone]) }}"
-                    class="text-xs text-[#F59E0B] ml-1 hover:underline" target="_blank">View All ↗</a>
-            </div>
+    <div class="flex flex-wrap items-center gap-4 mt-4 pt-4 border-t dark:border-gray-700">
+        <div class="flex items-center gap-1 text-sm">
+            <span class="text-gray-500 dark:text-gray-400 text-xs">Total Orders:</span>
+            <span class="font-bold text-[#1B2A4A] dark:text-white">{{ $phoneOrderCount }}</span>
+            <a href="{{ route('admin.orders.index', ['search' => $order->shipping_phone]) }}" class="text-xs text-[#F59E0B] hover:underline ml-1" target="_blank">View All ↗</a>
         </div>
-        <div>
-            <div class="text-xs text-gray-500 dark:text-gray-400">Completed/Delivered</div>
-            <div class="text-sm font-bold text-green-600">
-                {{ \App\Models\Order::where('shipping_phone', $order->shipping_phone)->whereIn('status', ['delivered','completed'])->count() }}
-            </div>
+        <div class="flex items-center gap-1 text-sm">
+            <span class="text-gray-500 dark:text-gray-400 text-xs">Completed:</span>
+            <span class="font-bold text-green-600">{{ \App\Models\Order::where('shipping_phone', $order->shipping_phone)->whereIn('status', ['delivered','completed'])->count() }}</span>
         </div>
-        <div>
-            <div class="text-xs text-gray-500 dark:text-gray-400">Order Source</div>
-            <div class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ ucfirst($order->source ?? 'Direct') }}</div>
+        <div class="flex items-center gap-1 text-sm">
+            <span class="text-gray-500 dark:text-gray-400 text-xs">Source:</span>
+            <span class="text-gray-700 dark:text-gray-300 text-xs font-medium">{{ $order->source ?? 'Direct' }}</span>
         </div>
-        <div class="space-y-1">
-            <select name="order_tag" class="w-full rounded-lg border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs bg-white dark:bg-gray-700 dark:text-white">
+        <div class="flex items-center gap-2 ml-auto">
+            <select name="order_tag" class="rounded-lg border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs bg-white dark:bg-gray-800 dark:text-white">
                 <option value="">Order Tag</option>
-                @foreach(['vip'=>'VIP','regular'=>'Regular','problematic'=>'Problematic'] as $v=>$l)
-                <option value="{{ $v }}" {{ $order->order_tag === $v ? 'selected' : '' }}>{{ $l }}</option>
-                @endforeach
+                <option value="vip" {{ $order->order_tag == 'vip' ? 'selected' : '' }}>VIP</option>
+                <option value="regular" {{ $order->order_tag == 'regular' ? 'selected' : '' }}>Regular</option>
+                <option value="problematic" {{ $order->order_tag == 'problematic' ? 'selected' : '' }}>Problematic</option>
             </select>
-            <select name="customer_tag" class="w-full rounded-lg border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs bg-white dark:bg-gray-700 dark:text-white">
+            <select name="customer_tag" class="rounded-lg border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs bg-white dark:bg-gray-800 dark:text-white">
                 <option value="">Customer Tag</option>
-                @foreach(['loyal'=>'Loyal','new'=>'New','fraud'=>'Fraud Risk'] as $v=>$l)
-                <option value="{{ $v }}" {{ $order->customer_tag === $v ? 'selected' : '' }}>{{ $l }}</option>
-                @endforeach
+                <option value="loyal" {{ $order->customer_tag == 'loyal' ? 'selected' : '' }}>Loyal</option>
+                <option value="new" {{ $order->customer_tag == 'new' ? 'selected' : '' }}>New</option>
+                <option value="fraud" {{ $order->customer_tag == 'fraud' ? 'selected' : '' }}>Fraud Risk</option>
             </select>
         </div>
     </div>
