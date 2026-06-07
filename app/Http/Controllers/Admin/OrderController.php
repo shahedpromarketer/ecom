@@ -315,6 +315,11 @@ class OrderController extends Controller
             'Tangail','Thakurgaon',
         ];
 
+        // Auto-fill reference_no from WooCommerce order ID if not set
+        if (empty($order->reference_no) && ! empty($order->source_order_id)) {
+            $order->reference_no = $order->source_order_id;
+        }
+
         return view('admin.orders.show', compact(
             'order', 'activeCouriers', 'statusSteps', 'currentStep',
             'admins', 'districts'
