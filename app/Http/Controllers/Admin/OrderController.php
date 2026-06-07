@@ -358,6 +358,16 @@ class OrderController extends Controller
             $order->reference_no = $order->source_order_id;
         }
 
+        // Normalize shipping_district to canonical casing so the select auto-selects
+        if (! empty($order->shipping_district)) {
+            foreach ($districts as $d) {
+                if (strtolower(trim($order->shipping_district)) === strtolower($d)) {
+                    $order->shipping_district = $d;
+                    break;
+                }
+            }
+        }
+
         return view('admin.orders.show', compact(
             'order', 'activeCouriers', 'statusSteps', 'currentStep',
             'admins', 'districts'

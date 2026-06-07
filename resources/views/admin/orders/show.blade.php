@@ -100,11 +100,11 @@
             {{-- District --}}
             <div>
                 <label class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">District</label>
-                <select name="district"
+                <select name="district" id="districtSelect"
                     class="w-full rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]">
                     <option value="">Select District</option>
                     @foreach($districts as $d)
-                    <option value="{{ $d }}" {{ ($order->shipping_district ?? '') === $d ? 'selected' : '' }}>{{ $d }}</option>
+                    <option value="{{ $d }}" {{ strtolower(trim($order->shipping_district ?? '')) === strtolower($d) ? 'selected' : '' }}>{{ $d }}</option>
                     @endforeach
                 </select>
             </div>
