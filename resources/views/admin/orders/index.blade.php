@@ -554,13 +554,13 @@
                 </a>
                 @foreach($order->items->take(2) as $item)
                 <div class="flex items-center gap-2 mt-1">
-                    @if($item->product && $item->product->images->first())
+                    @if($item->product && $item->product->images && $item->product->images->first())
                     <img src="{{ asset('storage/'.$item->product->images->first()->image_path) }}" class="w-8 h-8 object-cover rounded-lg border dark:border-gray-700" alt="">
                     @else
                     <div class="w-8 h-8 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-gray-300 text-xs">?</div>
                     @endif
                     <div>
-                        <div class="text-xs text-gray-700 dark:text-gray-300 leading-tight max-w-[160px] truncate">{{ $item->quantity }}x {{ $item->product->name ?? 'N/A' }}</div>
+                        <div class="text-xs text-gray-700 dark:text-gray-300 leading-tight max-w-[160px] truncate">{{ $item->qty }}x {{ $item->product_name ?? $item->product->name ?? 'Unknown Product' }}</div>
                         <div class="text-xs font-bold text-[#1B2A4A] dark:text-white">৳{{ number_format($item->unit_price, 0) }}Tk</div>
                     </div>
                 </div>
