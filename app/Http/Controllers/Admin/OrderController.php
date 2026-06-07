@@ -557,7 +557,7 @@ class OrderController extends Controller
             ->with(['variants', 'images'])
             ->when($q, fn($query) => $query->where('name', 'like', "%{$q}%")
                 ->orWhere('sku', 'like', "%{$q}%"))
-            ->limit(10)
+            ->limit(20)
             ->get()
             ->map(fn($p) => [
                 'id'        => $p->id,

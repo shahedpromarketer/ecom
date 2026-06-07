@@ -751,6 +751,7 @@ function openProductModal() {
     const m = document.getElementById('productModal');
     m.classList.remove('hidden'); m.classList.add('flex');
     document.getElementById('productSearchInput').focus();
+    searchProducts('');
 }
 function closeProductModal() {
     const m = document.getElementById('productModal');
@@ -760,26 +761,40 @@ function closeProductModal() {
 let searchTimeout;
 function searchProducts(q) {
     clearTimeout(searchTimeout);
-    if (q.length < 2) { document.getElementById('productSearchResults').innerHTML = '<p class="text-center text-gray-400 text-sm py-4">Type to search...</p>'; return; }
-    searchTimeout = setTimeout(() => {
-        fetch(SEARCH_URL + '?q=' + encodeURIComponent(q), {
-            headers: {'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json'}
-        })
-        .then(r => r.json())
-        .then(products => {
-            const c = document.getElementById('productSearchResults');
-            if (!products.length) { c.innerHTML = '<p class="text-center text-gray-400 text-sm py-4">No products found.</p>'; return; }
-            c.innerHTML = products.map(p => `
-                <div class="flex items-center gap-3 p-3 border dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer" onclick='addProductRow(${JSON.stringify(p)})'>
-                    <img src="${p.image_url}" class="w-10 h-10 object-cover rounded-lg" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22/>'">
-                    <div class="flex-1">
-                        <div class="text-sm font-medium dark:text-white">${p.name}</div>
-                        <div class="text-xs text-gray-400">Stock: ${p.stock} | ${p.variants.length} variants</div>
-                    </div>
+    if (q.length < 1) {
+        document.getElementById('productSearchResults').innerHTML = '<p class="text-center text-gray-400 text-sm py-4">Type to search products...</p>';
+        if (q === '') {
+            searchTimeout = setTimeout(() => loadProducts(''), 0);
+        }
+        return;
+    }
+    searchTimeout = setTimeout(() => loadProducts(q), 300);
+}
+function loadProducts(q) {
+    fetch(SEARCH_URL + '?q=' + encodeURIComponent(q), {
+        headers: {'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json'}
+    })
+    .then(r => r.json())
+    .then(products => {
+        const c = document.getElementById('productSearchResults');
+        if (!products.length) {
+            c.innerHTML = '<p class="text-center text-gray-400 text-sm py-4">No products found.</p>';
+            return;
+        }
+        c.innerHTML = products.map(p => `
+            <div class="flex items-center gap-3 p-3 border dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer" onclick='addProductRow(${JSON.stringify(p)})'>
+                <img src="${p.image_url}" class="w-10 h-10 object-cover rounded-lg" onerror="this.src='/images/no-image.png'">
+                <div class="flex-1">
+                    <div class="text-sm font-medium dark:text-white">${p.name}</div>
+                    <div class="text-xs text-gray-400">Stock: ${p.stock} | ${p.variants.length} variants</div>
                 </div>
-            `).join('');
-        });
-    }, 300);
+            </div>
+        `).join('');
+    })
+    .catch(err => {
+        document.getElementById('productSearchResults').innerHTML = '<p class="text-center text-red-400 text-sm py-4">Error loading products.</p>';
+        console.error(err);
+    });
 }
 
 let rowIndex = {{ $order->items->count() }};
