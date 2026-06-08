@@ -478,7 +478,7 @@
                        text-textprimary dark:text-gray-100">
                 @yield('page-title', 'Dashboard')
             </h1>
-            @if(request()->routeIs('admin.orders.*'))
+            @if(request()->routeIs('admin.dashboard'))
             <form action="{{ route('admin.orders.index') }}" method="GET" class="flex items-center gap-2 ml-4">
                 <input type="text" name="search" value="{{ request('search') }}"
                     placeholder="Order ID or Phone..."
