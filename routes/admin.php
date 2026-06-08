@@ -58,6 +58,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('orders/incomplete', [OrderController::class, 'incomplete'])->name('orders.incomplete');
 
         // AJAX endpoints for order create (must be before wildcard {order} routes)
+        Route::get('orders/search-live', [OrderController::class, 'searchLive'])->name('orders.searchLive');
         Route::get('orders/search-products', [OrderController::class, 'searchProducts'])->name('orders.searchProducts');
         Route::get('orders/search-customer', [OrderController::class, 'searchCustomer'])->name('orders.searchCustomer');
 

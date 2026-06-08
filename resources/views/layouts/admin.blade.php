@@ -479,12 +479,18 @@
                 @yield('page-title', 'Dashboard')
             </h1>
             @if(request()->routeIs('admin.dashboard'))
-            <form action="{{ route('admin.orders.index') }}" method="GET" class="flex items-center gap-2 ml-4">
-                <input type="text" name="search" value="{{ request('search') }}"
-                    placeholder="Order ID or Phone..."
-                    class="w-64 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-1.5 text-sm bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]">
-                <button type="submit" class="bg-[#1B2A4A] text-white px-4 py-1.5 rounded-xl text-sm hover:bg-[#243a63] transition">Search</button>
-            </form>
+            <div class="relative ml-4" id="globalSearchWrapper">
+                <div class="flex items-center bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-4 py-1.5 gap-2 w-72">
+                    <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <input type="text" id="globalSearchInput" placeholder="Order ID or Phone..."
+                        autocomplete="off"
+                        class="flex-1 bg-transparent text-sm text-gray-700 dark:text-white focus:outline-none"
+                        oninput="globalSearch(this.value)">
+                </div>
+                <div id="globalSearchResults"
+                    class="absolute top-full left-0 mt-1 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-50 hidden max-h-64 overflow-y-auto">
+                </div>
+            </div>
             @endif
         </div>
 
@@ -611,6 +617,48 @@ document.addEventListener('DOMContentLoaded', function () {
     const itemPos    = activeLink.offsetTop - nav.offsetTop;
     const itemHeight = activeLink.offsetHeight;
     nav.scrollTop    = itemPos - (nav.offsetHeight / 2) + (itemHeight / 2);
+});
+</script>
+
+<script>
+let globalSearchTimeout;
+function globalSearch(q) {
+    clearTimeout(globalSearchTimeout);
+    const results = document.getElementById('globalSearchResults');
+    if (!results) return;
+    if (q.length < 3) { results.classList.add('hidden'); return; }
+    globalSearchTimeout = setTimeout(() => {
+        fetch('/admin/orders/search-live?q=' + encodeURIComponent(q), {
+            headers: {'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content}
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.length) {
+                results.innerHTML = '<div class="px-4 py-3 text-sm text-gray-400">No results found</div>';
+            } else {
+                results.innerHTML = data.map(o => `
+                    <a href="/admin/orders/${o.id}"
+                        class="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 border-b border-gray-100 dark:border-gray-800 last:border-0">
+                        <span class="text-[#1B2A4A] dark:text-blue-400 font-bold text-sm">#${o.id}</span>
+                        <span class="text-gray-700 dark:text-gray-300 text-sm flex-1">${o.customer_name}</span>
+                        <span class="px-2 py-0.5 rounded-lg text-xs font-medium
+                            ${o.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                              o.status === 'confirmed' ? 'bg-blue-100 text-blue-700' :
+                              o.status === 'delivered' || o.status === 'completed' ? 'bg-green-100 text-green-700' :
+                              'bg-gray-100 text-gray-600'}">${o.status}</span>
+                    </a>
+                `).join('');
+            }
+            results.classList.remove('hidden');
+        });
+    }, 300);
+}
+
+document.addEventListener('click', function(e) {
+    const wrapper = document.getElementById('globalSearchWrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+        document.getElementById('globalSearchResults').classList.add('hidden');
+    }
 });
 </script>
 

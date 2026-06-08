@@ -756,6 +756,32 @@ class OrderController extends Controller
         return view('admin.orders.bulk-print', compact('orders'));
     }
 
+    public function searchLive(Request $request)
+    {
+        $q = trim($request->get('q', ''));
+        if (strlen($q) < 2) {
+            return response()->json([]);
+        }
+
+        $orders = Order::where(function ($query) use ($q) {
+                $query->where('id', 'like', "%{$q}%")
+                      ->orWhere('order_number', 'like', "%{$q}%")
+                      ->orWhere('shipping_phone', 'like', "%{$q}%")
+                      ->orWhere('shipping_name', 'like', "%{$q}%");
+            })
+            ->latest()
+            ->limit(8)
+            ->get()
+            ->map(fn ($o) => [
+                'id'            => $o->id,
+                'customer_name' => $o->shipping_name ?? 'N/A',
+                'phone'         => $o->shipping_phone ?? '',
+                'status'        => $o->status,
+            ]);
+
+        return response()->json($orders);
+    }
+
     public function reOrder($id)
     {
         $original = Order::with('items')->findOrFail($id);
