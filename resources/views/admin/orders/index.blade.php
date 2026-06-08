@@ -476,7 +476,7 @@
         </thead>
         <tbody>
         @forelse($orders as $sl => $order)
-        <tr class="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
+        <tr class="border-b dark:border-gray-800 transition {{ $order->is_duplicate ? 'bg-yellow-50 dark:bg-yellow-900/10 hover:bg-yellow-100 dark:hover:bg-yellow-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50' }}"
             data-order-id="{{ $order->id }}"
             data-total="{{ $order->total ?? 0 }}"
             data-paid="{{ $order->paid_amount ?? 0 }}"
