@@ -508,6 +508,17 @@
 
         <div class="flex items-center gap-1 flex-shrink-0">
 
+            {{-- New Order shortcut (orders pages only) --}}
+            @if(request()->is('admin/orders*'))
+            <a href="{{ route('admin.orders.create') }}"
+               class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex-shrink-0 mr-1">
+                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                </svg>
+                <span class="hidden sm:inline">New Order</span>
+            </a>
+            @endif
+
             {{-- Dark mode toggle --}}
             <button @click="$store.theme.toggle()"
                     class="p-2 rounded-xl transition-colors

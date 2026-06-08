@@ -32,27 +32,6 @@
         ->filter(fn($k) => request()->filled($k))->isNotEmpty();
 @endphp
 
-{{-- ── Top Action Bar ────────────────────────────────────────────────────── --}}
-<div class="flex flex-wrap items-center gap-2 mb-4">
-    <a href="{{ route('admin.orders.create') }}"
-       class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-primary text-white rounded-xl hover:bg-primary/90 transition-colors">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
-        </svg>
-        New Order
-    </a>
-    <a href="{{ route('admin.orders.incomplete') }}"
-       class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-colors">
-        Incomplete
-    </a>
-    <a href="{{ route('admin.invoices.csv') }}"
-       class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border border-border dark:border-gray-600 bg-white dark:bg-gray-800 text-textprimary dark:text-gray-200 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
-        </svg>
-        Export CSV
-    </a>
-</div>
 
 {{-- ── Filter Panel ─────────────────────────────────────────────────────────── --}}
 <div x-data="{ filterOpen: false, loading: false }" class="mb-4">
