@@ -20,8 +20,8 @@ export default {
                 danger: '#EF4444',
             },
             fontFamily: {
-                heading: ['Poppins', 'sans-serif'],
-                body: ['Inter', 'sans-serif'],
+                heading: ['Poppins', 'Tiro Bangla', 'sans-serif'],
+                body: ['Inter', 'Tiro Bangla', 'sans-serif'],
             },
             fontSize: {
                 h1: '36px',
