@@ -479,19 +479,19 @@
 
     {{-- Table --}}
     <div class="overflow-x-auto w-full">
-        <table class="w-full text-sm min-w-[1400px]">
+        <table class="w-full text-sm min-w-[1400px] border-collapse">
         <thead>
-        <tr class="bg-gray-50 dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400">
-            <th class="px-3 py-3 text-left w-[100px]">Status</th>
-            <th class="px-3 py-3 w-[40px]"><input type="checkbox" id="selectAll" @click="toggleAll()" class="w-4 h-4 rounded border-gray-300 text-primary cursor-pointer"></th>
-            <th class="px-3 py-3 text-left w-[60px]">Notes</th>
-            <th class="px-3 py-3 text-left w-[200px]">ID & Products ↕</th>
-            <th class="px-3 py-3 text-left w-[200px]">Name & Number</th>
-            <th class="px-3 py-3 text-left w-[160px]">Date</th>
-            <th class="px-3 py-3 text-left w-[180px]">Address</th>
-            <th class="px-2 py-3 w-[40px]"></th>
-            <th class="px-3 py-3 text-left w-[150px]">Courier</th>
-            <th class="px-3 py-3 text-left w-[140px]">Summary</th>
+        <tr class="bg-gray-50 dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400 border-b-2 border-gray-200 dark:border-gray-700">
+            <th class="px-3 py-3 text-left border-r border-gray-200 dark:border-gray-700 w-[100px]">Status</th>
+            <th class="px-3 py-3 border-r border-gray-200 dark:border-gray-700 w-[40px]"><input type="checkbox" id="selectAll" @click="toggleAll()" class="w-4 h-4 rounded border-gray-300 text-primary cursor-pointer"></th>
+            <th class="px-3 py-3 text-left border-r border-gray-200 dark:border-gray-700 w-[60px]">Notes</th>
+            <th class="px-3 py-3 text-left border-r border-gray-200 dark:border-gray-700 w-[200px]">ID & Products ↕</th>
+            <th class="px-3 py-3 text-left border-r border-gray-200 dark:border-gray-700 w-[200px]">Name & Number</th>
+            <th class="px-3 py-3 text-left border-r border-gray-200 dark:border-gray-700 w-[160px]">Date</th>
+            <th class="px-3 py-3 text-left border-r border-gray-200 dark:border-gray-700 w-[180px]">Address</th>
+            <th class="px-3 py-3 border-r border-gray-200 dark:border-gray-700 w-[40px]"></th>
+            <th class="px-3 py-3 text-left border-r border-gray-200 dark:border-gray-700 w-[150px]">Courier</th>
+            <th class="px-3 py-3 text-left border-r border-gray-200 dark:border-gray-700 w-[140px]">Summary</th>
             <th class="px-3 py-3 text-left w-[80px]">Employee</th>
         </tr>
         </thead>
@@ -504,7 +504,7 @@
             data-due="{{ ($order->total ?? 0) - ($order->paid_amount ?? 0) }}">
 
             {{-- Status --}}
-            <td class="px-3 py-3 align-top w-[100px]">
+            <td class="px-3 py-3 align-top w-[100px] border-r border-gray-100 dark:border-gray-800">
                 <a href="{{ route('admin.orders.show', $order->id) }}"
                     class="inline-block px-2 py-1 rounded-lg text-xs font-semibold
                     @if($order->status == 'pending') bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400
@@ -521,7 +521,7 @@
             </td>
 
             {{-- Checkbox --}}
-            <td class="px-3 py-3 align-top text-center w-[40px]">
+            <td class="px-3 py-3 align-top text-center w-[40px] border-r border-gray-100 dark:border-gray-800">
                 <input type="checkbox" name="selected_orders[]" value="{{ $order->id }}"
                     class="order-checkbox rounded"
                     x-on:change="
@@ -536,7 +536,7 @@
             </td>
 
             {{-- Notes --}}
-            <td class="px-3 py-3 align-top text-center w-[60px]">
+            <td class="px-3 py-3 align-top text-center w-[60px] border-r border-gray-100 dark:border-gray-800">
                 <button type="button" onclick="quickAddNote({{ $order->id }})"
                     class="w-6 h-6 flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 text-blue-500 rounded-lg hover:bg-blue-200 mx-auto text-xs">+</button>
                 @if($order->orderNotes && $order->orderNotes->count() > 0)
@@ -545,7 +545,7 @@
             </td>
 
             {{-- ID & Products --}}
-            <td class="px-3 py-3 align-top w-[200px]">
+            <td class="px-3 py-3 align-top w-[200px] border-r border-gray-100 dark:border-gray-800">
                 <a href="{{ route('admin.orders.show', $order->id) }}" class="text-blue-600 dark:text-blue-400 font-bold text-sm hover:underline">
                     #{{ $order->id }}
                 </a>
@@ -569,7 +569,7 @@
             </td>
 
             {{-- Name & Number --}}
-            <td class="px-3 py-3 align-top w-[200px]">
+            <td class="px-3 py-3 align-top w-[200px] border-r border-gray-100 dark:border-gray-800">
                 <div class="flex items-center gap-1 mb-1">
                     <span class="font-semibold text-gray-800 dark:text-white text-sm">{{ $order->shipping_name ?? 'N/A' }}</span>
                 </div>
@@ -582,7 +582,7 @@
             </td>
 
             {{-- Date --}}
-            <td class="px-3 py-3 align-top text-xs text-gray-500 dark:text-gray-400 w-[160px]">
+            <td class="px-3 py-3 align-top text-xs text-gray-500 dark:text-gray-400 w-[160px] border-r border-gray-100 dark:border-gray-800">
                 <div>C:{{ $order->created_at->format('d/m/Y - h:ia') }}</div>
                 <div>U:{{ $order->updated_at->format('d/m/Y - h:ia') }}</div>
                 @if($order->assignedTo)
@@ -591,14 +591,14 @@
             </td>
 
             {{-- Address --}}
-            <td class="px-3 py-3 align-top w-[180px]">
+            <td class="px-3 py-3 align-top w-[180px] border-r border-gray-100 dark:border-gray-800">
                 <div class="flex items-start gap-1">
                     <span class="text-xs text-gray-700 dark:text-gray-300 break-words">{{ $order->shipping_address ?? 'N/A' }}{{ $order->shipping_district ? ', '.$order->shipping_district : '' }}</span>
                 </div>
             </td>
 
             {{-- Copy --}}
-            <td class="px-2 py-3 align-top text-center w-[40px]">
+            <td class="px-2 py-3 align-top text-center w-[40px] border-r border-gray-100 dark:border-gray-800">
                 <button type="button" onclick="copyOrderDetails(
                     '{{ addslashes($order->shipping_name ?? '') }}',
                     '{{ $order->shipping_phone ?? '' }}',
@@ -610,7 +610,7 @@
             </td>
 
             {{-- Courier --}}
-            <td class="px-3 py-3 align-top text-xs w-[150px]">
+            <td class="px-3 py-3 align-top text-xs w-[150px] border-r border-gray-100 dark:border-gray-800">
                 @php
                     $courierName = $order->shipment->courier_name ?? 'New';
                     $customerTotal = \App\Models\Order::where('shipping_phone', $order->shipping_phone)->count();
@@ -632,7 +632,7 @@
             </td>
 
             {{-- Summary --}}
-            <td class="px-3 py-3 align-top text-xs w-[140px]">
+            <td class="px-3 py-3 align-top text-xs w-[140px] border-r border-gray-100 dark:border-gray-800">
                 <div class="text-gray-700 dark:text-gray-300">Total: <span class="font-bold">৳{{ number_format($order->total ?? 0, 0) }}</span></div>
                 <div class="text-green-600">Less: <span class="font-bold">৳{{ number_format($order->discount ?? 0, 0) }}</span></div>
                 <div class="text-blue-600">Paid: <span class="font-bold">৳{{ number_format($order->paid_amount ?? 0, 0) }}</span></div>
