@@ -527,6 +527,9 @@
                 @if($order->orderNotes && $order->orderNotes->count() > 0)
                 <span class="text-xs text-gray-400 mt-0.5 block">{{ $order->orderNotes->count() }}</span>
                 @endif
+                @if($isDuplicate)
+                <span class="inline-block mt-1 px-1 py-0.5 bg-yellow-400 text-yellow-900 text-[9px] font-bold rounded leading-none">DUP</span>
+                @endif
             </td>
 
             {{-- ID & Products --}}
