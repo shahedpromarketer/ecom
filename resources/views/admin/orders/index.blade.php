@@ -480,7 +480,7 @@
         @endphp
         @forelse($orders as $sl => $order)
         @php $isDuplicate = ($phoneCounts[$order->shipping_phone] ?? 1) > 1; @endphp
-        <tr class="border-b dark:border-gray-800 transition {{ $isDuplicate ? 'bg-yellow-50 dark:bg-yellow-900/10 hover:bg-yellow-100 dark:hover:bg-yellow-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50' }}"
+        <tr class="border-b dark:border-gray-800 transition {{ $isDuplicate ? 'bg-yellow-100 dark:bg-yellow-900/25 hover:bg-yellow-200 dark:hover:bg-yellow-900/35' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50' }}"
             data-order-id="{{ $order->id }}"
             data-total="{{ $order->total ?? 0 }}"
             data-paid="{{ $order->paid_amount ?? 0 }}"
