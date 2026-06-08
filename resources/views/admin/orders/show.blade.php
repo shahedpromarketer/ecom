@@ -32,7 +32,7 @@
 {{-- CARD: SHIPPING ADDRESS --}}
 <div class="bg-white dark:bg-gray-900 rounded-2xl shadow p-6">
     <h3 class="text-base font-semibold text-[#1B2A4A] dark:text-white mb-4 flex items-center gap-2">
-        <span class="w-8 h-8 bg-[#1B2A4A]/10 rounded-lg flex items-center justify-center text-[#1B2A4A] dark:bg-[#1B2A4A]/30 dark:text-white text-xs">📦</span>
+        <span class="w-8 h-8 bg-[#1B2A4A]/10 rounded-lg flex items-center justify-center text-[#1B2A4A] dark:bg-[#1B2A4A]/30 dark:text-white"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg></span>
         Shipping Address
     </h3>
 
@@ -49,11 +49,11 @@
                     id="mobileInput" required maxlength="11"
                     class="flex-1 rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]">
                 <a href="https://wa.me/880{{ ltrim($order->shipping_phone, '0') }}" target="_blank"
-                    class="w-8 h-8 flex items-center justify-center bg-green-500 text-white rounded-lg text-xs hover:bg-green-600" title="WhatsApp">💬</a>
+                    class="w-8 h-8 flex items-center justify-center bg-green-500 text-white rounded-lg hover:bg-green-600" title="WhatsApp"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></a>
                 <a href="tel:{{ $order->shipping_phone }}"
-                    class="w-8 h-8 flex items-center justify-center bg-blue-500 text-white rounded-lg text-xs hover:bg-blue-600" title="Call">📞</a>
+                    class="w-8 h-8 flex items-center justify-center bg-blue-500 text-white rounded-lg hover:bg-blue-600" title="Call"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.948V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 7V5z"/></svg></a>
                 <button type="button" onclick="copyText('{{ $order->shipping_phone }}')"
-                    class="w-8 h-8 flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-xs hover:bg-gray-200" title="Copy">📋</button>
+                    class="w-8 h-8 flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-200" title="Copy"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg></button>
             </div>
         </div>
 
@@ -79,7 +79,7 @@
                 <input type="email" name="email" value="{{ old('email', $order->email) }}"
                     class="flex-1 rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]">
                 <button type="button" onclick="copyText('{{ $order->email ?? '' }}')"
-                    class="w-8 h-8 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-lg text-xs">📋</button>
+                    class="w-8 h-8 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-lg"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg></button>
             </div>
         </div>
     </div>
@@ -92,7 +92,7 @@
                 <textarea name="address" rows="2"
                     class="flex-1 rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1B2A4A] resize-none">{{ old('address', $order->shipping_address) }}</textarea>
                 <button type="button" onclick="copyText('{{ addslashes($order->shipping_address ?? '') }}')"
-                    class="w-8 h-8 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-lg text-xs mt-1">📋</button>
+                    class="w-8 h-8 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-lg mt-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg></button>
             </div>
         </div>
 
@@ -149,7 +149,7 @@
     <div class="flex items-center justify-between cursor-pointer" @click="open = !open">
         <h3 class="text-base font-semibold text-[#1B2A4A] dark:text-white">Courier Success Rate</h3>
         <div class="flex items-center gap-2">
-            <button type="button" onclick="refreshCourierStats(event)" class="text-xs text-[#F59E0B] hover:underline">↻ Refresh</button>
+            <button type="button" onclick="refreshCourierStats(event)" class="text-xs text-[#F59E0B] hover:underline flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Refresh</button>
             <span x-text="open ? '▲' : '▼'" class="text-gray-400 text-xs"></span>
         </div>
     </div>
@@ -202,7 +202,7 @@
 {{-- CARD: ORDER PRODUCTS --}}
 <div class="bg-white dark:bg-gray-900 rounded-2xl shadow p-6">
     <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <h3 class="text-base font-semibold text-[#1B2A4A] dark:text-white flex items-center gap-2">🛒 Order Products</h3>
+        <h3 class="text-base font-semibold text-[#1B2A4A] dark:text-white flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg> Order Products</h3>
         <div class="flex gap-2">
             <button type="button" onclick="openProductModal()"
                 class="bg-[#F59E0B] text-white px-4 py-2 rounded-xl text-xs font-medium hover:bg-yellow-500 transition">
@@ -210,7 +210,7 @@
             </button>
             <button type="button" onclick="togglePackingItems()"
                 class="border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-xl text-xs dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 transition">
-                📦 Show Packing Items
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg> Show Packing Items
             </button>
         </div>
     </div>
@@ -286,7 +286,7 @@
                     </td>
                     <td class="px-3 py-3 text-center">
                         <button type="button" onclick="removeProductRow(this)"
-                            class="w-8 h-8 flex items-center justify-center bg-red-100 dark:bg-red-900/30 text-red-500 rounded-lg hover:bg-red-200 mx-auto">✕</button>
+                            class="w-8 h-8 flex items-center justify-center bg-red-100 dark:bg-red-900/30 text-red-500 rounded-lg hover:bg-red-200 mx-auto"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
                     </td>
                 </tr>
                 @endforeach
@@ -306,7 +306,7 @@
             </select>
             <button type="button" onclick="reOrderNow()"
                 class="mt-2 flex items-center gap-2 px-4 py-2 bg-[#F59E0B] text-white rounded-xl text-xs font-semibold hover:bg-yellow-500 transition w-full justify-center">
-                🔄 Re-Order
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Re-Order
             </button>
         </div>
         <div>
@@ -481,7 +481,7 @@
         <h3 class="text-lg font-bold text-gray-800 dark:text-white">Summary</h3>
         <button type="button" onclick="copyOrderInfo()"
             class="bg-[#F59E0B] text-white px-3 py-1.5 rounded-xl text-xs font-medium hover:bg-yellow-500 transition flex items-center gap-1">
-            📋 Copy Info
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg> Copy Info
         </button>
     </div>
 
@@ -593,12 +593,12 @@
     {{-- Buttons --}}
     <button type="submit"
         class="w-full bg-[#1B2A4A] text-white py-3 rounded-xl text-sm font-semibold hover:bg-[#243a63] transition mb-2">
-        ✔ Update
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Update
     </button>
     <p class="text-xs text-gray-400 mb-2">NB: (*) marked are required field.</p>
     <a href="{{ route('admin.invoices.generatePrint', $order) }}" target="_blank"
         class="w-full block text-center bg-[#0d9488] text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-teal-700 transition">
-        🖨 Invoice Print
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg> Invoice Print
     </a>
 
 </div>
@@ -802,7 +802,7 @@ function addProductRow(product) {
         </td>
         <td class="px-3 py-3 text-center">
             <button type="button" onclick="removeProductRow(this)"
-                class="w-8 h-8 flex items-center justify-center bg-red-100 dark:bg-red-900/30 text-red-500 rounded-lg hover:bg-red-200 mx-auto">✕</button>
+                class="w-8 h-8 flex items-center justify-center bg-red-100 dark:bg-red-900/30 text-red-500 rounded-lg hover:bg-red-200 mx-auto"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
         </td>
     `;
     document.getElementById('productRows').appendChild(row);
