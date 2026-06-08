@@ -473,10 +473,20 @@
             </svg>
         </button>
 
-        <h1 class="font-heading font-semibold text-base sm:text-lg truncate flex-1
-                   text-textprimary dark:text-gray-100">
-            @yield('page-title', 'Dashboard')
-        </h1>
+        <div class="flex items-center gap-3 flex-1 min-w-0">
+            <h1 class="font-heading font-semibold text-base sm:text-lg truncate flex-shrink-0
+                       text-textprimary dark:text-gray-100">
+                @yield('page-title', 'Dashboard')
+            </h1>
+            @if(request()->routeIs('admin.orders.*'))
+            <form action="{{ route('admin.orders.index') }}" method="GET" class="flex items-center gap-2 ml-4">
+                <input type="text" name="search" value="{{ request('search') }}"
+                    placeholder="Order ID or Phone..."
+                    class="w-64 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-1.5 text-sm bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]">
+                <button type="submit" class="bg-[#1B2A4A] text-white px-4 py-1.5 rounded-xl text-sm hover:bg-[#243a63] transition">Search</button>
+            </form>
+            @endif
+        </div>
 
         <div class="flex items-center gap-1 flex-shrink-0">
 

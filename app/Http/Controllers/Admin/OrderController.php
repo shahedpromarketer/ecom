@@ -68,7 +68,8 @@ class OrderController extends Controller
         if ($request->filled('search')) {
             $s = $request->search;
             $query->where(function ($q) use ($s) {
-                $q->where('order_number', 'like', "%{$s}%")
+                $q->where('id', 'like', "%{$s}%")
+                  ->orWhere('order_number', 'like', "%{$s}%")
                   ->orWhere('shipping_phone', 'like', "%{$s}%")
                   ->orWhere('shipping_name', 'like', "%{$s}%");
             });
