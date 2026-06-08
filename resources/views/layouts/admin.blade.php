@@ -480,15 +480,26 @@
             </h1>
             @if(request()->routeIs('admin.dashboard'))
             <div class="relative ml-4" id="globalSearchWrapper">
-                <div class="flex items-center gap-2 w-72">
-                    <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                    <input type="text" id="globalSearchInput" placeholder="Order ID or Phone..."
+                <div class="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-2 w-80 transition-all duration-300 focus-within:ring-2 focus-within:ring-[#F59E0B] focus-within:bg-white dark:focus-within:bg-gray-700">
+                    <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    <input type="text" id="globalSearchInput"
+                        placeholder="Search order ID or phone..."
                         autocomplete="off"
-                        class="flex-1 bg-transparent text-sm text-gray-700 dark:text-white focus:outline-none"
-                        oninput="globalSearch(this.value)">
+                        class="flex-1 bg-transparent text-sm text-gray-700 dark:text-white placeholder-gray-400 focus:outline-none"
+                        oninput="globalSearch(this.value)"
+                        onkeydown="if(event.key==='Escape') document.getElementById('globalSearchResults').classList.add('hidden')">
+                    <span id="searchSpinner" class="hidden">
+                        <svg class="w-4 h-4 text-gray-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                        </svg>
+                    </span>
                 </div>
                 <div id="globalSearchResults"
-                    class="absolute top-full left-0 mt-1 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-50 hidden max-h-64 overflow-y-auto">
+                    class="absolute top-full left-0 mt-2 w-full bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-xl z-50 hidden overflow-hidden">
+                    <div id="searchResultsInner"></div>
                 </div>
             </div>
             @endif
@@ -625,32 +636,48 @@ let globalSearchTimeout;
 function globalSearch(q) {
     clearTimeout(globalSearchTimeout);
     const results = document.getElementById('globalSearchResults');
+    const inner = document.getElementById('searchResultsInner');
+    const spinner = document.getElementById('searchSpinner');
     if (!results) return;
-    if (q.length < 3) { results.classList.add('hidden'); return; }
+    if (q.length < 2) { results.classList.add('hidden'); return; }
+    spinner.classList.remove('hidden');
     globalSearchTimeout = setTimeout(() => {
         fetch('/admin/orders/search-live?q=' + encodeURIComponent(q), {
             headers: {'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content}
         })
         .then(r => r.json())
         .then(data => {
+            spinner.classList.add('hidden');
             if (!data.length) {
-                results.innerHTML = '<div class="px-4 py-3 text-sm text-gray-400">No results found</div>';
+                inner.innerHTML = '<div class="px-4 py-4 text-sm text-gray-400 text-center">No results found</div>';
             } else {
-                results.innerHTML = data.map(o => `
+                inner.innerHTML = data.map(o => `
                     <a href="/admin/orders/${o.id}"
-                        class="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 border-b border-gray-100 dark:border-gray-800 last:border-0">
-                        <span class="text-[#1B2A4A] dark:text-blue-400 font-bold text-sm">#${o.id}</span>
-                        <span class="text-gray-700 dark:text-gray-300 text-sm flex-1">${o.customer_name}</span>
-                        <span class="px-2 py-0.5 rounded-lg text-xs font-medium
-                            ${o.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                              o.status === 'confirmed' ? 'bg-blue-100 text-blue-700' :
-                              o.status === 'delivered' || o.status === 'completed' ? 'bg-green-100 text-green-700' :
-                              'bg-gray-100 text-gray-600'}">${o.status}</span>
+                        class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 border-b border-gray-50 dark:border-gray-800 last:border-0 transition">
+                        <div class="w-8 h-8 rounded-xl bg-[#1B2A4A]/10 dark:bg-[#1B2A4A]/30 flex items-center justify-center flex-shrink-0">
+                            <span class="text-[#1B2A4A] dark:text-blue-400 text-xs font-bold">#</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="text-[#1B2A4A] dark:text-blue-400 font-bold text-sm">#${o.id}</span>
+                                <span class="text-gray-700 dark:text-gray-300 text-sm truncate">${o.customer_name}</span>
+                            </div>
+                            <div class="text-xs text-gray-400">${o.phone}</div>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-lg text-xs font-semibold flex-shrink-0
+                            ${o.status === 'pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                              o.status === 'confirmed' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                              o.status === 'delivered' || o.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                              o.status === 'cancelled' || o.status === 'failed' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                              'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'}">${o.status}</span>
                     </a>
-                `).join('');
+                `).join('') + `<div class="px-4 py-2 bg-gray-50 dark:bg-gray-800 text-center">
+                    <a href="/admin/orders?search=${encodeURIComponent(q)}" class="text-xs text-[#F59E0B] hover:underline font-medium">View all results →</a>
+                </div>`;
             }
             results.classList.remove('hidden');
-        });
+        })
+        .catch(() => spinner.classList.add('hidden'));
     }, 300);
 }
 
