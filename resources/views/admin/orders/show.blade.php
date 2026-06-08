@@ -97,11 +97,11 @@
         {{-- Address --}}
         <div>
             <label class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Address</label>
-            <div class="flex items-start gap-1">
-                <textarea name="address" rows="2"
-                    class="flex-1 rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1B2A4A] resize-none">{{ old('address', $order->shipping_address) }}</textarea>
+            <div class="flex items-center gap-1">
+                <input type="text" name="address" value="{{ old('address', $order->shipping_address) }}"
+                    class="flex-1 rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]">
                 <button type="button" onclick="copyText('{{ addslashes($order->shipping_address ?? '') }}')"
-                    class="w-8 h-8 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-lg mt-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg></button>
+                    class="w-8 h-8 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-lg flex-shrink-0"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg></button>
             </div>
         </div>
 
@@ -601,13 +601,13 @@
 
     {{-- Buttons --}}
     <button type="submit"
-        class="w-full bg-[#1B2A4A] text-white py-3 rounded-xl text-sm font-semibold hover:bg-[#243a63] transition mb-2">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Update
+        class="w-full flex items-center justify-center gap-2 bg-[#1B2A4A] text-white py-3 rounded-xl text-sm font-semibold hover:bg-[#243a63] transition mb-2">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Update
     </button>
     <p class="text-xs text-gray-400 mb-2">NB: (*) marked are required field.</p>
     <a href="{{ route('admin.invoices.generatePrint', $order) }}" target="_blank"
-        class="w-full block text-center bg-[#0d9488] text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-teal-700 transition">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg> Invoice Print
+        class="w-full flex items-center justify-center gap-2 bg-[#0d9488] text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-teal-700 transition">
+        <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg> Invoice Print
     </a>
 
 </div>
