@@ -347,90 +347,84 @@
 </div>
 
 {{-- CARD: ORDER NOTES --}}
-<div class="bg-white dark:bg-gray-900 rounded-2xl shadow p-6" x-data="{ open: false }">
-    <div class="flex items-center justify-between cursor-pointer" @click="open = !open">
-        <h3 class="text-base font-semibold text-[#1B2A4A] dark:text-white">
-            Order Notes <span x-text="open ? '▲' : '▼'" class="text-xs text-gray-400 ml-1"></span>
+<div class="bg-white dark:bg-gray-900 rounded-2xl shadow p-5">
+    <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-semibold text-[#1B2A4A] dark:text-white flex items-center gap-2">
+            <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Order Notes
+            @php $orderNoteCount = $order->orderNotes->filter(fn($n) => $n->type === 'order')->count(); @endphp
+            @if($orderNoteCount > 0)
+            <span class="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 text-xs font-bold rounded-full">{{ $orderNoteCount }}</span>
+            @endif
         </h3>
-        <button type="button" onclick="event.stopPropagation(); showAddNoteModal('order')"
-            class="bg-[#1B2A4A] text-white px-3 py-1.5 rounded-xl text-xs hover:bg-[#243a63] transition">
-            + Add Note
+        <button type="button" onclick="showAddNoteModal('order')"
+            class="inline-flex items-center gap-1 bg-[#1B2A4A] text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-[#243a63] transition">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Add Note
         </button>
     </div>
-    <div x-show="open" x-transition class="mt-4">
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800">
-                        <th class="text-left px-3 py-2 rounded-l-xl">SL</th>
-                        <th class="text-left px-3 py-2">Note</th>
-                        <th class="text-left px-3 py-2">Added By</th>
-                        <th class="text-left px-3 py-2">Created At</th>
-                        <th class="text-center px-3 py-2 rounded-r-xl">Action</th>
-                    </tr>
-                </thead>
-                <tbody id="orderNotesBody">
-                    @forelse($order->orderNotes->filter(fn($n) => $n->type === 'order') as $i => $note)
-                    <tr class="border-b dark:border-gray-800" id="note-row-{{ $note->id }}">
-                        <td class="px-3 py-2 text-gray-500">{{ $i + 1 }}</td>
-                        <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ $note->note_text }}</td>
-                        <td class="px-3 py-2 text-gray-500">{{ $note->user->name ?? 'System' }}</td>
-                        <td class="px-3 py-2 text-gray-400 text-xs">{{ $note->created_at->format('d M Y H:i') }}</td>
-                        <td class="px-3 py-2 text-center">
-                            <button type="button" onclick="deleteNote({{ $note->id }})"
-                                class="w-7 h-7 flex items-center justify-center bg-red-100 dark:bg-red-900/30 text-red-500 rounded-lg hover:bg-red-200 mx-auto text-xs">✕</button>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr id="noOrderNotes"><td colspan="5" class="text-center py-4 text-gray-400 text-sm">No notes yet.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
+    <div id="orderNotesBody" class="space-y-2">
+        @forelse($order->orderNotes->filter(fn($n) => $n->type === 'order')->sortByDesc('created_at') as $note)
+        <div class="group relative bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30 rounded-xl px-3.5 py-3" id="note-row-{{ $note->id }}">
+            <p class="text-sm text-gray-800 dark:text-gray-200 leading-relaxed pr-7">{{ $note->note_text }}</p>
+            <div class="flex items-center gap-1.5 mt-2">
+                <div class="w-4 h-4 rounded-full bg-[#1B2A4A] flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0">{{ substr($note->user->name ?? 'S', 0, 1) }}</div>
+                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ $note->user->name ?? 'System' }}</span>
+                <span class="text-gray-300 dark:text-gray-600 text-xs">·</span>
+                <span class="text-xs text-gray-400 dark:text-gray-500">{{ $note->created_at->format('d M Y, H:i') }}</span>
+            </div>
+            <button type="button" onclick="deleteNote({{ $note->id }})"
+                class="absolute top-2.5 right-2.5 w-5 h-5 flex items-center justify-center bg-red-100 dark:bg-red-900/40 text-red-400 rounded-md hover:bg-red-200 opacity-0 group-hover:opacity-100 transition-opacity">
+                <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
         </div>
+        @empty
+        <div id="noOrderNotes" class="flex flex-col items-center justify-center py-6 text-gray-400">
+            <svg class="w-8 h-8 mb-1.5 text-gray-200 dark:text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            <p class="text-xs">No notes yet</p>
+        </div>
+        @endforelse
     </div>
 </div>
 
 {{-- CARD: CUSTOMER NOTES --}}
-<div class="bg-white dark:bg-gray-900 rounded-2xl shadow p-6" x-data="{ open: false }">
-    <div class="flex items-center justify-between cursor-pointer" @click="open = !open">
-        <h3 class="text-base font-semibold text-[#1B2A4A] dark:text-white">
-            Customer Notes/Feedback <span x-text="open ? '▲' : '▼'" class="text-xs text-gray-400 ml-1"></span>
+<div class="bg-white dark:bg-gray-900 rounded-2xl shadow p-5">
+    <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-semibold text-[#1B2A4A] dark:text-white flex items-center gap-2">
+            <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+            Customer Notes
+            @php $custNoteCount = $order->orderNotes->filter(fn($n) => $n->type === 'customer')->count(); @endphp
+            @if($custNoteCount > 0)
+            <span class="px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 text-xs font-bold rounded-full">{{ $custNoteCount }}</span>
+            @endif
         </h3>
-        <button type="button" onclick="event.stopPropagation(); showAddNoteModal('customer')"
-            class="bg-[#1B2A4A] text-white px-3 py-1.5 rounded-xl text-xs hover:bg-[#243a63] transition">
-            + Add Note
+        <button type="button" onclick="showAddNoteModal('customer')"
+            class="inline-flex items-center gap-1 bg-[#1B2A4A] text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-[#243a63] transition">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Add Note
         </button>
     </div>
-    <div x-show="open" x-transition class="mt-4">
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800">
-                        <th class="text-left px-3 py-2 rounded-l-xl">SL</th>
-                        <th class="text-left px-3 py-2">Note</th>
-                        <th class="text-left px-3 py-2">Added By</th>
-                        <th class="text-left px-3 py-2">Created At</th>
-                        <th class="text-center px-3 py-2 rounded-r-xl">Action</th>
-                    </tr>
-                </thead>
-                <tbody id="customerNotesBody">
-                    @forelse($order->orderNotes->filter(fn($n) => $n->type === 'customer') as $i => $note)
-                    <tr class="border-b dark:border-gray-800" id="note-row-{{ $note->id }}">
-                        <td class="px-3 py-2 text-gray-500">{{ $i + 1 }}</td>
-                        <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ $note->note_text }}</td>
-                        <td class="px-3 py-2 text-gray-500">{{ $note->user->name ?? 'System' }}</td>
-                        <td class="px-3 py-2 text-gray-400 text-xs">{{ $note->created_at->format('d M Y H:i') }}</td>
-                        <td class="px-3 py-2 text-center">
-                            <button type="button" onclick="deleteNote({{ $note->id }})"
-                                class="w-7 h-7 flex items-center justify-center bg-red-100 dark:bg-red-900/30 text-red-500 rounded-lg hover:bg-red-200 mx-auto text-xs">✕</button>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr><td colspan="5" class="text-center py-4 text-gray-400 text-sm">No customer notes yet.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
+    <div id="customerNotesBody" class="space-y-2">
+        @forelse($order->orderNotes->filter(fn($n) => $n->type === 'customer')->sortByDesc('created_at') as $note)
+        <div class="group relative bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/30 rounded-xl px-3.5 py-3" id="note-row-{{ $note->id }}">
+            <p class="text-sm text-gray-800 dark:text-gray-200 leading-relaxed pr-7">{{ $note->note_text }}</p>
+            <div class="flex items-center gap-1.5 mt-2">
+                <div class="w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0">{{ substr($note->user->name ?? 'S', 0, 1) }}</div>
+                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ $note->user->name ?? 'System' }}</span>
+                <span class="text-gray-300 dark:text-gray-600 text-xs">·</span>
+                <span class="text-xs text-gray-400 dark:text-gray-500">{{ $note->created_at->format('d M Y, H:i') }}</span>
+            </div>
+            <button type="button" onclick="deleteNote({{ $note->id }})"
+                class="absolute top-2.5 right-2.5 w-5 h-5 flex items-center justify-center bg-red-100 dark:bg-red-900/40 text-red-400 rounded-md hover:bg-red-200 opacity-0 group-hover:opacity-100 transition-opacity">
+                <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
         </div>
+        @empty
+        <div class="flex flex-col items-center justify-center py-6 text-gray-400">
+            <svg class="w-8 h-8 mb-1.5 text-gray-200 dark:text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+            <p class="text-xs">No customer notes yet</p>
+        </div>
+        @endforelse
     </div>
 </div>
 
@@ -849,25 +843,31 @@ function submitNote() {
     .then(r => r.json())
     .then(data => {
         if (!data.success) return showToast(data.message || 'Error saving note', 'error');
-        const tbody = type === 'customer'
+        const container = type === 'customer'
             ? document.getElementById('customerNotesBody')
             : document.getElementById('orderNotesBody');
         const noRow = document.getElementById('noOrderNotes');
         if (noRow) noRow.remove();
-        const rows  = tbody.querySelectorAll('tr').length;
-        const tr    = document.createElement('tr');
-        tr.id        = 'note-row-' + data.note.id;
-        tr.className = 'border-b dark:border-gray-800';
-        tr.innerHTML = `
-            <td class="px-3 py-2 text-gray-500">${rows + 1}</td>
-            <td class="px-3 py-2 text-gray-700 dark:text-gray-300">${data.note.note_text}</td>
-            <td class="px-3 py-2 text-gray-500">${data.note.user_name}</td>
-            <td class="px-3 py-2 text-gray-400 text-xs">${data.note.created_at}</td>
-            <td class="px-3 py-2 text-center">
-                <button type="button" onclick="deleteNote(${data.note.id})"
-                    class="w-7 h-7 flex items-center justify-center bg-red-100 dark:bg-red-900/30 text-red-500 rounded-lg hover:bg-red-200 mx-auto text-xs">✕</button>
-            </td>`;
-        tbody.prepend(tr);
+        const isCustomer = type === 'customer';
+        const bgClass      = isCustomer ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-800/30' : 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800/30';
+        const avatarClass  = isCustomer ? 'bg-amber-500' : 'bg-[#1B2A4A]';
+        const initial      = (data.note.user_name || 'S').charAt(0).toUpperCase();
+        const card = document.createElement('div');
+        card.id        = 'note-row-' + data.note.id;
+        card.className = `group relative ${bgClass} border rounded-xl px-3.5 py-3`;
+        card.innerHTML = `
+            <p class="text-sm text-gray-800 dark:text-gray-200 leading-relaxed pr-7">${data.note.note_text}</p>
+            <div class="flex items-center gap-1.5 mt-2">
+                <div class="w-4 h-4 rounded-full ${avatarClass} flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0">${initial}</div>
+                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">${data.note.user_name}</span>
+                <span class="text-gray-300 dark:text-gray-600 text-xs">·</span>
+                <span class="text-xs text-gray-400 dark:text-gray-500">${data.note.created_at}</span>
+            </div>
+            <button type="button" onclick="deleteNote(${data.note.id})"
+                class="absolute top-2.5 right-2.5 w-5 h-5 flex items-center justify-center bg-red-100 dark:bg-red-900/40 text-red-400 rounded-md hover:bg-red-200 opacity-0 group-hover:opacity-100 transition-opacity">
+                <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>`;
+        container.prepend(card);
         closeNoteModal();
         showToast('Note added successfully');
     });
