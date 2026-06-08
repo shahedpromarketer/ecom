@@ -304,6 +304,10 @@
                 <option value="{{ $s }}" {{ $order->status === $s ? 'selected' : '' }}>{{ $l }}</option>
                 @endforeach
             </select>
+            <button type="button" onclick="reOrderNow()"
+                class="mt-2 flex items-center gap-2 px-4 py-2 bg-[#F59E0B] text-white rounded-xl text-xs font-semibold hover:bg-yellow-500 transition w-full justify-center">
+                🔄 Re-Order
+            </button>
         </div>
         <div>
             <label class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Payment Method</label>
@@ -948,6 +952,23 @@ function refreshCourierStats(e) {
 
 function togglePackingItems() {
     showToast('Packing items view - coming soon');
+}
+
+function reOrderNow() {
+    if (!confirm('Same products & customer diye নতুন order create করবেন?')) return;
+    fetch('/admin/orders/' + ORDER_ID + '/reorder', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json'}
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            showToast('Re-order created! Redirecting...');
+            setTimeout(() => window.location.href = d.redirect_url, 1500);
+        } else {
+            showToast(d.message || 'Failed', 'error');
+        }
+    });
 }
 
 // ─── Toast ────────────────────────────────────────────────────────────────────

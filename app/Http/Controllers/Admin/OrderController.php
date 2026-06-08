@@ -755,6 +755,33 @@ class OrderController extends Controller
         return view('admin.orders.bulk-print', compact('orders'));
     }
 
+    public function reOrder($id)
+    {
+        $original = Order::with('items')->findOrFail($id);
+
+        $newOrder = $original->replicate();
+        $newOrder->status         = 'pending';
+        $newOrder->payment_status = 'unpaid';
+        $newOrder->paid_amount    = 0;
+        $newOrder->reference_no   = null;
+        $newOrder->source_order_id = null;
+        $newOrder->order_number   = null; // boot() will generate a fresh one
+        $newOrder->created_at     = now();
+        $newOrder->updated_at     = now();
+        $newOrder->save();
+
+        foreach ($original->items as $item) {
+            $newItem = $item->replicate();
+            $newItem->order_id = $newOrder->id;
+            $newItem->save();
+        }
+
+        return response()->json([
+            'success'      => true,
+            'redirect_url' => route('admin.orders.show', $newOrder->id),
+        ]);
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private function applyDateFilter($query, string $column, string $range): void

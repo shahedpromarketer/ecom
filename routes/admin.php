@@ -77,6 +77,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('orders/{order}/submit-courier', [OrderController::class, 'submitCourier'])->name('orders.submitCourier');
         Route::post('orders/{order}/return', [ReturnController::class, 'store'])->name('returns.store');
         Route::get('orders/{id}/products-search', [OrderController::class, 'productSearch'])->name('orders.productSearch');
+        Route::post('orders/{id}/reorder', [OrderController::class, 'reOrder'])->name('orders.reOrder');
         Route::post('orders/{id}/notes', [OrderNoteController::class, 'store'])->name('orders.notes.store');
         Route::delete('orders/{id}/notes/{noteId}', [OrderNoteController::class, 'destroy'])->name('orders.notes.destroy');
         Route::post('orders/{id}/customer-notes', [OrderNoteController::class, 'storeCustomer'])->name('orders.customerNotes.store');
