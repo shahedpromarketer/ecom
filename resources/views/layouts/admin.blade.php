@@ -487,8 +487,8 @@
                     <input type="text" id="globalSearchInput"
                         placeholder="Search order ID or phone..."
                         autocomplete="off"
-                        class="flex-1 bg-transparent text-sm text-gray-700 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-0 focus:border-none"
-                        style="outline:none; box-shadow:none;"
+                        style="outline:none !important; box-shadow:none !important; border:none !important;"
+                        class="flex-1 bg-transparent text-sm text-gray-700 dark:text-white placeholder-gray-400"
                         oninput="globalSearch(this.value)"
                         onkeydown="if(event.key==='Escape') document.getElementById('globalSearchResults').classList.add('hidden')">
                     <span id="searchSpinner" class="hidden">
