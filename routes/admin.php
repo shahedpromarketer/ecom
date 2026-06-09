@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\IntegrationController;
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\InvoiceController;
 use App\Http\Controllers\Admin\InvoiceSetupController;
+use App\Http\Controllers\Admin\InvoiceTemplateController;
 use App\Http\Controllers\Admin\MarketingController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\OrderNoteController;
@@ -39,6 +40,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('dashboard/status-data', [DashboardController::class, 'statusData'])->name('dashboard.status-data');
         Route::get('dashboard/order-status', [DashboardController::class, 'orderStatus'])->name('dashboard.orderStatus');
         Route::get('dashboard/order-source', [DashboardController::class, 'orderSource'])->name('dashboard.orderSource');
+        Route::get('dashboard/summary-data', [DashboardController::class, 'summaryData'])->name('dashboard.summaryData');
 
         // Categories
         Route::patch('categories/{category}/toggle', [CategoryController::class, 'toggleActive'])->name('categories.toggle');
@@ -76,6 +78,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::delete('orders/notes/{note}', [OrderController::class, 'deleteNote'])->name('orders.deleteNote');
         Route::post('orders/{order}/shipment', [OrderController::class, 'createShipment'])->name('orders.createShipment');
         Route::post('orders/{order}/submit-courier', [OrderController::class, 'submitCourier'])->name('orders.submitCourier');
+        Route::get('orders/{order}/track-courier', [OrderController::class, 'trackCourier'])->name('orders.trackCourier');
+        Route::patch('orders/{order}/update-tracking', [OrderController::class, 'updateTracking'])->name('orders.updateTracking');
         Route::post('orders/{order}/return', [ReturnController::class, 'store'])->name('returns.store');
         Route::get('orders/{id}/products-search', [OrderController::class, 'productSearch'])->name('orders.productSearch');
         Route::post('orders/{id}/reorder', [OrderController::class, 'reOrder'])->name('orders.reOrder');
@@ -151,6 +155,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Invoice Setup
         Route::get('invoice-setup', [InvoiceSetupController::class, 'index'])->name('invoice-setup.index');
         Route::post('invoice-setup', [InvoiceSetupController::class, 'update'])->name('invoice-setup.update');
+
+        // Invoice Templates
+        Route::get('invoice-templates', [InvoiceTemplateController::class, 'index'])->name('invoice-templates.index');
+        Route::post('invoice-templates/{id}/activate', [InvoiceTemplateController::class, 'activate'])->name('invoice-templates.activate');
+        Route::get('invoices/preview/{templateId}', [InvoiceController::class, 'preview'])->name('invoices.preview');
 
         // Returns
         Route::get('returns', [ReturnController::class, 'index'])->name('returns.index');

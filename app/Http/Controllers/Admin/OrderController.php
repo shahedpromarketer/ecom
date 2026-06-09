@@ -49,11 +49,15 @@ class OrderController extends Controller
         $perPage = in_array((int) $request->get('per_page', 10), [10,25,50,100,150,200,250,300,500,1000,1500,2000])
             ? (int) $request->get('per_page', 10) : 10;
 
-        $query = Order::with(['items.product.images', 'assignedTo', 'orderNotes', 'shipment'])->latest();
+        $query = Order::with(['items.product.images', 'assignedTo', 'orderNotes', 'shipment']);
 
         // Status filter
         if ($request->filled('status')) {
             $query->where('status', $request->status);
+            // For shipped orders sort by updated_at so recently submitted orders appear first
+            $query->latest($request->status === 'shipped' ? 'updated_at' : 'created_at');
+        } else {
+            $query->latest();
         }
 
         // Flag filters
@@ -62,6 +66,11 @@ class OrderController extends Controller
         }
         if ($request->filled('duplicates')) {
             $query->where('is_duplicate', true);
+        }
+
+        // ID-only search
+        if ($request->filled('id_search')) {
+            $query->where('id', $request->id_search);
         }
 
         // Search
@@ -135,14 +144,15 @@ class OrderController extends Controller
 
         $orders = $query->paginate($perPage)->withQueryString();
 
-        $categories = Category::where('is_active', true)->orderBy('name')->get();
-        $districts  = Order::whereNotNull('shipping_district')
+        $categories     = Category::where('is_active', true)->orderBy('name')->get();
+        $districts      = Order::whereNotNull('shipping_district')
             ->distinct()->pluck('shipping_district')->filter()->sort()->values();
-        $sources    = Order::whereNotNull('source')
+        $sources        = Order::whereNotNull('source')
             ->distinct()->pluck('source')->filter()->sort()->values();
+        $activeCouriers = CourierSetting::all();
 
         return view('admin.orders.index', compact(
-            'orders', 'categories', 'districts', 'sources', 'perPage'
+            'orders', 'categories', 'districts', 'sources', 'perPage', 'activeCouriers'
         ));
     }
 
@@ -334,7 +344,12 @@ class OrderController extends Controller
             'assignedEmployee',
         ]);
 
-        $activeCouriers = CourierSetting::where('is_active', true)->get();
+        $allCourierKeys  = ['pathao', 'steadfast', 'carrybe', 'redx', 'paperfly'];
+        $courierSettings = CourierSetting::whereIn('courier', $allCourierKeys)->get()->keyBy('courier');
+        $activeCouriers  = collect($allCourierKeys)->map(fn($key) => (object)[
+            'courier'   => $key,
+            'is_active' => $courierSettings->get($key)?->is_active ?? false,
+        ]);
         $statusSteps    = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'completed'];
         $currentStep    = array_search($order->status, $statusSteps);
         if ($currentStep === false) $currentStep = -1;
@@ -554,21 +569,21 @@ class OrderController extends Controller
     public function submitCourier(Request $request, Order $order)
     {
         $request->validate([
-            'courier'       => 'required|in:pathao,steadfast,carrybe,redx,paperfly,manual',
-            'delivery_fee'  => 'nullable|numeric|min:0',
-            'notes'         => 'nullable|string',
-            'tracking_code' => 'nullable|string',
+            'courier'      => 'required|in:pathao,steadfast,carrybe,redx,paperfly,manual',
+            'delivery_fee' => 'nullable|numeric|min:0',
+            'notes'        => 'nullable|string',
         ]);
 
         if ($request->courier === 'manual') {
             $order->shipment()->updateOrCreate(
                 ['order_id' => $order->id],
                 [
-                    'courier_name'  => 'manual',
-                    'tracking_code' => $request->tracking_code,
-                    'delivery_fee'  => $request->delivery_fee ?? 0,
-                    'status'        => 'assigned',
-                    'notes'         => $request->notes,
+                    'courier_name'   => 'manual',
+                    'tracking_code'  => $request->tracking_code,
+                    'consignment_id' => $request->consignment_id,
+                    'delivery_fee'   => $request->delivery_fee ?? 0,
+                    'status'         => 'assigned',
+                    'notes'          => $request->notes,
                 ]
             );
             $order->update(['status' => 'shipped']);
@@ -585,7 +600,8 @@ class OrderController extends Controller
                 [
                     'courier_name'   => $request->courier,
                     'consignment_id' => $result['consignment_id'] ?? null,
-                    'tracking_code'  => $result['tracking_code'] ?? $result['tracking_id'] ?? null,
+                    'tracking_code'  => $result['tracking_code'] ?? $result['tracking_id'] ?? $request->tracking_code ?? null,
+                    'tracking_link'  => $result['tracking_link'] ?? null,
                     'delivery_fee'   => $request->delivery_fee ?? 0,
                     'status'         => 'submitted',
                     'notes'          => $request->notes,
@@ -602,6 +618,94 @@ class OrderController extends Controller
         } catch (\Exception $e) {
             return back()->with('error', 'Courier API error: ' . $e->getMessage());
         }
+    }
+
+    public function trackCourier(Order $order)
+    {
+        $shipment = $order->shipment;
+        if (!$shipment || !$shipment->tracking_code) {
+            return response()->json(['error' => 'No tracking code found.'], 404);
+        }
+
+        try {
+            $service  = CourierFactory::make($shipment->courier_name);
+            $raw      = $service->trackShipment($shipment->tracking_code);
+            $events   = $this->normalizeTrackingEvents($shipment->courier_name, $raw);
+
+            return response()->json([
+                'courier'        => ucfirst($shipment->courier_name),
+                'tracking_code'  => $shipment->tracking_code,
+                'consignment_id' => $shipment->consignment_id,
+                'events'         => $events,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        }
+    }
+
+    private function normalizeTrackingEvents(string $courier, array $raw): array
+    {
+        $events = [];
+
+        if ($courier === 'steadfast') {
+            $list = $raw['tracking'] ?? $raw['data'] ?? [];
+            foreach ($list as $item) {
+                $events[] = [
+                    'date'          => $item['created_at'] ?? $item['date'] ?? '',
+                    'note'          => $item['description'] ?? $item['note'] ?? $item['message'] ?? '',
+                    'delivery_man'  => $item['courier'] ?? $item['delivery_man'] ?? 'n/a',
+                ];
+            }
+        } elseif ($courier === 'pathao') {
+            $list = $raw['data']['order_status'] ?? $raw['data'] ?? [];
+            if (!isset($list[0])) $list = [$list];
+            foreach ($list as $item) {
+                $events[] = [
+                    'date'         => $item['updated_at'] ?? $item['created_at'] ?? '',
+                    'note'         => $item['order_status'] ?? $item['status'] ?? '',
+                    'delivery_man' => $item['delivery_man'] ?? 'n/a',
+                ];
+            }
+        } elseif ($courier === 'redx') {
+            $list = $raw['trackings'] ?? $raw['data'] ?? [];
+            foreach ($list as $item) {
+                $events[] = [
+                    'date'         => $item['date'] ?? $item['created_at'] ?? '',
+                    'note'         => $item['message'] ?? $item['status'] ?? '',
+                    'delivery_man' => $item['delivery_man'] ?? 'n/a',
+                ];
+            }
+        } else {
+            // Generic fallback
+            foreach (($raw['data'] ?? $raw['trackings'] ?? $raw['events'] ?? []) as $item) {
+                $events[] = [
+                    'date'         => $item['date'] ?? $item['created_at'] ?? '',
+                    'note'         => $item['message'] ?? $item['note'] ?? $item['status'] ?? '',
+                    'delivery_man' => $item['delivery_man'] ?? 'n/a',
+                ];
+            }
+        }
+
+        return array_reverse($events);
+    }
+
+    public function updateTracking(Request $request, Order $order)
+    {
+        $request->validate([
+            'tracking_code'  => 'required|string',
+            'consignment_id' => 'nullable|string',
+        ]);
+
+        if (!$order->shipment) {
+            return response()->json(['error' => 'No shipment found.'], 404);
+        }
+
+        $order->shipment->update([
+            'tracking_code'  => $request->tracking_code,
+            'consignment_id' => $request->consignment_id ?? $order->shipment->consignment_id,
+        ]);
+
+        return response()->json(['success' => true, 'tracking_code' => $request->tracking_code]);
     }
 
     public function productSearch(Request $request, $id)
@@ -697,17 +801,62 @@ class OrderController extends Controller
     public function bulkCourier(Request $request)
     {
         $request->validate(['ids' => 'required|array', 'courier' => 'required|string']);
+
+        $errors = [];
+
         foreach ($request->ids as $id) {
             $order = Order::find($id);
-            if ($order) {
+            if (!$order) continue;
+
+            if ($request->courier === 'manual') {
                 CourierShipment::updateOrCreate(
                     ['order_id' => $order->id],
-                    ['courier_name' => $request->courier, 'status' => 'assigned']
+                    [
+                        'courier_name' => 'manual',
+                        'delivery_fee' => $order->shipping_charge ?? 0,
+                        'status'       => 'assigned',
+                    ]
+                );
+                $order->update(['status' => 'shipped']);
+                continue;
+            }
+
+            try {
+                $service = CourierFactory::make($request->courier);
+                $result  = $service->createShipment($order);
+
+                CourierShipment::updateOrCreate(
+                    ['order_id' => $order->id],
+                    [
+                        'courier_name'   => $request->courier,
+                        'consignment_id' => $result['consignment_id'] ?? null,
+                        'tracking_code'  => $result['tracking_code'] ?? null,
+                        'tracking_link'  => $result['tracking_link'] ?? null,
+                        'delivery_fee'   => $order->shipping_charge ?? 0,
+                        'status'         => 'submitted',
+                    ]
+                );
+                $order->update(['status' => 'shipped']);
+
+            } catch (\Exception $e) {
+                $errors[] = 'Order #' . $order->order_number . ': ' . $e->getMessage();
+                // Still mark as assigned even if API fails
+                CourierShipment::updateOrCreate(
+                    ['order_id' => $order->id],
+                    [
+                        'courier_name' => $request->courier,
+                        'delivery_fee' => $order->shipping_charge ?? 0,
+                        'status'       => 'assigned',
+                    ]
                 );
                 $order->update(['status' => 'shipped']);
             }
         }
-        return response()->json(['success' => true]);
+
+        return response()->json([
+            'success' => true,
+            'errors'  => $errors,
+        ]);
     }
 
     public function bulkTag(Request $request)

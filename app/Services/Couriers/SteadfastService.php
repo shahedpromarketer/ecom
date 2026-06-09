@@ -5,6 +5,7 @@ namespace App\Services\Couriers;
 use App\Models\CourierSetting;
 use App\Models\Order;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class SteadfastService extends BaseCourierService
 {
@@ -49,13 +50,16 @@ class SteadfastService extends BaseCourierService
 
         $data = $response->json();
 
+        Log::info('Steadfast raw response', $data);
+
         if (! isset($data['consignment'])) {
             throw new \Exception('Steadfast response invalid: ' . json_encode($data));
         }
 
         return [
             'tracking_code'  => $data['consignment']['tracking_code'] ?? null,
-            'consignment_id' => $data['consignment']['id'] ?? null,
+            'consignment_id' => $data['consignment']['consignment_id'] ?? $data['consignment']['id'] ?? null,
+            'tracking_link'  => $data['consignment']['tracking_link'] ?? null,
             'status'         => 'submitted',
         ];
     }

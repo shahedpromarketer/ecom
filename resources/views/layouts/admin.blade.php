@@ -49,9 +49,9 @@
 <aside id="admin-sidebar"
        class="fixed inset-y-0 left-0 z-50 flex flex-col
               bg-[#1B2A4A] border-r border-white/5
-              -translate-x-full lg:translate-x-0
-              transition-all duration-300 ease-in-out"
-       :class="{ 'translate-x-0': mobileOpen, 'w-16': collapsed, 'w-64': !collapsed }">
+              -translate-x-full lg:translate-x-0"
+       :class="{ 'translate-x-0': mobileOpen, 'w-16': collapsed, 'w-64': !collapsed }"
+       x-init="$nextTick(() => $el.classList.add('transition-all', 'duration-300', 'ease-in-out'))">
 
     {{-- Logo --}}
     <div class="flex items-center h-16 px-3 border-b border-white/10 flex-shrink-0 overflow-hidden"
@@ -133,8 +133,10 @@
                 'delivered'      => \App\Models\Order::where('status','delivered')->count(),
                 'completed'      => \App\Models\Order::where('status','completed')->count(),
                 'cancelled'      => \App\Models\Order::where('status','cancelled')->count(),
+                'failed'         => \App\Models\Order::where('status','failed')->count(),
                 'pending_return' => \App\Models\Order::where('status','pending_return')->count(),
                 'returned'       => \App\Models\Order::where('status','returned')->count(),
+                'incomplete'     => \App\Models\Order::where('status','pending')->where('payment_status','unpaid')->where('source','!=','manual')->count(),
             ]);
             $ordersActive = request()->is('admin/orders*') || request()->is('admin/payments*');
         @endphp
@@ -171,7 +173,7 @@
                  x-transition:leave="transition-all ease-in duration-100"
                  x-transition:leave-start="opacity-100 translate-y-0"
                  x-transition:leave-end="opacity-0 -translate-y-1"
-                 class="mt-1 space-y-0.5 max-h-[60vh] overflow-y-auto pb-1">
+                 class="mt-1 space-y-0.5 pb-1">
 
                 {{-- Create New --}}
                 <a href="{{ route('admin.orders.create') }}"
@@ -187,6 +189,7 @@
                     ['key' => null,             'label' => 'All Orders',     'count' => $counts['all'],            'param' => null],
                     ['key' => 'pending',        'label' => 'Pending',        'count' => $counts['pending'],        'param' => 'status'],
                     ['key' => 'confirmed',      'label' => 'Confirmed',      'count' => $counts['confirmed'],      'param' => 'status'],
+                    ['key' => 'failed',         'label' => 'Failed Orders',  'count' => $counts['failed'],         'param' => 'status'],
                     ['key' => 'processing',     'label' => 'Processing',     'count' => $counts['processing'],     'param' => 'status'],
                     ['key' => 'hold',           'label' => 'Hold',           'count' => $counts['hold'],           'param' => 'status'],
                     ['key' => 'shipped',        'label' => 'In Courier',     'count' => $counts['shipped'],        'param' => 'status'],
@@ -225,6 +228,21 @@
 
                 {{-- Divider --}}
                 <div class="mx-1 my-1.5 border-t border-white/10"></div>
+
+                {{-- Incomplete Orders --}}
+                @php $incompleteActive = request()->is('admin/orders/incomplete'); @endphp
+                <a href="{{ route('admin.orders.incomplete') }}"
+                   class="group flex items-center justify-between pl-4 pr-3 py-2 text-xs rounded-lg transition-all duration-150 {{ $incompleteActive ? 'bg-white/[0.12] text-white font-semibold border-l-2 border-yellow-400' : 'text-white/60 font-medium hover:text-white hover:bg-white/[0.08]' }}">
+                    <span class="flex items-center gap-2 min-w-0">
+                        <svg class="w-3 h-3 flex-shrink-0 {{ $incompleteActive ? 'text-yellow-400' : 'text-white/40 group-hover:text-white/70' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+                        </svg>
+                        <span class="truncate">Incomplete Orders</span>
+                    </span>
+                    @if(($counts['incomplete'] ?? 0) > 0)
+                        <span class="px-1.5 py-0.5 text-[10px] font-bold rounded-md bg-red-500/30 text-red-300 border border-red-400/40 min-w-[20px] text-center tabular-nums flex-shrink-0 ml-1">{{ $counts['incomplete'] > 999 ? '999+' : $counts['incomplete'] }}</span>
+                    @endif
+                </a>
 
                 {{-- Tool links --}}
                 @php
@@ -364,6 +382,15 @@
             <span class="truncate">Invoice Print Setup</span>
         </a>
 
+        <a href="{{ route('admin.invoice-templates.index') }}"
+           class="flex items-center gap-3 py-3 pr-4 text-sm font-medium transition-colors duration-150 {{ $navItem('admin.invoice-templates*') }}">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"/>
+            </svg>
+            <span class="truncate">Invoice Templates</span>
+        </a>
+
         {{-- ANALYTICS --}}
         <div class="px-4 mt-4 mb-1">
             <span class="text-white/30 text-xs font-semibold uppercase tracking-widest">Analytics</span>
@@ -451,8 +478,9 @@
 </aside>
 
 {{-- ══════════════════════════ MAIN ══════════════════════════ --}}
-<div class="flex flex-col min-h-screen transition-all duration-300"
-     :class="collapsed ? 'lg:ml-16' : 'lg:ml-64'">
+<div class="flex flex-col min-h-screen"
+     :class="collapsed ? 'lg:ml-16' : 'lg:ml-64'"
+     x-init="$nextTick(() => $el.classList.add('transition-all', 'duration-300'))">
 
     {{-- Top Header --}}
     <header class="sticky top-0 z-30
@@ -473,25 +501,26 @@
             </svg>
         </button>
 
-        <div class="flex items-center gap-3 flex-1 min-w-0">
+        <div class="flex items-center gap-2 flex-1 min-w-0">
             <h1 class="font-heading font-semibold text-base sm:text-lg truncate flex-shrink-0
-                       text-textprimary dark:text-gray-100">
+                       text-textprimary dark:text-gray-100
+                       @if(request()->routeIs('admin.dashboard')) hidden sm:block @endif">
                 @yield('page-title', 'Dashboard')
             </h1>
             @if(request()->routeIs('admin.dashboard'))
-            <div class="relative ml-4" id="globalSearchWrapper">
-                <div class="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-xl px-3 py-1.5 w-72">
+            <div class="relative flex-1 min-w-0 sm:ml-2 sm:max-w-xs" id="globalSearchWrapper">
+                <div class="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-xl px-3 py-1.5 w-full">
                     <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
                     <input type="text" id="globalSearchInput"
-                        placeholder="Search order ID or phone..."
+                        placeholder="Order ID বা ফোন নম্বর..."
                         autocomplete="off"
                         style="outline:none !important; box-shadow:none !important; border:none !important;"
-                        class="flex-1 bg-transparent text-sm text-gray-700 dark:text-white placeholder-gray-400"
+                        class="flex-1 min-w-0 bg-transparent text-sm text-gray-700 dark:text-white placeholder-gray-400"
                         oninput="globalSearch(this.value)"
                         onkeydown="if(event.key==='Escape') document.getElementById('globalSearchResults').classList.add('hidden')">
-                    <span id="searchSpinner" class="hidden">
+                    <span id="searchSpinner" class="hidden flex-shrink-0">
                         <svg class="w-4 h-4 text-gray-400 animate-spin" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
@@ -499,7 +528,7 @@
                     </span>
                 </div>
                 <div id="globalSearchResults"
-                    class="absolute top-full left-0 mt-2 w-full bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-xl z-50 hidden overflow-hidden">
+                    class="absolute top-full left-0 mt-2 w-full min-w-[280px] bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-xl z-50 hidden overflow-hidden">
                     <div id="searchResultsInner"></div>
                 </div>
             </div>
@@ -508,8 +537,8 @@
 
         <div class="flex items-center gap-1 flex-shrink-0">
 
-            {{-- New Order shortcut (orders pages only) --}}
-            @if(request()->is('admin/orders*'))
+            {{-- New Order shortcut (orders + dashboard) --}}
+            @if(request()->is('admin/orders*') || request()->is('admin/dashboard') || request()->is('admin'))
             <a href="{{ route('admin.orders.create') }}"
                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex-shrink-0 mr-1">
                 <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">

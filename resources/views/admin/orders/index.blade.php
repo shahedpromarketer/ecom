@@ -414,46 +414,61 @@
 <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
 
     {{-- Table Header Bar --}}
-    <div class="flex flex-col gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-        {{-- Row 1: Title + results --}}
-        <div class="flex items-center gap-2">
+    <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+
+        {{-- Row 1: Title + ID-only search --}}
+        <div class="flex items-center justify-between gap-4 mb-2">
             <h3 class="text-sm font-bold text-gray-900 dark:text-white">Order List</h3>
-            <span class="px-2 py-0.5 bg-primary/10 text-primary text-xs font-semibold rounded-full">
-                {{ $orders->total() }} results
-            </span>
-        </div>
-        {{-- Row 2: Search + Show entries --}}
-        <div class="flex items-center gap-2">
-            <form method="GET" action="{{ route('admin.orders.index') }}" class="flex items-center gap-2 flex-1">
-                @foreach(request()->except(['search','page']) as $key => $val)
+            <form method="GET" action="{{ route('admin.orders.index') }}" class="flex items-center gap-1 flex-shrink-0">
+                @foreach(request()->except(['id_search','search','page']) as $key => $val)
                     <input type="hidden" name="{{ $key }}" value="{{ $val }}">
                 @endforeach
-                <input type="text" name="search" value="{{ request('search') }}"
-                    placeholder="Search order# or phone..."
-                    class="flex-1 min-w-0 px-3 py-2 text-sm rounded-xl border border-gray-200
-                           dark:border-gray-600 bg-white dark:bg-gray-700
-                           text-gray-900 dark:text-white placeholder-gray-400
-                           focus:outline-none focus:ring-2 focus:ring-primary/30">
-                <button type="submit"
-                    class="px-3 py-2 bg-primary text-white text-xs font-semibold rounded-xl flex-shrink-0">
-                    Search
-                </button>
+                <span class="inline-flex items-center px-2 py-1.5 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs font-bold rounded-l-lg border border-gray-300 dark:border-gray-500 border-r-0 leading-none">ID</span>
+                <input type="text" name="id_search" value="{{ request('id_search') }}"
+                    placeholder="Search by Only ID"
+                    class="w-40 px-3 py-1.5 text-xs rounded-r-lg border border-gray-300 dark:border-gray-500
+                           bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400
+                           focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
             </form>
-            <div class="relative flex-shrink-0">
-                <select onchange="window.location.href='?per_page='+this.value+'&{{ http_build_query(request()->except('per_page', 'page')) }}'"
-                    class="appearance-none pl-2 pr-6 py-2 text-xs rounded-xl border border-gray-200
-                           dark:border-gray-600 bg-white dark:bg-gray-700
-                           text-gray-900 dark:text-white cursor-pointer min-w-[52px]">
-                    @foreach([10,25,50,100,150,200,250,300,500,1000,1500,2000] as $n)
-                    <option value="{{ $n }}" {{ request('per_page', 10) == $n ? 'selected' : '' }}>{{ $n }}</option>
-                    @endforeach
-                </select>
-                <svg class="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none"
-                     fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
-                </svg>
-            </div>
         </div>
+
+        {{-- Row 2: Show entries (left) + Search (right) --}}
+        <div class="flex items-center justify-between gap-4">
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <span class="text-xs text-gray-500 dark:text-gray-400">Show</span>
+                <div class="relative">
+                    <select onchange="window.location.href='?per_page='+this.value+'&{{ http_build_query(request()->except('per_page', 'page')) }}'"
+                        class="appearance-none pl-2 pr-7 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-500
+                               bg-white dark:bg-gray-700 text-gray-900 dark:text-white cursor-pointer">
+                        @foreach([10,25,50,100,150,200,250,300,500,1000,1500,2000] as $n)
+                        <option value="{{ $n }}" {{ request('per_page', 10) == $n ? 'selected' : '' }}>{{ $n }}</option>
+                        @endforeach
+                    </select>
+                    <svg class="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none"
+                         fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </div>
+                <span class="text-xs text-gray-500 dark:text-gray-400">entries</span>
+            </div>
+            <form method="GET" action="{{ route('admin.orders.index') }}" class="flex items-center gap-2">
+                @foreach(request()->except(['search','id_search','page']) as $key => $val)
+                    <input type="hidden" name="{{ $key }}" value="{{ $val }}">
+                @endforeach
+                <label class="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">Search:</label>
+                <input type="text" name="search" value="{{ request('search') }}"
+                    placeholder="Order# or phone..."
+                    class="w-44 px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-500
+                           bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400
+                           focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
+            </form>
+        </div>
+
+        {{-- Row 3: Showing X to Y of Z --}}
+        <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+            Showing {{ $orders->firstItem() ?? 0 }} to {{ $orders->lastItem() ?? 0 }} of {{ number_format($orders->total()) }} entries
+        </div>
+
     </div>
 
     {{-- Table --}}
@@ -525,12 +540,25 @@
 
             {{-- Notes --}}
             <td class="px-3 py-3 align-top text-center w-[60px] border-r border-gray-100 dark:border-gray-800">
+                {{-- Add note button --}}
                 <button type="button" onclick="quickAddNote({{ $order->id }})"
-                    class="w-5 h-5 flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 text-blue-500 rounded-md hover:bg-blue-200 mx-auto">
+                    class="w-5 h-5 flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 text-blue-500 rounded-md hover:bg-blue-200 mx-auto"
+                    title="Add note">
                     <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 </button>
+                {{-- Note view tooltip icon (only if notes exist) --}}
                 @if($order->orderNotes && $order->orderNotes->count() > 0)
-                <span class="text-xs text-gray-400 mt-0.5 block">{{ $order->orderNotes->count() }}</span>
+                @php $lastNote = $order->orderNotes->sortByDesc('created_at')->first(); @endphp
+                <button type="button"
+                    class="note-tip-btn mt-0.5 w-5 h-5 flex items-center justify-center bg-amber-100 dark:bg-amber-900/30 text-amber-600 rounded-md hover:bg-amber-200 mx-auto"
+                    data-count="{{ $order->orderNotes->count() }}"
+                    data-text="{{ e(Str::limit($lastNote->note_text ?? '', 220)) }}"
+                    data-date="{{ $lastNote->created_at->format('d/m/Y h:ia') }}">
+                    <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                </button>
+                <span class="note-count-span text-[10px] text-amber-500 font-semibold leading-none">{{ $order->orderNotes->count() }}</span>
                 @endif
                 @if($isDuplicate)
                 <span class="inline-block mt-1 px-1 py-0.5 bg-yellow-400 text-yellow-900 text-[9px] font-bold rounded leading-none">DUP</span>
@@ -564,7 +592,7 @@
             {{-- Name & Number --}}
             <td class="px-3 py-3 align-top w-[200px] border-r border-gray-100 dark:border-gray-800">
                 <div class="flex items-center gap-1 mb-1">
-                    <span class="font-semibold text-gray-800 dark:text-white text-sm">{{ $order->shipping_name ?? 'N/A' }}</span>
+                    <a href="{{ route('admin.orders.show', $order->id) }}" class="font-semibold text-gray-800 dark:text-white text-sm hover:text-[#1B2A4A] dark:hover:text-[#F59E0B] hover:underline">{{ $order->shipping_name ?? 'N/A' }}</a>
                 </div>
                 <div class="flex items-center gap-1">
                     <span class="bg-gray-900 dark:bg-gray-700 text-white text-xs px-2 py-0.5 rounded-lg font-mono">{{ $order->shipping_phone ?? 'N/A' }}</span>
@@ -616,18 +644,51 @@
                     $customerSuccess = \App\Models\Order::where('shipping_phone', $order->shipping_phone)->whereIn('status',['delivered','completed'])->count();
                     $customerFailed = \App\Models\Order::where('shipping_phone', $order->shipping_phone)->whereIn('status',['cancelled','failed','returned'])->count();
                     $percent = $customerTotal > 0 ? round(($customerSuccess/$customerTotal)*100) : 0;
+                    $shipmentStatusColors = [
+                        'submitted' => 'bg-blue-500',
+                        'assigned'  => 'bg-yellow-500',
+                        'pending'   => 'bg-orange-400',
+                        'delivered' => 'bg-green-500',
+                        'returned'  => 'bg-red-500',
+                        'cancelled' => 'bg-gray-500',
+                    ];
+                    $shipmentStatusColor = $shipmentStatusColors[$order->shipment?->status ?? ''] ?? 'bg-gray-400';
                 @endphp
                 <div class="text-gray-600 dark:text-gray-400 mb-1">
                     To: {{ $customerTotal }} Co: {{ $customerSuccess }}
-                    <span class="px-1 py-0.5 rounded text-white text-xs {{ $order->shipment ? 'bg-[#1B2A4A]' : 'bg-gray-400' }}">{{ $courierName }}</span>
+                    <span class="px-1 py-0.5 rounded text-white text-xs {{ $order->shipment ? 'bg-[#1B2A4A]' : 'bg-gray-400' }}">{{ ucfirst($courierName) }}</span>
                 </div>
                 <div class="w-24 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-1">
                     <div class="h-full rounded-full {{ $percent >= 70 ? 'bg-green-500' : ($percent >= 40 ? 'bg-yellow-500' : 'bg-red-500') }}"
                         style="width: {{ $percent }}%"></div>
                 </div>
-                <div class="text-gray-500 dark:text-gray-400">
+                <div class="text-gray-500 dark:text-gray-400 mb-1">
                     Su: {{ $customerSuccess }} Fa: {{ $customerFailed }}
                 </div>
+                @if($order->shipment)
+                <div class="border-t border-gray-100 dark:border-gray-700 pt-1 mt-1 space-y-0.5">
+                    @if($order->shipment->tracking_code)
+                    <div class="text-gray-700 dark:text-gray-300 font-medium break-all flex items-start gap-1">
+                        <span>{{ ucfirst($order->shipment->courier_name) }} Inv: {{ $order->shipment->tracking_code }}@if($order->shipment->consignment_id) - {{ $order->shipment->consignment_id }}@endif</span>
+                        @if($order->shipment->tracking_link)
+                        <a href="{{ $order->shipment->tracking_link }}" target="_blank"
+                           class="flex-shrink-0 w-5 h-5 flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded hover:bg-blue-200 mt-0.5" title="Track">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                        </a>
+                        @endif
+                    </div>
+                    @endif
+                    <div class="flex items-center gap-1">
+                        <span class="px-1 py-0.5 rounded text-white text-[10px] {{ $shipmentStatusColor }}">{{ ucfirst($order->shipment->status) }}</span>
+                        @if($order->shipment->delivery_fee > 0)
+                        <span class="text-gray-500 dark:text-gray-400">৳{{ number_format($order->shipment->delivery_fee, 0) }}</span>
+                        @endif
+                    </div>
+                    <div class="text-gray-400 dark:text-gray-500 text-[10px]">
+                        {{ $order->shipment->created_at->format('d/m/Y g:ia') }}
+                    </div>
+                </div>
+                @endif
             </td>
 
             {{-- Summary --}}
@@ -665,14 +726,8 @@
     <p class="text-xs text-gray-400 text-center py-2 sm:hidden">← Scroll to see more →</p>
 
     {{-- Pagination --}}
-    <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <p class="text-xs text-gray-500 dark:text-gray-400 order-2 sm:order-1">
-            Showing {{ $orders->firstItem() ?? 0 }} to {{ $orders->lastItem() ?? 0 }}
-            of {{ $orders->total() }} orders
-        </p>
-        <div class="flex items-center gap-1 order-1 sm:order-2">
-            {{ $orders->links('pagination::tailwind') }}
-        </div>
+    <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex justify-center">
+        {{ $orders->links('pagination::tailwind') }}
     </div>
 
 </div>
@@ -743,29 +798,12 @@
         CSV
       </button>
 
-      <!-- Courier dropdown -->
-      <div class="relative overflow-visible flex-shrink-0" x-data="{ o: false }">
-        <button @click="o = !o; $event.stopPropagation()"
-          class="px-2.5 py-1.5 rounded-lg bg-purple-600 text-white
-                 text-xs font-semibold whitespace-nowrap">
-          Courier ▾
-        </button>
-        <div x-show="o"
-             x-on:click.away="o = false"
-             x-transition
-             style="position: absolute; bottom: 100%; margin-bottom: 8px; right: 0; z-index: 9999;"
-             class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700
-                    shadow-2xl w-36">
-          @foreach(['pathao','steadfast','carrybe','redx','paperfly','manual'] as $c)
-          <button @click="bulkAssignCourier('{{ $c }}'); o = false"
-            class="w-full px-3 py-2.5 text-left text-xs font-medium
-                   text-gray-700 dark:text-gray-300
-                   hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-            {{ ucfirst($c) }}
-          </button>
-          @endforeach
-        </div>
-      </div>
+      <!-- Courier Modal Trigger (mobile) -->
+      <button onclick="openBulkCourierModal()"
+        class="px-2.5 py-1.5 rounded-lg bg-purple-600 text-white
+               text-xs font-semibold whitespace-nowrap flex-shrink-0">
+        Courier
+      </button>
 
       <!-- Clear -->
       <button @click="selectedOrders = []; selectAll = false; updateBulkSummary([])"
@@ -856,34 +894,15 @@
       </button>
 
       <!-- Assign Courier -->
-      <div class="relative" x-data="{ courierOpen: false }">
-        <button @click="courierOpen = !courierOpen"
-          class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl
-                 bg-purple-600 text-white text-xs font-semibold hover:bg-purple-700 transition">
-          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
-          </svg>
-          Courier
-          <svg class="w-3 h-3" :class="courierOpen ? 'rotate-180' : ''"
-               fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-          </svg>
-        </button>
-        <div x-show="courierOpen" @click.away="courierOpen = false"
-             class="absolute bottom-full mb-2 left-0 bg-white dark:bg-gray-800
-                    rounded-2xl border border-gray-200 dark:border-gray-700
-                    shadow-xl z-[999] overflow-hidden w-36">
-          @foreach(['pathao','steadfast','carrybe','redx','paperfly','manual'] as $c)
-          <button @click="bulkAssignCourier('{{ $c }}'); courierOpen = false"
-            class="w-full px-4 py-2.5 text-left text-xs font-medium
-                   text-gray-700 dark:text-gray-300
-                   hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-            {{ ucfirst($c) }}
-          </button>
-          @endforeach
-        </div>
-      </div>
+      <button onclick="openBulkCourierModal()"
+        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl
+               bg-purple-600 text-white text-xs font-semibold hover:bg-purple-700 transition">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+        </svg>
+        Submit Courier
+      </button>
 
       <!-- Tag -->
       <div class="flex items-center gap-1.5">
@@ -921,12 +940,102 @@
 
 </div>{{-- end x-data wrapper --}}
 
+{{-- Quick Add Note Modal --}}
+<div id="quickNoteModal"
+     class="fixed inset-0 bg-black/50 z-[9999] hidden items-center justify-center p-4"
+     onclick="if(event.target===this) closeQuickNoteModal()">
+    <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h4 class="font-semibold text-[#1B2A4A] dark:text-white">Add Note — Order #<span id="quickNoteOrderId"></span></h4>
+            <button type="button" onclick="closeQuickNoteModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl leading-none">&times;</button>
+        </div>
+        <textarea id="quickNoteTextarea" rows="4" placeholder="Write note here..."
+            class="w-full rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]"></textarea>
+        <div class="flex gap-3 mt-4">
+            <button type="button" onclick="submitQuickNote()"
+                class="flex-1 bg-[#1B2A4A] text-white py-2 rounded-xl text-sm font-medium hover:bg-[#243a63] transition">
+                Save Note
+            </button>
+            <button type="button" onclick="closeQuickNoteModal()"
+                class="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
 {{-- AJAX note toast --}}
 <div id="note-toast"
      class="fixed bottom-5 right-5 z-50 flex items-center gap-2 px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium text-white transition-all duration-300 opacity-0 translate-y-2 pointer-events-none"
      style="background:#22c55e">
     <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
     <span id="note-toast-msg">Note added successfully</span>
+</div>
+
+{{-- Bulk Courier Modal --}}
+<div id="bulkCourierModal" class="hidden fixed inset-0 z-[10000] flex items-center justify-center p-4"
+     onclick="if(event.target===this) closeBulkCourierModal()">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+    <div class="relative w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        {{-- Header --}}
+        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                    <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+                </div>
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Bulk Courier Submit</h3>
+                    <p class="text-xs text-gray-400"><span id="bulkCourierCount">0</span> টি order selected</p>
+                </div>
+            </div>
+            <button onclick="closeBulkCourierModal()"
+                    class="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        {{-- Body --}}
+        <div class="px-5 py-4 space-y-4">
+            {{-- Courier Selection --}}
+            <div>
+                <label class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2 block">Courier নির্বাচন করুন <span class="text-red-500">*</span></label>
+                <div class="grid grid-cols-3 gap-2" id="bulkCourierBtnGroup">
+                    @foreach(['pathao'=>'Pathao','steadfast'=>'Steadfast','carrybe'=>'CarryBe','redx'=>'RedX','paperfly'=>'Paperfly','manual'=>'Manual'] as $key => $label)
+                    <button type="button"
+                        onclick="selectBulkCourier('{{ $key }}')"
+                        data-bulk-courier="{{ $key }}"
+                        class="bulk-courier-btn flex flex-col items-center justify-center gap-1 px-2 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:border-purple-400 hover:text-purple-600 transition-all">
+                        @if($key === 'manual')
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        @else
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
+                        @endif
+                        {{ $label }}
+                    </button>
+                    @endforeach
+                </div>
+                <input type="hidden" id="bulkSelectedCourier" value="">
+            </div>
+
+            {{-- Warning --}}
+            <div class="flex items-start gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2.5">
+                <svg class="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                <p class="text-xs text-amber-700 dark:text-amber-400"><span id="bulkCourierWarning">0</span> টি order এ courier assign হবে। প্রতিটি order এর নিজস্ব shipping charge auto-use হবে।</p>
+            </div>
+        </div>
+        {{-- Footer --}}
+        <div class="flex items-center justify-end gap-2 px-5 py-3 border-t border-gray-100 dark:border-gray-800">
+            <button onclick="closeBulkCourierModal()"
+                    class="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                Cancel
+            </button>
+            <button onclick="submitBulkCourier()"
+                    id="bulkCourierSubmitBtn"
+                    class="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 transition-colors flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+                Submit All
+            </button>
+        </div>
+    </div>
 </div>
 
 @push('scripts')
@@ -946,9 +1055,29 @@
         navigator.clipboard.writeText(text).then(() => showToast('Order details copied!', 'success'));
     }
 
+    let _quickNoteOrderId = null;
+
     function quickAddNote(orderId) {
-        const note = prompt('Add note for order #' + orderId + ':');
-        if (!note || !note.trim()) return;
+        _quickNoteOrderId = orderId;
+        document.getElementById('quickNoteOrderId').textContent = orderId;
+        document.getElementById('quickNoteTextarea').value = '';
+        const m = document.getElementById('quickNoteModal');
+        m.classList.remove('hidden');
+        m.classList.add('flex');
+        setTimeout(() => document.getElementById('quickNoteTextarea').focus(), 50);
+    }
+
+    function closeQuickNoteModal() {
+        const m = document.getElementById('quickNoteModal');
+        m.classList.add('hidden');
+        m.classList.remove('flex');
+        _quickNoteOrderId = null;
+    }
+
+    function submitQuickNote() {
+        const note = document.getElementById('quickNoteTextarea').value.trim();
+        if (!note) { showToast('Note cannot be empty', 'error'); return; }
+        const orderId = _quickNoteOrderId;
         fetch('/admin/orders/' + orderId + '/notes', {
             method: 'POST',
             headers: {
@@ -956,23 +1085,46 @@
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                 'Accept': 'application/json'
             },
-            body: JSON.stringify({note_text: note.trim(), type: 'order'})
+            body: JSON.stringify({note_text: note, type: 'order'})
         })
         .then(r => r.json())
         .then(d => {
             if (d.success) {
+                closeQuickNoteModal();
                 showToast('Note added!', 'success');
-                const btn = document.querySelector('[onclick="quickAddNote(' + orderId + ')"]');
-                if (btn) {
-                    const countEl = btn.nextElementSibling;
-                    if (countEl) {
-                        countEl.textContent = parseInt(countEl.textContent || 0) + 1;
-                    } else {
-                        const span = document.createElement('span');
-                        span.className = 'text-xs text-gray-400 mt-0.5 block';
-                        span.textContent = '1';
-                        btn.parentNode.appendChild(span);
-                    }
+
+                const addBtn = document.querySelector('[onclick="quickAddNote(' + orderId + ')"]');
+                if (!addBtn) return;
+                const td = addBtn.closest('td');
+                let tipBtn    = td.querySelector('.note-tip-btn');
+                let countSpan = td.querySelector('.note-count-span');
+                const dateStr = nowDateStr();
+                const noteSnip = note.substring(0, 220);
+
+                if (!tipBtn) {
+                    // First note — create amber icon + count span
+                    tipBtn = document.createElement('button');
+                    tipBtn.type = 'button';
+                    tipBtn.className = 'note-tip-btn mt-0.5 w-5 h-5 flex items-center justify-center bg-amber-100 text-amber-600 rounded-md hover:bg-amber-200 mx-auto';
+                    tipBtn.dataset.count = '1';
+                    tipBtn.dataset.text  = noteSnip;
+                    tipBtn.dataset.date  = dateStr;
+                    tipBtn.innerHTML = `<svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>`;
+
+                    countSpan = document.createElement('span');
+                    countSpan.className = 'note-count-span text-[10px] text-amber-500 font-semibold leading-none';
+                    countSpan.textContent = '1';
+
+                    addBtn.insertAdjacentElement('afterend', countSpan);
+                    addBtn.insertAdjacentElement('afterend', tipBtn);
+                    _noteTip.attach(tipBtn);
+                } else {
+                    // Subsequent notes — update count + tooltip data
+                    const newCount = parseInt(tipBtn.dataset.count || 0) + 1;
+                    tipBtn.dataset.count = newCount;
+                    tipBtn.dataset.text  = noteSnip;
+                    tipBtn.dataset.date  = dateStr;
+                    if (countSpan) countSpan.textContent = newCount;
                 }
             } else {
                 showToast('Failed to add note', 'error');
@@ -980,6 +1132,10 @@
         })
         .catch(() => showToast('Error adding note', 'error'));
     }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeQuickNoteModal();
+    });
 
     window.showToast = function (message, type) {
         const toast = document.getElementById('note-toast');
@@ -1047,29 +1203,77 @@
         window.open('/admin/orders/bulk-print?' + params.toString());
     }
 
-    async function bulkAssignCourier(courier) {
-        const selected = window.getSelectedOrders();
-        if (!selected.length) {
-            showToast('No orders selected', 'error');
-            return;
-        }
-        if (!confirm(`Assign ${selected.length} order(s) to ${courier}?`)) return;
-        const response = await fetch('/admin/orders/bulk-courier', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
-            },
-            body: JSON.stringify({ ids: selected, courier: courier })
+    function openBulkCourierModal() {
+        const selected = window.getSelectedOrders ? window.getSelectedOrders() : getSelectedIds();
+        if (!selected.length) { showToast('কোনো order select করা হয়নি', 'error'); return; }
+        document.getElementById('bulkCourierCount').textContent = selected.length;
+        document.getElementById('bulkCourierWarning').textContent = selected.length;
+        document.getElementById('bulkSelectedCourier').value = '';
+        document.querySelectorAll('.bulk-courier-btn').forEach(btn => {
+            btn.classList.remove('border-purple-500','bg-purple-50','text-purple-700','dark:bg-purple-900/30','dark:text-purple-300');
+            btn.classList.add('border-gray-200','dark:border-gray-700','bg-white','dark:bg-gray-800','text-gray-700','dark:text-gray-300');
         });
-        const data = await response.json();
-        if (data.success) {
-            showToast(`${selected.length} orders assigned to ${courier}`, 'success');
-            setTimeout(() => window.location.reload(), 1000);
-        } else {
-            showToast('Assignment failed', 'error');
+        document.getElementById('bulkCourierModal').classList.remove('hidden');
+    }
+
+    function closeBulkCourierModal() {
+        document.getElementById('bulkCourierModal').classList.add('hidden');
+    }
+
+    function selectBulkCourier(name) {
+        document.getElementById('bulkSelectedCourier').value = name;
+        document.querySelectorAll('.bulk-courier-btn').forEach(btn => {
+            const active = btn.dataset.bulkCourier === name;
+            btn.classList.toggle('border-purple-500', active);
+            btn.classList.toggle('bg-purple-50', active);
+            btn.classList.toggle('text-purple-700', active);
+            btn.classList.toggle('dark:bg-purple-900/30', active);
+            btn.classList.toggle('dark:text-purple-300', active);
+            btn.classList.toggle('border-gray-200', !active);
+            btn.classList.toggle('dark:border-gray-700', !active);
+            btn.classList.toggle('bg-white', !active);
+            btn.classList.toggle('dark:bg-gray-800', !active);
+            btn.classList.toggle('text-gray-700', !active);
+            btn.classList.toggle('dark:text-gray-300', !active);
+        });
+    }
+
+    async function submitBulkCourier() {
+        const courier = document.getElementById('bulkSelectedCourier').value;
+        if (!courier) { showToast('Courier নির্বাচন করুন', 'error'); return; }
+        const selected = window.getSelectedOrders ? window.getSelectedOrders() : getSelectedIds();
+        if (!selected.length) { showToast('কোনো order select করা হয়নি', 'error'); return; }
+        const btn = document.getElementById('bulkCourierSubmitBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Submitting...';
+        try {
+            const response = await fetch('/admin/orders/bulk-courier', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+                body: JSON.stringify({ ids: selected, courier: courier })
+            });
+            const data = await response.json();
+            if (data.success) {
+                if (data.errors && data.errors.length) {
+                    showToast(`${selected.length - data.errors.length} টি submit হয়েছে। ${data.errors.length} টি fail: ${data.errors[0]}`, 'error');
+                } else {
+                    showToast(`${selected.length} টি order ${courier} এ submit হয়েছে`, 'success');
+                }
+                closeBulkCourierModal();
+                setTimeout(() => window.location.reload(), 1800);
+            } else {
+                showToast(data.message || 'Submit failed', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg> Submit All';
+            }
+        } catch(e) {
+            showToast('Network error', 'error');
+            btn.disabled = false;
+            btn.innerHTML = 'Submit All';
         }
     }
+
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeBulkCourierModal(); });
 
     async function bulkAssignTag() {
         const selected = getSelectedIds();
@@ -1104,6 +1308,51 @@
         document.getElementById('bulk-total').textContent = fmt(total);
         document.getElementById('bulk-paid').textContent  = fmt(paid);
         document.getElementById('bulk-due').textContent   = fmt(due);
+    }
+
+    // ── Note Hover Tooltip ────────────────────────────────────────────────────
+    const _noteTip = (function () {
+        const tip = document.createElement('div');
+        tip.id = 'noteTip';
+        Object.assign(tip.style, {
+            position: 'fixed', zIndex: '99999', maxWidth: '280px', minWidth: '180px',
+            background: '#1e293b', color: '#f1f5f9', borderRadius: '10px',
+            padding: '10px 13px', fontSize: '12px', lineHeight: '1.55',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.35)', pointerEvents: 'none',
+            display: 'none', wordBreak: 'break-word',
+        });
+        document.body.appendChild(tip);
+
+        function posTip(e) {
+            const mg = 14, tw = tip.offsetWidth, th = tip.offsetHeight;
+            let x = e.clientX + mg, y = e.clientY - th - mg;
+            if (x + tw > window.innerWidth) x = e.clientX - tw - mg;
+            if (y < 0) y = e.clientY + mg;
+            tip.style.left = x + 'px'; tip.style.top = y + 'px';
+        }
+
+        function attach(btn) {
+            btn.addEventListener('mouseenter', function (e) {
+                const c = this.dataset.count, d = this.dataset.date, t = this.dataset.text;
+                tip.innerHTML =
+                    `<div style="color:#94a3b8;font-size:10px;margin-bottom:5px;border-bottom:1px solid #334155;padding-bottom:4px;">` +
+                    `📝 ${c} note${c > 1 ? 's' : ''} &nbsp;·&nbsp; ${d}</div><div>${t}</div>`;
+                tip.style.display = 'block';
+                posTip(e);
+            });
+            btn.addEventListener('mousemove', posTip);
+            btn.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+        }
+
+        document.querySelectorAll('.note-tip-btn').forEach(attach);
+        return { attach, hide: () => { tip.style.display = 'none'; } };
+    })();
+
+    function nowDateStr() {
+        const n = new Date();
+        const pad = v => String(v).padStart(2,'0');
+        const h = n.getHours(), ampm = h >= 12 ? 'pm' : 'am';
+        return `${pad(n.getDate())}/${pad(n.getMonth()+1)}/${n.getFullYear()} ${pad(h%12||12)}:${pad(n.getMinutes())}${ampm}`;
     }
 </script>
 @endpush

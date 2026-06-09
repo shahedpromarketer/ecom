@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
+use App\Models\InvoiceTemplate;
 use App\Models\Order;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 
 class InvoiceController extends Controller
@@ -88,8 +90,23 @@ class InvoiceController extends Controller
 
     public function printView(Invoice $invoice)
     {
-        $invoice->load('order.items.product', 'order.items.variant', 'order.user');
-        return view('admin.invoices.print', compact('invoice'));
+        $invoice->load('order.items.product', 'order.items.variant');
+        $order    = $invoice->order;
+        $settings = Setting::pluck('value', 'key')->toArray();
+        $active   = InvoiceTemplate::where('is_active', true)->first();
+        $view     = $active ? 'admin.invoices.templates.' . $active->size . '-' . $active->style
+                            : 'admin.invoices.templates.medium-standard';
+        return view($view, compact('order', 'settings', 'invoice'));
+    }
+
+    public function preview($templateId)
+    {
+        $template = InvoiceTemplate::findOrFail($templateId);
+        $order    = Order::with(['items.product', 'items.variant'])->whereHas('items')->latest()->firstOrFail();
+        $settings = Setting::pluck('value', 'key')->toArray();
+        $invoice  = Invoice::where('order_id', $order->id)->first();
+        $view     = 'admin.invoices.templates.' . $template->size . '-' . $template->style;
+        return view($view, compact('order', 'settings', 'invoice', 'template'));
     }
 
     public function downloadCsv(Request $request)

@@ -8,7 +8,7 @@ class CourierShipment extends Model
 {
     protected $fillable = [
         'order_id', 'courier_name', 'consignment_id', 'tracking_code',
-        'status', 'delivery_fee', 'notes',
+        'tracking_link', 'status', 'delivery_fee', 'notes',
     ];
 
     public function order()
