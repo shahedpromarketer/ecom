@@ -40,18 +40,28 @@
           class="flex flex-wrap gap-3 px-6 py-4 border-b border-border dark:border-gray-700">
         <input type="text" name="search" value="{{ request('search') }}" placeholder="Search products…"
                class="flex-1 min-w-[200px] px-4 py-2.5 text-sm rounded-xl border border-border dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 placeholder-textsecondary dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary dark:focus:border-primary transition-all duration-200">
-        <select name="status" class="px-4 py-2.5 text-sm rounded-xl border border-border dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary dark:focus:border-primary transition-all duration-200">
-            <option value="">All Statuses</option>
-            <option value="active"   {{ request('status') === 'active'   ? 'selected' : '' }}>Active</option>
-            <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
-            <option value="draft"    {{ request('status') === 'draft'    ? 'selected' : '' }}>Draft</option>
-        </select>
-        <select name="category" class="px-4 py-2.5 text-sm rounded-xl border border-border dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary dark:focus:border-primary transition-all duration-200">
-            <option value="">All Categories</option>
-            @foreach($categories as $cat)
-                <option value="{{ $cat->id }}" {{ request('category') == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
-            @endforeach
-        </select>
+        <div class="relative">
+            <select name="status" class="cs pl-3 py-2.5 text-sm rounded-xl border border-border dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary dark:focus:border-primary transition-all duration-200 cursor-pointer">
+                <option value="">All Statuses</option>
+                <option value="active"   {{ request('status') === 'active'   ? 'selected' : '' }}>Active</option>
+                <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
+                <option value="draft"    {{ request('status') === 'draft'    ? 'selected' : '' }}>Draft</option>
+            </select>
+            <span class="pointer-events-none absolute inset-y-0 right-2.5 flex items-center">
+                <svg class="w-4 h-4 text-textsecondary dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </span>
+        </div>
+        <div class="relative">
+            <select name="category" class="cs pl-3 py-2.5 text-sm rounded-xl border border-border dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary dark:focus:border-primary transition-all duration-200 cursor-pointer">
+                <option value="">All Categories</option>
+                @foreach($categories as $cat)
+                    <option value="{{ $cat->id }}" {{ request('category') == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
+                @endforeach
+            </select>
+            <span class="pointer-events-none absolute inset-y-0 right-2.5 flex items-center">
+                <svg class="w-4 h-4 text-textsecondary dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </span>
+        </div>
         <button type="submit" class="px-4 py-2.5 text-sm font-semibold bg-primary hover:bg-primary/90 text-white rounded-xl transition-colors">Filter</button>
         <a href="{{ route('admin.products.index') }}" class="px-4 py-2.5 text-sm font-medium border border-border dark:border-gray-600 text-textsecondary dark:text-gray-400 hover:text-textprimary dark:hover:text-gray-200 rounded-xl transition-colors">Clear</a>
     </form>
@@ -82,7 +92,7 @@
                     <td class="px-4 py-3">
                         <div class="flex items-center gap-3">
                             @if($product->primaryImage)
-                                <img src="{{ Storage::url($product->primaryImage->image_path) }}" alt="{{ $product->name }}"
+                                <img src="{{ $product->primaryImage->url }}" alt="{{ $product->name }}"
                                      class="w-10 h-10 object-cover rounded-xl flex-shrink-0">
                             @else
                                 <div class="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-xl flex-shrink-0 flex items-center justify-center">

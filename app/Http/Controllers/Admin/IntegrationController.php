@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\SyncLog;
 use App\Models\WordPressSite;
 use Illuminate\Http\Request;
@@ -18,8 +19,15 @@ class IntegrationController extends Controller
 {
     public function wordpressIndex()
     {
-        $sites      = WordPressSite::withCount('logs')->latest()->get();
-        $logs       = SyncLog::with(['site', 'order'])->latest()->take(10)->get();
+        $tenantId   = auth()->user()->tenant_id;
+        $isSA       = auth()->user()->is_super_admin;
+        $siteQ      = WordPressSite::withCount('logs')->latest();
+        if (!$isSA) $siteQ->where('tenant_id', $tenantId);
+        $sites      = $siteQ->get();
+
+        $logQ = SyncLog::with(['site', 'order'])->latest()->take(10);
+        if (!$isSA) $logQ->whereHas('site', fn($q) => $q->where('tenant_id', $tenantId));
+        $logs       = $logQ->get();
         $webhookUrl = url('/api/wordpress/sync');
 
         return view('admin.integrations.wordpress.index', compact('sites', 'logs', 'webhookUrl'));
@@ -55,6 +63,7 @@ class IntegrationController extends Controller
             'invoice_address' => $request->invoice_address,
             'logo'            => $logoPath,
             'api_key'         => WordPressSite::generateApiKey(),
+            'tenant_id'       => auth()->user()->tenant_id,
         ]);
 
         return response()->json(['success' => true, 'site' => $site]);
@@ -114,8 +123,30 @@ class IntegrationController extends Controller
         return response()->json(['success' => true, 'is_active' => $site->is_active]);
     }
 
+    public function forceConnect(WordPressSite $site)
+    {
+        $now = $site->plugin_connected ? null : now();
+        $site->update([
+            'plugin_connected'    => !$site->plugin_connected,
+            'plugin_connected_at' => $now,
+            'plugin_version'      => $site->plugin_connected ? null : 'manual',
+        ]);
+
+        return response()->json([
+            'success'          => true,
+            'plugin_connected' => $site->plugin_connected,
+        ]);
+    }
+
     public function syncOrders(WordPressSite $site)
     {
+        if (!$site->plugin_connected) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ecom Pilot Netpilot plugin is not connected. Please install and connect the plugin on your WordPress site first.',
+            ], 403);
+        }
+
         try {
             $credentials = base64_encode($site->consumer_key . ':' . $site->consumer_secret);
 
@@ -144,11 +175,18 @@ class IntegrationController extends Controller
 
             foreach ($orders as $wcOrder) {
                 try {
-                    $exists = Order::where('source_order_id', $wcOrder['id'])
+                    $existing = Order::where('source_order_id', $wcOrder['id'])
                         ->where('source', 'woocommerce')
-                        ->exists();
+                        ->first();
 
-                    if ($exists) continue;
+                    if ($existing) {
+                        // Backfill packing_note if empty
+                        if (empty($existing->packing_note)) {
+                            $note = $this->extractPackingNote($wcOrder);
+                            if ($note) $existing->update(['packing_note' => $note]);
+                        }
+                        continue;
+                    }
 
                     $billing = $wcOrder['billing'];
                     $phone   = $billing['phone'] ?? '';
@@ -158,8 +196,8 @@ class IntegrationController extends Controller
                         $phone = substr($phone, -11);
                     }
 
-                    $order = Order::create([
-                        'order_number'      => 'CLT' . date('Ymd') . '-WC' . $wcOrder['id'],
+                    $order = new Order([
+                        'order_number'      => 'EPL' . \Carbon\Carbon::parse($wcOrder['date_created'] ?? now())->format('Ymd') . '-WC' . $wcOrder['id'],
                         'status'            => 'pending',
                         'shipping_name'     => trim($billing['first_name'] . ' ' . $billing['last_name']),
                         'shipping_phone'    => $phone ?: '01000000000',
@@ -167,7 +205,7 @@ class IntegrationController extends Controller
                         'shipping_district' => $billing['city'] ?? 'Dhaka',
                         'shipping_area'     => $billing['city'] ?? '',
                         'shipping_address'  => $billing['address_1'] ?? '',
-                        'subtotal'          => $wcOrder['subtotal'] ?? $wcOrder['total'],
+                        'subtotal'          => collect($wcOrder['line_items'] ?? [])->sum('subtotal'),
                         'discount'          => $wcOrder['discount_total'] ?? 0,
                         'shipping_charge'   => $wcOrder['shipping_total'] ?? 0,
                         'total'             => $wcOrder['total'],
@@ -176,18 +214,36 @@ class IntegrationController extends Controller
                         'source'            => 'woocommerce',
                         'source_order_id'   => (string) $wcOrder['id'],
                         'source_url'        => $site->site_url,
+                        'platform'          => $this->extractPlatform($wcOrder),
                         'print_status'      => 'unprinted',
+                        'packing_note'      => $this->extractPackingNote($wcOrder),
+                        'tenant_id'         => $site->tenant_id,
                     ]);
+                    $order->created_at = \Carbon\Carbon::parse($wcOrder['date_created'] ?? now());
+                    $order->save();
+
+                    $billingSize = $this->extractBillingSize($wcOrder);
 
                     foreach ($wcOrder['line_items'] as $item) {
-                        $product = Product::where('name', 'like', '%' . $item['name'] . '%')
-                            ->orWhereHas('variants', fn($q) => $q->where('sku', $item['sku']))
-                            ->first();
+                        $product = $this->matchProduct($item, $billingSize);
+                        $variant = $this->matchVariant($product, $billingSize);
+
+                        $variantInfo = collect($item['meta_data'] ?? [])
+                            ->filter(fn($m) => !str_starts_with($m['key'], '_') && !empty($m['display_value']))
+                            ->map(fn($m) => $m['display_value'])
+                            ->implode(' / ');
+
+                        // Use billing_size as variant_info if no line-item meta
+                        if (!$variantInfo && $billingSize) {
+                            $variantInfo = $billingSize;
+                        }
 
                         OrderItem::create([
                             'order_id'     => $order->id,
                             'product_id'   => $product?->id ?? null,
+                            'variant_id'   => $variant?->id ?? null,
                             'product_name' => $item['name'],
+                            'variant_info' => $variantInfo ?: null,
                             'qty'          => $item['quantity'],
                             'unit_price'   => $item['price'],
                             'total'        => $item['total'],
@@ -237,6 +293,13 @@ class IntegrationController extends Controller
 
     public function syncProducts(WordPressSite $site)
     {
+        if (!$site->plugin_connected) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ecom Pilot Netpilot plugin is not connected. Please install and connect the plugin on your WordPress site first.',
+            ], 403);
+        }
+
         try {
             $credentials = base64_encode($site->consumer_key . ':' . $site->consumer_secret);
             $page    = 1;
@@ -248,10 +311,9 @@ class IntegrationController extends Controller
                     ->withoutVerifying()
                     ->withHeaders(['Authorization' => 'Basic ' . $credentials])
                     ->get($site->site_url . '/wp-json/wc/v3/products', [
-                        'per_page'     => 50,
-                        'page'         => $page,
-                        'status'       => 'publish',
-                        'stock_status' => '',
+                        'per_page' => 50,
+                        'page'     => $page,
+                        'status'   => 'publish',
                     ]);
 
                 if ($response->failed()) {
@@ -289,21 +351,23 @@ class IntegrationController extends Controller
                             $stock = 0;
                         }
 
-                        $existing = Product::where('wp_product_id', $wpProduct['id'])->first();
+                        $existing = Product::where('wp_product_id', $wpProduct['id'])
+                            ->where('tenant_id', $site->tenant_id)
+                            ->first();
 
                         $slug = $wpProduct['slug'] ?? Str::slug($wpProduct['name']);
                         if (! $existing) {
                             $base  = $slug;
                             $count = 1;
-                            while (Product::where('slug', $slug)->exists()) {
+                            while (Product::where('slug', $slug)->where('tenant_id', $site->tenant_id)->exists()) {
                                 $slug = $base . '-' . $count++;
                             }
                         } else {
                             $slug = $existing->slug;
                         }
 
-                        Product::updateOrCreate(
-                            ['wp_product_id' => $wpProduct['id']],
+                        $product = Product::updateOrCreate(
+                            ['wp_product_id' => $wpProduct['id'], 'tenant_id' => $site->tenant_id],
                             [
                                 'name'              => $wpProduct['name'],
                                 'slug'              => $slug,
@@ -317,9 +381,29 @@ class IntegrationController extends Controller
                             ]
                         );
 
+                        // Sync images — store WooCommerce URLs directly in image_path
+                        if (!empty($wpProduct['images'])) {
+                            $product->images()->delete();
+                            foreach ($wpProduct['images'] as $idx => $img) {
+                                if (!empty($img['src'])) {
+                                    $product->images()->create([
+                                        'image_path' => $img['src'],
+                                        'is_primary' => $idx === 0,
+                                        'sort_order' => $idx,
+                                    ]);
+                                }
+                            }
+                        }
+
                         $synced++;
                     } catch (\Exception $e) {
                         $failed++;
+                        \Log::warning('Product sync failed', [
+                            'site_id'    => $site->id,
+                            'wp_id'      => $wpProduct['id'] ?? null,
+                            'name'       => $wpProduct['name'] ?? null,
+                            'error'      => $e->getMessage(),
+                        ]);
                     }
                 }
 
@@ -382,8 +466,161 @@ class IntegrationController extends Controller
         return response()->json(['success' => true, 'api_key' => $newKey]);
     }
 
+    public function importRecentOrders(WordPressSite $site, Request $request)
+    {
+        if (!$site->plugin_connected) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ecom Pilot Netpilot plugin is not connected. Please install and connect the plugin on your WordPress site first.',
+            ], 403);
+        }
+
+        $days = in_array((int) $request->input('days'), [1, 2]) ? (int) $request->input('days') : 2;
+
+        try {
+            $credentials = base64_encode($site->consumer_key . ':' . $site->consumer_secret);
+
+            $response = Http::timeout(30)
+                ->withoutVerifying()
+                ->withHeaders([
+                    'Authorization' => 'Basic ' . $credentials,
+                ])
+                ->get($site->site_url . '/wp-json/wc/v3/orders', [
+                    'per_page' => 100,
+                    'status'   => 'any',
+                    'orderby'  => 'date',
+                    'order'    => 'desc',
+                    'after'    => now()->subDays($days - 1)->startOfDay()->toIso8601String(),
+                ]);
+
+            if ($response->failed()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'API Error: ' . $response->status() . ' - ' . $response->body()
+                ]);
+            }
+
+            $orders   = $response->json();
+            $imported = 0;
+            $skipped  = 0;
+
+            foreach ($orders as $wcOrder) {
+                try {
+                    $existing = Order::where('source_order_id', $wcOrder['id'])
+                        ->where('source', 'woocommerce')
+                        ->first();
+
+                    if ($existing) {
+                        $skipped++;
+                        continue;
+                    }
+
+                    $billing = $wcOrder['billing'];
+                    $phone   = preg_replace('/[^0-9]/', '', $billing['phone'] ?? '');
+                    if (strlen($phone) > 11) {
+                        $phone = substr($phone, -11);
+                    }
+
+                    $order = new Order([
+                        'order_number'      => 'EPL' . \Carbon\Carbon::parse($wcOrder['date_created'] ?? now())->format('Ymd') . '-WC' . $wcOrder['id'],
+                        'status'            => 'pending',
+                        'shipping_name'     => trim($billing['first_name'] . ' ' . $billing['last_name']),
+                        'shipping_phone'    => $phone ?: '01000000000',
+                        'shipping_division' => $billing['state'] ?? 'Dhaka',
+                        'shipping_district' => $billing['city'] ?? 'Dhaka',
+                        'shipping_area'     => $billing['city'] ?? '',
+                        'shipping_address'  => $billing['address_1'] ?? '',
+                        'subtotal'          => collect($wcOrder['line_items'] ?? [])->sum('subtotal'),
+                        'discount'          => $wcOrder['discount_total'] ?? 0,
+                        'shipping_charge'   => $wcOrder['shipping_total'] ?? 0,
+                        'total'             => $wcOrder['total'],
+                        'payment_method'    => 'cod',
+                        'payment_status'    => $wcOrder['payment_method'] === 'cod' ? 'unpaid' : 'paid',
+                        'source'            => 'woocommerce',
+                        'source_order_id'   => (string) $wcOrder['id'],
+                        'source_url'        => $site->site_url,
+                        'platform'          => $this->extractPlatform($wcOrder),
+                        'print_status'      => 'unprinted',
+                        'packing_note'      => $this->extractPackingNote($wcOrder),
+                        'tenant_id'         => $site->tenant_id,
+                    ]);
+                    $order->created_at = \Carbon\Carbon::parse($wcOrder['date_created'] ?? now());
+                    $order->save();
+
+                    $billingSize = $this->extractBillingSize($wcOrder);
+
+                    foreach ($wcOrder['line_items'] as $item) {
+                        $product     = $this->matchProduct($item, $billingSize);
+                        $variant     = $this->matchVariant($product, $billingSize);
+                        $variantInfo = collect($item['meta_data'] ?? [])
+                            ->filter(fn($m) => !str_starts_with($m['key'], '_') && !empty($m['display_value']))
+                            ->map(fn($m) => $m['display_value'])
+                            ->implode(' / ');
+
+                        if (!$variantInfo && $billingSize) {
+                            $variantInfo = $billingSize;
+                        }
+
+                        OrderItem::create([
+                            'order_id'     => $order->id,
+                            'product_id'   => $product?->id ?? null,
+                            'variant_id'   => $variant?->id ?? null,
+                            'product_name' => $item['name'],
+                            'variant_info' => $variantInfo ?: null,
+                            'qty'          => $item['quantity'],
+                            'unit_price'   => $item['price'],
+                            'total'        => $item['total'],
+                        ]);
+                    }
+
+                    SyncLog::create([
+                        'site_id'         => $site->id,
+                        'order_id'        => $order->id,
+                        'source_order_id' => (string) $wcOrder['id'],
+                        'status'          => 'success',
+                        'message'         => "Imported via last {$days} day(s) pull",
+                    ]);
+
+                    $imported++;
+
+                } catch (\Exception $e) {
+                    SyncLog::create([
+                        'site_id'         => $site->id,
+                        'source_order_id' => (string) ($wcOrder['id'] ?? ''),
+                        'status'          => 'failed',
+                        'message'         => substr($e->getMessage(), 0, 500),
+                    ]);
+                }
+            }
+
+            if ($imported > 0) {
+                $site->update([
+                    'last_order_sync_at' => now(),
+                    'total_synced'       => $site->total_synced + $imported,
+                ]);
+            }
+
+            return response()->json([
+                'success'  => true,
+                'imported' => $imported,
+                'skipped'  => $skipped,
+                'message'  => "$imported orders imported, $skipped already existed",
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Connection error: ' . $e->getMessage()
+            ]);
+        }
+    }
+
     public function pullNewOrders(WordPressSite $site): array
     {
+        if (!$site->plugin_connected) {
+            return ['synced' => 0, 'skipped' => 'plugin_not_connected'];
+        }
+
         $credentials = base64_encode($site->consumer_key . ':' . $site->consumer_secret);
 
         $params = [
@@ -416,16 +653,23 @@ class IntegrationController extends Controller
             foreach ($orders as $wcOrder) {
                 if (!is_array($wcOrder) || empty($wcOrder['id'])) continue;
 
-                if (Order::where('source_order_id', (string) $wcOrder['id'])
-                    ->where('source', 'woocommerce')->exists()) continue;
+                $existingOrder = Order::where('source_order_id', (string) $wcOrder['id'])
+                    ->where('source', 'woocommerce')->first();
+                if ($existingOrder) {
+                    if (empty($existingOrder->packing_note)) {
+                        $note = $this->extractPackingNote($wcOrder);
+                        if ($note) $existingOrder->update(['packing_note' => $note]);
+                    }
+                    continue;
+                }
 
                 $billing = $wcOrder['billing'] ?? [];
                 $phone   = preg_replace('/[^0-9]/', '', $billing['phone'] ?? '');
                 if (strlen($phone) > 11) $phone = substr($phone, -11);
                 if (empty($phone)) $phone = '01000000000';
 
-                $order = Order::create([
-                    'order_number'      => 'CLT' . date('Ymd') . '-WC' . $wcOrder['id'],
+                $order = new Order([
+                    'order_number'      => 'EPL' . \Carbon\Carbon::parse($wcOrder['date_created'] ?? now())->format('Ymd') . '-WC' . $wcOrder['id'],
                     'status'            => 'pending',
                     'shipping_name'     => trim(($billing['first_name'] ?? '') . ' ' . ($billing['last_name'] ?? '')),
                     'shipping_phone'    => $phone,
@@ -433,7 +677,7 @@ class IntegrationController extends Controller
                     'shipping_district' => $billing['city'] ?? 'Dhaka',
                     'shipping_area'     => $billing['city'] ?? '',
                     'shipping_address'  => $billing['address_1'] ?? '',
-                    'subtotal'          => $wcOrder['subtotal'] ?? $wcOrder['total'],
+                    'subtotal'          => collect($wcOrder['line_items'] ?? [])->sum('subtotal'),
                     'discount'          => $wcOrder['discount_total'] ?? 0,
                     'shipping_charge'   => $wcOrder['shipping_total'] ?? 0,
                     'total'             => $wcOrder['total'],
@@ -442,14 +686,35 @@ class IntegrationController extends Controller
                     'source'            => 'woocommerce',
                     'source_order_id'   => (string) $wcOrder['id'],
                     'source_url'        => $site->site_url,
+                    'platform'          => $this->extractPlatform($wcOrder),
                     'print_status'      => 'unprinted',
+                    'packing_note'      => $this->extractPackingNote($wcOrder),
+                    'tenant_id'         => $site->tenant_id,
                 ]);
+                $order->created_at = \Carbon\Carbon::parse($wcOrder['date_created'] ?? now());
+                $order->save();
+
+                $billingSize = $this->extractBillingSize($wcOrder);
 
                 foreach ($wcOrder['line_items'] ?? [] as $item) {
+                    $product = $this->matchProduct($item, $billingSize);
+                    $variant = $this->matchVariant($product, $billingSize);
+
+                    $variantInfo = collect($item['meta_data'] ?? [])
+                        ->filter(fn($m) => !str_starts_with($m['key'], '_') && !empty($m['display_value']))
+                        ->map(fn($m) => $m['display_value'])
+                        ->implode(' / ');
+
+                    if (!$variantInfo && $billingSize) {
+                        $variantInfo = $billingSize;
+                    }
+
                     OrderItem::create([
                         'order_id'     => $order->id,
-                        'product_id'   => null,
+                        'product_id'   => $product?->id ?? null,
+                        'variant_id'   => $variant?->id ?? null,
                         'product_name' => $item['name'] ?? 'Unknown',
+                        'variant_info' => $variantInfo ?: null,
                         'qty'          => $item['quantity'] ?? 1,
                         'unit_price'   => $item['price'] ?? 0,
                         'total'        => $item['total'] ?? 0,
@@ -474,5 +739,84 @@ class IntegrationController extends Controller
         } catch (\Exception $e) {
             return ['synced' => 0, 'error' => $e->getMessage()];
         }
+    }
+
+    private function matchProduct(array $item, ?string $billingSize): ?Product
+    {
+        $name = $item['name'] ?? '';
+        $sku  = $item['sku']  ?? '';
+
+        // 1. Name + size combined match (most specific)
+        if ($billingSize) {
+            $product = Product::where('name', 'like', '%' . $name . '%')
+                ->where('name', 'like', '%' . $billingSize . '%')
+                ->first();
+            if ($product) return $product;
+        }
+
+        // 2. Exact name match
+        $product = Product::where('name', $name)->first();
+        if ($product) return $product;
+
+        // 3. CRM product name contained in WC product name
+        $product = Product::whereRaw('? LIKE CONCAT(\'%\', name, \'%\')', [$name])->first();
+        if ($product) return $product;
+
+        // 4. WC product name contained in CRM product name
+        $product = Product::where('name', 'like', '%' . $name . '%')->first();
+        if ($product) return $product;
+
+        // 5. SKU match
+        if ($sku) {
+            $product = Product::whereHas('variants', fn($q) => $q->where('sku', $sku))->first();
+            if ($product) return $product;
+        }
+
+        return null;
+    }
+
+    private function matchVariant(?Product $product, ?string $billingSize): ?ProductVariant
+    {
+        if (!$product || !$billingSize) return null;
+
+        return $product->variants()
+            ->where(fn($q) => $q->whereRaw('LOWER(size) = LOWER(?)', [$billingSize])
+                ->orWhereRaw('LOWER(size) = LOWER(?)', [trim($billingSize)]))
+            ->where('is_active', true)
+            ->first();
+    }
+
+    private function extractBillingSize(array $wcOrder): ?string
+    {
+        $meta = collect($wcOrder['meta_data'] ?? [])->keyBy('key');
+
+        return $meta->get('billing_size')['value']
+            ?? $meta->get('_billing_size')['value']
+            ?? null;
+    }
+
+    private function extractPackingNote(array $wcOrder): ?string
+    {
+        $size = $this->extractBillingSize($wcOrder);
+        if (empty($size)) return null;
+
+        return 'Size: ' . $size;
+    }
+
+    private function extractPlatform(array $wcOrder): ?string
+    {
+        $meta = collect($wcOrder['meta_data'] ?? [])->keyBy('key');
+
+        $utmSource = $meta->get('_wc_order_attribution_utm_source')['value'] ?? null;
+        if ($utmSource) {
+            return strtolower($utmSource);
+        }
+
+        $sourceType = $meta->get('_wc_order_attribution_source_type')['value'] ?? null;
+        if ($sourceType) {
+            return strtolower($sourceType);
+        }
+
+        return null;
     }
 }

@@ -13,25 +13,27 @@ class Order extends Model
         'coupon_id', 'shipping_name', 'shipping_phone', 'alt_phone', 'email',
         'shipping_division', 'shipping_district', 'shipping_area', 'shipping_address',
         'notes', 'courier_note', 'packing_note',
-        'source', 'source_url', 'source_order_id', 'source_website',
+        'source', 'source_url', 'source_order_id', 'source_website', 'platform',
         'utm_source', 'utm_medium', 'utm_campaign',
         'order_tag', 'customer_tag', 'print_status', 'hold_reason',
         'assigned_to', 'cod_changed', 'is_duplicate',
         'reference_no', 'skip_followup', 'user_ip',
+        'tenant_id', 'stock_deducted',
     ];
 
     protected $casts = [
-        'status'         => 'string',
-        'payment_status' => 'string',
-        'subtotal'       => 'decimal:2',
-        'discount'       => 'decimal:2',
-        'shipping_charge'=> 'decimal:2',
-        'courier_charge' => 'decimal:2',
-        'total'          => 'decimal:2',
-        'paid_amount'    => 'decimal:2',
-        'cod_changed'    => 'boolean',
-        'is_duplicate'   => 'boolean',
-        'skip_followup'  => 'boolean',
+        'status'          => 'string',
+        'payment_status'  => 'string',
+        'subtotal'        => 'decimal:2',
+        'discount'        => 'decimal:2',
+        'shipping_charge' => 'decimal:2',
+        'courier_charge'  => 'decimal:2',
+        'total'           => 'decimal:2',
+        'paid_amount'     => 'decimal:2',
+        'cod_changed'     => 'boolean',
+        'is_duplicate'    => 'boolean',
+        'skip_followup'   => 'boolean',
+        'stock_deducted'  => 'boolean',
     ];
 
     protected static function boot()
@@ -40,7 +42,7 @@ class Order extends Model
 
         static::creating(function ($order) {
             if (empty($order->order_number)) {
-                $order->order_number = 'CLT' . date('Ymd') . '-' . str_pad(rand(0, 9999), 4, '0', STR_PAD_LEFT);
+                $order->order_number = 'EPL' . date('Ymd') . '-' . str_pad(rand(0, 9999), 4, '0', STR_PAD_LEFT);
             }
         });
     }
@@ -80,6 +82,11 @@ class Order extends Model
         return $this->hasMany(OrderNote::class)->latest();
     }
 
+    public function latestOrderNote()
+    {
+        return $this->hasOne(OrderNote::class)->latestOfMany();
+    }
+
     public function orderReturn()
     {
         return $this->hasOne(OrderReturn::class, 'order_id');
@@ -100,5 +107,10 @@ class Order extends Model
     public function scopeBySource($query, string $source)
     {
         return $query->where('source', $source);
+    }
+
+    public function scopeForTenant($query)
+    {
+        return $query->where('tenant_id', auth()->user()?->tenant_id);
     }
 }

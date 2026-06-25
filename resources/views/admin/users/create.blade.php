@@ -12,6 +12,17 @@
 
 @section('content')
 <div class="max-w-2xl">
+
+@if(isset($maxUsers))
+@php $pct = min(100, round(($current / $maxUsers) * 100)); @endphp
+<div class="mb-4 flex items-center gap-3 p-3 rounded-xl border {{ $pct >= 80 ? 'bg-orange-50 border-orange-200 dark:bg-orange-900/20 dark:border-orange-800' : 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800' }}">
+    <svg class="w-4 h-4 flex-shrink-0 {{ $pct >= 80 ? 'text-orange-500' : 'text-blue-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"/></svg>
+    <p class="text-xs {{ $pct >= 80 ? 'text-orange-700 dark:text-orange-400' : 'text-blue-700 dark:text-blue-400' }}">
+        Your plan allows <strong>{{ $maxUsers }}</strong> users. Currently using <strong>{{ $current }}</strong>/{{ $maxUsers }}.
+    </p>
+</div>
+@endif
+
 <x-admin.card>
     <x-slot:header>
         <h3 class="font-heading font-semibold text-textprimary dark:text-gray-100">New User</h3>
@@ -70,7 +81,7 @@
         </div>
 
         <div class="flex gap-3 pt-2">
-            <button type="submit" class="flex-1 py-2.5 font-semibold bg-accent hover:bg-yellow-500 text-white rounded-xl transition-colors active:scale-95">Create User</button>
+            <button type="submit" class="flex-1 py-2.5 font-semibold bg-accent hover:bg-yellow-500 text-black rounded-xl transition-colors active:scale-95">Create User</button>
             <a href="{{ route('admin.users.index') }}" class="flex-1 py-2.5 text-center font-semibold border border-gray-200 dark:border-gray-600 text-textsecondary dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Cancel</a>
         </div>
     </form>

@@ -27,6 +27,7 @@ class ReportController extends Controller
             ->leftJoin('category_product', 'products.id', '=', 'category_product.product_id')
             ->leftJoin('categories', 'category_product.category_id', '=', 'categories.id')
             ->whereBetween('orders.created_at', [$from . ' 00:00:00', $to . ' 23:59:59'])
+            ->when(!auth()->user()->is_super_admin, fn($q) => $q->where('orders.tenant_id', auth()->user()->tenant_id))
             ->select(
                 'products.name as product',
                 'categories.name as category',
@@ -46,8 +47,9 @@ class ReportController extends Controller
 
     public function userReport(Request $request)
     {
-        $data = User::where('role', 'customer')
-            ->withCount('orders')
+        $userReportQ = User::where('role', 'customer');
+        if (!auth()->user()->is_super_admin) { $userReportQ->where('tenant_id', auth()->user()->tenant_id); }
+        $data = $userReportQ->withCount('orders')
             ->withSum('orders', 'total')
             ->orderByDesc('orders_sum_total')
             ->get()
@@ -70,9 +72,11 @@ class ReportController extends Controller
 
     public function stockReport(Request $request)
     {
-        $data = ProductVariant::with('product')
-            ->where('is_active', true)
-            ->orderBy('stock')
+        $stockQ = ProductVariant::with('product')->where('is_active', true);
+        if (!auth()->user()->is_super_admin) {
+            $stockQ->whereHas('product', fn($p) => $p->where('tenant_id', auth()->user()->tenant_id));
+        }
+        $data = $stockQ->orderBy('stock')
             ->get()
             ->map(fn($v) => [
                 'product' => $v->product?->name,
@@ -95,8 +99,9 @@ class ReportController extends Controller
         $from = $request->get('from', now()->subDays(30)->toDateString());
         $to   = $request->get('to', now()->toDateString());
 
-        $data = Order::with('user')
-            ->whereBetween('created_at', [$from . ' 00:00:00', $to . ' 23:59:59'])
+        $payQ = Order::with('user')->whereBetween('created_at', [$from . ' 00:00:00', $to . ' 23:59:59']);
+        if (!auth()->user()->is_super_admin) { $payQ->where('tenant_id', auth()->user()->tenant_id); }
+        $data = $payQ
             ->get()
             ->map(fn($o) => [
                 'order'          => $o->order_number,

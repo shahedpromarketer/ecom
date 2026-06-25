@@ -13,7 +13,12 @@ class CourierController extends Controller
 
     public function index()
     {
-        $settings = CourierSetting::all()->keyBy('courier');
+        $tenantId = auth()->user()->tenant_id;
+        $isSA     = auth()->user()->is_super_admin;
+
+        $q = CourierSetting::query();
+        if (!$isSA) { $q->where('tenant_id', $tenantId); }
+        $settings = $q->get()->keyBy('courier');
 
         foreach ($this->couriers as $courier) {
             if (! isset($settings[$courier])) {
@@ -36,15 +41,18 @@ class CourierController extends Controller
             'is_active'  => 'nullable|boolean',
         ]);
 
+        $tenantId = auth()->user()->tenant_id;
+
         $data = [
             'api_key'    => $request->api_key,
             'api_secret' => $request->api_secret,
             'webhook_url'=> url("/webhook/{$request->courier}"),
             'is_active'  => $request->boolean('is_active'),
+            'tenant_id'  => $tenantId,
         ];
 
         if ($request->courier === 'pathao') {
-            $existing = CourierSetting::forCourier('pathao');
+            $existing = CourierSetting::forCourier('pathao', $tenantId);
             $oldExtra = $existing?->extra_config ?? [];
             $extra    = $request->input('extra_config', []);
             $data['extra_config'] = [
@@ -55,7 +63,7 @@ class CourierController extends Controller
         }
 
         CourierSetting::updateOrCreate(
-            ['courier' => $request->courier],
+            ['courier' => $request->courier, 'tenant_id' => $tenantId],
             $data
         );
 
@@ -64,8 +72,9 @@ class CourierController extends Controller
 
     public function testConnection(Request $request)
     {
-        $courier = $request->input('courier');
-        $config  = CourierSetting::forCourier($courier);
+        $courier  = $request->input('courier');
+        $tenantId = auth()->user()->tenant_id;
+        $config   = CourierSetting::forCourier($courier, $tenantId);
 
         try {
             switch ($courier) {

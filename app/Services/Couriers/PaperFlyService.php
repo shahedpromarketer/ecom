@@ -33,7 +33,20 @@ class PaperFlyService extends BaseCourierService
             'cod_amount'       => $order->total,
         ]);
 
-        return $response->json();
+        $data = $response->json();
+
+        $trackingCode  = $data['data']['tracking_code'] ?? $data['tracking_code'] ?? $data['order_id'] ?? null;
+        $consignmentId = $data['data']['order_id'] ?? $data['order_id'] ?? $trackingCode;
+
+        if (empty($trackingCode)) {
+            throw new \Exception('Paperfly API error: ' . json_encode($data));
+        }
+
+        return [
+            'tracking_code'  => $trackingCode,
+            'consignment_id' => (string) $consignmentId,
+            'status'         => 'submitted',
+        ];
     }
 
     public function trackShipment(string $trackingCode): array

@@ -110,18 +110,28 @@
             <span class="font-bold text-green-600" id="prevCompletedCount">0</span>
         </div>
         <div class="flex items-center gap-2 ml-auto">
-            <select name="order_tag" class="rounded-lg border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs bg-white dark:bg-gray-800 dark:text-white">
-                <option value="">Order Tag</option>
-                <option value="vip">VIP</option>
-                <option value="regular">Regular</option>
-                <option value="problematic">Problematic</option>
-            </select>
-            <select name="customer_tag" class="rounded-lg border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs bg-white dark:bg-gray-800 dark:text-white">
-                <option value="">Customer Tag</option>
-                <option value="loyal">Loyal</option>
-                <option value="new">New</option>
-                <option value="fraud">Fraud Risk</option>
-            </select>
+            <div class="relative">
+                <select name="order_tag" class="appearance-none rounded-lg border border-gray-200 dark:border-gray-700 px-2 py-1 pr-6 text-xs bg-white dark:bg-gray-800 dark:text-white" style="-webkit-appearance:none;-moz-appearance:none;appearance:none;background-image:none">
+                    <option value="">Order Tag</option>
+                    <option value="vip">VIP</option>
+                    <option value="regular">Regular</option>
+                    <option value="problematic">Problematic</option>
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-1.5 flex items-center">
+                    <svg class="w-3 h-3 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+            </div>
+            <div class="relative">
+                <select name="customer_tag" class="appearance-none rounded-lg border border-gray-200 dark:border-gray-700 px-2 py-1 pr-6 text-xs bg-white dark:bg-gray-800 dark:text-white" style="-webkit-appearance:none;-moz-appearance:none;appearance:none;background-image:none">
+                    <option value="">Customer Tag</option>
+                    <option value="loyal">Loyal</option>
+                    <option value="new">New</option>
+                    <option value="fraud">Fraud Risk</option>
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-1.5 flex items-center">
+                    <svg class="w-3 h-3 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -131,7 +141,7 @@
     <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
         <h3 class="text-base font-semibold text-[#1B2A4A] dark:text-white flex items-center gap-2">🛒 Order Products</h3>
         <button type="button" onclick="openProductModal()"
-            class="bg-[#F59E0B] text-white px-4 py-2 rounded-xl text-xs font-medium hover:bg-yellow-500 transition">
+            class="bg-[#F59E0B] text-black px-4 py-2 rounded-xl text-xs font-medium hover:bg-yellow-500 transition">
             + Add Item
         </button>
     </div>
@@ -163,7 +173,7 @@
             <label class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Order Status*</label>
             <select name="order_status" required
                 class="w-full rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]">
-                @foreach(['pending'=>'Pending','confirmed'=>'Confirmed','processing'=>'Processing','shipped'=>'Shipped','delivered'=>'Delivered','cancelled'=>'Cancelled','hold'=>'Hold','failed'=>'Failed','returned'=>'Returned','damage'=>'Damage','hand_delivery'=>'Hand Delivery','completed'=>'Completed'] as $s => $l)
+                @foreach(['pending'=>'Pending','confirmed'=>'Confirmed','processing'=>'Processing','shipped'=>'Shipped','delivered'=>'Delivered','cancelled'=>'Cancelled','hold'=>'Hold','returned'=>'Returned','damage'=>'Damage','hand_delivery'=>'Hand Delivery','completed'=>'Completed'] as $s => $l)
                 <option value="{{ $s }}" {{ $s === 'pending' ? 'selected' : '' }}>{{ $l }}</option>
                 @endforeach
             </select>
@@ -421,6 +431,13 @@ function lookupCustomer(phone) {
     });
 }
 
+// ─── Variant ID sync ──────────────────────────────────────────────────────────
+function updateVariantId(select) {
+    const map    = JSON.parse(select.dataset.variantMap || '{}');
+    const hidden = select.closest('div').querySelector('.variant-id-input');
+    if (hidden) hidden.value = map[select.value] || '';
+}
+
 // ─── Product Row Calculations ─────────────────────────────────────────────────
 function recalcRow(el) {
     const row = el.closest('tr');
@@ -488,7 +505,7 @@ function loadProducts(q) {
             return;
         }
         c.innerHTML = products.map(p => {
-            const imgSrc = p.primary_image ? '/storage/' + p.primary_image : '/images/no-image.png';
+            const imgSrc = p.primary_image || '/images/no-image.png';
             const stock  = (p.variants || []).reduce((s, v) => s + (parseInt(v.stock) || 0), 0) || 0;
             return `<div class="flex items-center gap-3 p-3 border dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer" onclick='addProductRow(${JSON.stringify(p)})'>
                 <img src="${imgSrc}" class="w-10 h-10 object-cover rounded-lg" onerror="this.src='/images/no-image.png'">
@@ -519,20 +536,28 @@ function addProductRow(product) {
     row.className = 'product-row border-b dark:border-gray-800';
     row.setAttribute('data-row', rowIndex);
 
+    // Build a map: label → variant_id for the hidden field update
+    const variantMap = {};
+    variants.forEach(v => { variantMap[v.label || v.name || ''] = v.id; });
+
     const variantOpts = variants.map(v => `<option value="${v.label || v.name || ''}">${v.label || v.name || ''}</option>`).join('');
 
     row.innerHTML = `
         <td class="px-3 py-3">
             <div class="flex items-center gap-3">
-                <img src="${product.image_url || (product.primary_image ? '/storage/'+product.primary_image : '/images/no-image.png')}"
+                <img src="${product.primary_image || '/images/no-image.png'}"
                     class="w-12 h-12 object-cover rounded-lg border dark:border-gray-700" onerror="this.src='/images/no-image.png'">
                 <div>
                     <div class="font-medium text-gray-800 dark:text-gray-200 text-xs leading-tight">${product.name}</div>
-                    <select name="items[${rowIndex}][variant]" class="mt-1 text-xs border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 bg-white dark:bg-gray-800 dark:text-white">
-                        <option value="">No variant</option>
+                    <select name="items[${rowIndex}][variant]"
+                            data-variant-map='${JSON.stringify(variantMap)}'
+                            onchange="updateVariantId(this)"
+                            class="mt-1 text-xs border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 bg-white dark:bg-gray-800 dark:text-white">
+                        <option value="">Size</option>
                         ${variantOpts}
                     </select>
                     <input type="hidden" name="items[${rowIndex}][product_id]" value="${product.id}">
+                    <input type="hidden" name="items[${rowIndex}][variant_id]" class="variant-id-input" value="${variants[0]?.id || ''}">
                     <input type="hidden" name="items[${rowIndex}][id]" value="">
                 </div>
             </div>

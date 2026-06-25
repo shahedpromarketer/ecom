@@ -13,6 +13,9 @@ class PaymentsController extends Controller
     {
         $query = Order::with(['user', 'items'])
             ->latest();
+        if (!auth()->user()->is_super_admin) {
+            $query->where('tenant_id', auth()->user()->tenant_id);
+        }
 
         if ($request->filled('payment_status')) {
             $query->where('payment_status', $request->payment_status);
@@ -29,7 +32,11 @@ class PaymentsController extends Controller
             });
         }
 
-        $summary = Order::selectRaw('
+        $isSA     = auth()->user()->is_super_admin;
+        $tenantId = auth()->user()->tenant_id;
+        $payBase  = $isSA ? Order::query() : Order::where('tenant_id', $tenantId);
+
+        $summary = (clone $payBase)->selectRaw('
             payment_method,
             payment_status,
             count(*) as order_count,
@@ -39,10 +46,10 @@ class PaymentsController extends Controller
         ->get()
         ->groupBy('payment_method');
 
-        $unpaidTotal  = Order::where('payment_status', 'unpaid')->sum('total');
-        $paidTotal    = Order::where('payment_status', 'paid')->sum('total');
-        $unpaidCount  = Order::where('payment_status', 'unpaid')->count();
-        $codPending   = Order::where('payment_method', 'cod')->where('payment_status', 'unpaid')->count();
+        $unpaidTotal  = (clone $payBase)->where('payment_status', 'unpaid')->sum('total');
+        $paidTotal    = (clone $payBase)->where('payment_status', 'paid')->sum('total');
+        $unpaidCount  = (clone $payBase)->where('payment_status', 'unpaid')->count();
+        $codPending   = (clone $payBase)->where('payment_method', 'cod')->where('payment_status', 'unpaid')->count();
 
         $orders = $query->paginate(25)->withQueryString();
 
@@ -66,7 +73,9 @@ class PaymentsController extends Controller
     public function bulkMarkPaid(Request $request)
     {
         $request->validate(['ids' => 'required|array', 'ids.*' => 'integer']);
-        Order::whereIn('id', $request->ids)->update(['payment_status' => 'paid']);
+        $bulkPayQ = Order::whereIn('id', $request->ids);
+        if (!auth()->user()->is_super_admin) { $bulkPayQ->where('tenant_id', auth()->user()->tenant_id); }
+        $bulkPayQ->update(['payment_status' => 'paid']);
         return back()->with('success', count($request->ids) . ' orders marked as paid.');
     }
 }

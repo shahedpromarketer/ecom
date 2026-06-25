@@ -147,7 +147,7 @@ $courierMeta = [
                             Test Connection
                         </button>
                         <button type="submit"
-                                class="px-4 py-2.5 text-xs font-semibold bg-accent hover:bg-yellow-500 text-white rounded-xl transition-colors">
+                                class="px-4 py-2.5 text-xs font-semibold bg-accent hover:bg-yellow-500 text-black rounded-xl transition-colors">
                             Save Settings
                         </button>
                     </div>

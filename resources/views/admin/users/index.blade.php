@@ -41,11 +41,19 @@
 
 <x-admin.card>
     <x-slot:header>
-        <h3 class="font-heading font-semibold text-textprimary dark:text-gray-100">
-            Users <span class="ml-2 px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-textsecondary dark:text-gray-400">{{ $users->total() }}</span>
-        </h3>
+        <div class="flex items-center gap-3">
+            <h3 class="font-heading font-semibold text-textprimary dark:text-gray-100">
+                Users <span class="ml-2 px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-textsecondary dark:text-gray-400">{{ $users->total() }}</span>
+            </h3>
+            @if($maxUsers && !auth()->user()->is_super_admin)
+            @php $pct = min(100, round(($total / $maxUsers) * 100)); @endphp
+            <span class="text-xs font-medium px-2 py-0.5 rounded-full {{ $pct >= 100 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : ($pct >= 80 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400') }}">
+                {{ $total }}/{{ $maxUsers }} users
+            </span>
+            @endif
+        </div>
         <a href="{{ route('admin.users.create') }}"
-           class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-accent hover:bg-yellow-500 text-white rounded-xl transition-colors">
+           class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-accent hover:bg-yellow-500 text-black rounded-xl transition-colors">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
             Add User
         </a>
@@ -56,18 +64,28 @@
           class="flex flex-wrap gap-3 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
         <input type="text" name="search" value="{{ request('search') }}" placeholder="Search name, email, phone…"
                class="flex-1 min-w-[180px] px-4 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 placeholder-textsecondary dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary dark:focus:border-primary transition-all duration-200">
-        <select name="role" class="px-4 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary dark:focus:border-primary transition-all duration-200">
-            <option value="">All Roles</option>
-            <option value="admin"    {{ request('role') === 'admin'    ? 'selected' : '' }}>Admin</option>
-            <option value="manager"  {{ request('role') === 'manager'  ? 'selected' : '' }}>Manager</option>
-            <option value="support"  {{ request('role') === 'support'  ? 'selected' : '' }}>Support</option>
-            <option value="customer" {{ request('role') === 'customer' ? 'selected' : '' }}>Customer</option>
-        </select>
-        <select name="status" class="px-4 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary dark:focus:border-primary transition-all duration-200">
-            <option value="">All Status</option>
-            <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
-            <option value="banned" {{ request('status') === 'banned' ? 'selected' : '' }}>Banned</option>
-        </select>
+        <div class="relative">
+            <select name="role" class="cs pl-3 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary dark:focus:border-primary transition-all duration-200 cursor-pointer">
+                <option value="">All Roles</option>
+                <option value="admin"    {{ request('role') === 'admin'    ? 'selected' : '' }}>Admin</option>
+                <option value="manager"  {{ request('role') === 'manager'  ? 'selected' : '' }}>Manager</option>
+                <option value="support"  {{ request('role') === 'support'  ? 'selected' : '' }}>Support</option>
+                <option value="customer" {{ request('role') === 'customer' ? 'selected' : '' }}>Customer</option>
+            </select>
+            <span class="pointer-events-none absolute inset-y-0 right-2.5 flex items-center">
+                <svg class="w-4 h-4 text-textsecondary dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </span>
+        </div>
+        <div class="relative">
+            <select name="status" class="cs pl-3 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary dark:focus:border-primary transition-all duration-200 cursor-pointer">
+                <option value="">All Status</option>
+                <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
+                <option value="banned" {{ request('status') === 'banned' ? 'selected' : '' }}>Banned</option>
+            </select>
+            <span class="pointer-events-none absolute inset-y-0 right-2.5 flex items-center">
+                <svg class="w-4 h-4 text-textsecondary dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </span>
+        </div>
         <button type="submit" class="px-4 py-2.5 text-sm font-semibold bg-primary hover:bg-primary/90 text-white rounded-xl transition-colors">Filter</button>
         <a href="{{ route('admin.users.index') }}" class="px-4 py-2.5 text-sm font-medium border border-gray-200 dark:border-gray-600 text-textsecondary dark:text-gray-400 hover:text-textprimary dark:hover:text-gray-200 rounded-xl transition-colors">Clear</a>
     </form>

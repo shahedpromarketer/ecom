@@ -13,9 +13,11 @@ class MarketingController extends Controller
 
     public function index()
     {
-        $pixels = collect(self::PLATFORMS)->mapWithKeys(function ($platform) {
+        $tenantId = auth()->user()->tenant_id;
+
+        $pixels = collect(self::PLATFORMS)->mapWithKeys(function ($platform) use ($tenantId) {
             $pixel = MarketingPixel::firstOrCreate(
-                ['platform' => $platform],
+                ['platform' => $platform, 'tenant_id' => $tenantId],
                 ['is_active' => false]
             );
             return [$platform => $pixel];
@@ -34,8 +36,10 @@ class MarketingController extends Controller
             'test_code'  => 'nullable|string|max:255',
         ]);
 
+        $tenantId = auth()->user()->tenant_id;
+
         MarketingPixel::updateOrCreate(
-            ['platform' => $platform],
+            ['platform' => $platform, 'tenant_id' => $tenantId],
             [
                 'pixel_id'   => $request->filled('pixel_id') ? $request->pixel_id : null,
                 'api_secret' => $request->filled('api_secret') ? $request->api_secret : null,
@@ -43,7 +47,7 @@ class MarketingController extends Controller
             ]
         );
 
-        Cache::store('file')->forget('active_pixels');
+        Cache::store('file')->forget('active_pixels_' . $tenantId);
 
         return response()->json(['success' => true, 'message' => 'Saved successfully.']);
     }
@@ -52,13 +56,15 @@ class MarketingController extends Controller
     {
         abort_unless(in_array($platform, self::PLATFORMS), 404);
 
+        $tenantId = auth()->user()->tenant_id;
+
         $pixel = MarketingPixel::firstOrCreate(
-            ['platform' => $platform],
+            ['platform' => $platform, 'tenant_id' => $tenantId],
             ['is_active' => false]
         );
         $pixel->update(['is_active' => !$pixel->is_active]);
 
-        Cache::store('file')->forget('active_pixels');
+        Cache::store('file')->forget('active_pixels_' . $tenantId);
 
         return response()->json(['success' => true, 'is_active' => (bool) $pixel->is_active]);
     }

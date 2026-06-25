@@ -116,7 +116,7 @@
 </div>
 
 {{-- ── Sites Table ───────────────────────────────────────────────────────── --}}
-<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden mb-6">
+<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm mb-6">
     <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
         <h3 class="text-sm font-bold text-gray-900 dark:text-white">Connected Sites
             <span class="ml-2 px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">{{ $sites->count() }}</span>
@@ -138,16 +138,16 @@
         </button>
     </div>
     @else
-    <div class="overflow-x-auto">
-        <table class="w-full min-w-[700px]">
+    <div class="overflow-x-clip">
+        <table class="w-full table-fixed">
             <thead class="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
                 <tr>
-                    <th class="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Site</th>
-                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Type</th>
-                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Last Order Sync</th>
-                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Last Product Sync</th>
-                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Status</th>
-                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Actions</th>
+                    <th class="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-[28%]">Site</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-[12%]">Type</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-[22%]">Last Order Sync</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-[14%]">Last Product Sync</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-[10%]">Status</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-[14%]">Actions</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-50 dark:divide-gray-700/50">
@@ -188,9 +188,32 @@
                             <div class="min-w-0">
                                 <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ $site->name }}</p>
                                 <a href="{{ $site->site_url }}" target="_blank"
-                                   class="text-xs text-primary dark:text-blue-400 hover:underline truncate block max-w-[180px]">
+                                   class="text-xs text-primary dark:text-blue-400 hover:underline truncate block w-full">
                                     {{ $site->site_url }}
                                 </a>
+                                {{-- Plugin status badge --}}
+                                @if($site->plugin_connected)
+                                <span class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                                    Plugin Connected
+                                    @if($site->plugin_version) <span class="opacity-60">v{{ $site->plugin_version }}</span> @endif
+                                </span>
+                                @else
+                                <span class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                                    Plugin Not Connected
+                                </span>
+                                @endif
+                                {{-- API Key copy --}}
+                                <div x-data="{ copied: false }" class="mt-1 flex items-center gap-1">
+                                    <span class="text-[10px] text-gray-400 font-mono truncate max-w-[100px]">{{ substr($site->api_key, 0, 16) }}…</span>
+                                    <button @click="navigator.clipboard.writeText('{{ $site->api_key }}'); copied = true; setTimeout(() => copied = false, 2000)"
+                                        class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-primary/10 hover:text-primary transition"
+                                        :title="copied ? 'Copied!' : 'Copy API Key'">
+                                        <span x-show="!copied">Copy API Key</span>
+                                        <span x-show="copied" x-cloak class="text-green-600">Copied!</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </td>
@@ -215,6 +238,53 @@
                                 </svg>
                                 Sync Now
                             </button>
+                            <div class="flex items-center gap-1 mt-0.5"
+                                 x-data="{ open: false, days: '2', label: '2 Days' }">
+                                {{-- Custom dropdown --}}
+                                <div class="relative">
+                                    <button type="button"
+                                        @click="open = !open"
+                                        @click.outside="open = false"
+                                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 text-orange-600 dark:text-orange-400 text-xs font-semibold hover:bg-orange-100 dark:hover:bg-orange-900/30 transition select-none">
+                                        <span x-text="label"></span>
+                                        <svg class="w-3 h-3 transition-transform duration-150" :class="open ? 'rotate-180' : ''"
+                                             fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                                        </svg>
+                                    </button>
+                                    <div x-show="open" x-cloak
+                                         x-transition:enter="transition ease-out duration-100"
+                                         x-transition:enter-start="opacity-0 scale-95"
+                                         x-transition:enter-end="opacity-100 scale-100"
+                                         x-transition:leave="transition ease-in duration-75"
+                                         x-transition:leave-start="opacity-100 scale-100"
+                                         x-transition:leave-end="opacity-0 scale-95"
+                                         class="absolute left-0 top-full mt-1 z-30 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden min-w-[90px]">
+                                        <button type="button"
+                                            @click="days = '1'; label = '1 Day'; open = false"
+                                            class="w-full px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:text-orange-600 dark:hover:text-orange-400 transition flex items-center gap-2">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0" :class="days === '1' ? 'opacity-100' : 'opacity-0'"></span>
+                                            1 Day
+                                        </button>
+                                        <button type="button"
+                                            @click="days = '2'; label = '2 Days'; open = false"
+                                            class="w-full px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:text-orange-600 dark:hover:text-orange-400 transition flex items-center gap-2">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0" :class="days === '2' ? 'opacity-100' : 'opacity-0'"></span>
+                                            2 Days
+                                        </button>
+                                    </div>
+                                </div>
+                                {{-- Import button --}}
+                                <button type="button"
+                                    :id="'import-recent-{{ $site->id }}'"
+                                    @click="importRecentOrders({{ $site->id }}, days)"
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold transition shadow-sm active:scale-95">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                                    </svg>
+                                    Import
+                                </button>
+                            </div>
                         </div>
                     </td>
 
@@ -249,6 +319,14 @@
                             <button onclick="testConnection({{ $site->id }})"
                                 class="px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-xs font-medium text-gray-600 dark:text-gray-300 hover:border-blue-400 hover:text-blue-600 transition whitespace-nowrap">
                                 Test
+                            </button>
+                            <button onclick="forceConnect({{ $site->id }}, {{ $site->plugin_connected ? 'true' : 'false' }})"
+                                id="fc-btn-{{ $site->id }}"
+                                class="px-2.5 py-1.5 rounded-lg border text-xs font-medium transition whitespace-nowrap
+                                    {{ $site->plugin_connected
+                                        ? 'border-orange-200 dark:border-orange-800 text-orange-600 dark:text-orange-400 hover:bg-orange-50'
+                                        : 'border-green-200 dark:border-green-800 text-green-600 dark:text-green-400 hover:bg-green-50' }}">
+                                {{ $site->plugin_connected ? 'Disconnect' : 'Force Connect' }}
                             </button>
                             <button @click="openEdit({{ $siteJson }})"
                                 class="px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-xs font-medium text-gray-600 dark:text-gray-300 hover:border-primary hover:text-primary transition">
@@ -584,6 +662,39 @@ async function syncProducts(siteId) {
     }
 }
 
+async function importRecentOrders(siteId, days = '2') {
+    const btn = document.getElementById('import-recent-' + siteId);
+    if (!btn) return;
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.textContent = 'Importing...';
+    try {
+        const res  = await fetch('/admin/integrations/wordpress/' + siteId + '/import-recent-orders', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ days: days }),
+        });
+        const data = await res.json();
+        if (data.success) {
+            const msg = data.imported > 0
+                ? data.imported + ' orders imported! (' + days + ' day' + (days > 1 ? 's' : '') + ')'
+                : 'No new orders found (last ' + days + ' day' + (days > 1 ? 's' : '') + ')';
+            wpToast(msg, 'success');
+            if (data.imported > 0) setTimeout(() => location.reload(), 1500);
+        } else {
+            wpToast(data.message || 'Import failed', 'error');
+        }
+    } catch(e) {
+        wpToast('Network error', 'error');
+    } finally {
+        btn.disabled  = false;
+        btn.innerHTML = orig;
+    }
+}
+
 async function testConnection(siteId) {
     wpToast('Testing connection...', 'success');
     try {
@@ -610,6 +721,29 @@ async function toggleActive(siteId) {
     const data = await res.json();
     if (data.success) {
         setTimeout(() => location.reload(), 300);
+    }
+}
+
+async function forceConnect(siteId, isConnected) {
+    const btn  = document.getElementById('fc-btn-' + siteId);
+    const orig = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = '...'; }
+    try {
+        const res  = await fetch('/admin/integrations/wordpress/' + siteId + '/force-connect', {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content }
+        });
+        const data = await res.json();
+        if (data.success) {
+            wpToast(data.plugin_connected ? 'Plugin manually connected!' : 'Plugin disconnected.', 'success');
+            setTimeout(() => location.reload(), 800);
+        } else {
+            wpToast('Failed', 'error');
+        }
+    } catch(e) {
+        wpToast('Network error', 'error');
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = orig; }
     }
 }
 

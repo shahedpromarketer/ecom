@@ -25,33 +25,40 @@ class AnalyticsController extends Controller
             ? \Carbon\Carbon::parse($request->to)->endOfDay()
             : now()->endOfDay();
 
-        $totalRevenue   = Order::where('status', 'delivered')->whereBetween('created_at', [$from, $to])->sum('total');
-        $totalOrders    = Order::whereBetween('created_at', [$from, $to])->count();
+        $isSA     = auth()->user()->is_super_admin;
+        $tenantId = auth()->user()->tenant_id;
+        $orderBase = fn() => $isSA ? Order::query() : Order::where('tenant_id', $tenantId);
+
+        $totalRevenue   = $orderBase()->where('status', 'delivered')->whereBetween('created_at', [$from, $to])->sum('total');
+        $totalOrders    = $orderBase()->whereBetween('created_at', [$from, $to])->count();
         $avgOrderValue  = $totalOrders > 0 ? round($totalRevenue / max($totalOrders, 1), 2) : 0;
-        $totalCustomers = User::where('role', 'customer')->whereBetween('created_at', [$from, $to])->count();
-        $repeatCustomers = Order::whereBetween('created_at', [$from, $to])
+        $custQ = User::where('role', 'customer')->whereBetween('created_at', [$from, $to]);
+        if (!$isSA) { $custQ->where('tenant_id', $tenantId); }
+        $totalCustomers = $custQ->count();
+        $repeatCustomers = $orderBase()->whereBetween('created_at', [$from, $to])
             ->select('user_id', DB::raw('count(*) as cnt'))
             ->groupBy('user_id')
             ->having('cnt', '>', 1)
             ->count();
 
-        $revenueByDate = Order::where('status', 'delivered')
+        $revenueByDate = $orderBase()->where('status', 'delivered')
             ->whereBetween('created_at', [$from, $to])
             ->select(DB::raw('DATE(created_at) as date'), DB::raw('SUM(total) as revenue'))
             ->groupBy('date')
             ->orderBy('date')
             ->get();
 
-        $ordersByDate = Order::whereBetween('created_at', [$from, $to])
+        $ordersByDate = $orderBase()->whereBetween('created_at', [$from, $to])
             ->select(DB::raw('DATE(created_at) as date'), DB::raw('COUNT(*) as orders'))
             ->groupBy('date')
             ->orderBy('date')
             ->get();
 
-        $topProducts = OrderItem::join('orders', 'order_items.order_id', '=', 'orders.id')
+        $topProdQ = OrderItem::join('orders', 'order_items.order_id', '=', 'orders.id')
             ->join('products', 'order_items.product_id', '=', 'products.id')
-            ->whereBetween('orders.created_at', [$from, $to])
-            ->select(
+            ->whereBetween('orders.created_at', [$from, $to]);
+        if (!$isSA) { $topProdQ->where('orders.tenant_id', $tenantId); }
+        $topProducts = $topProdQ->select(
                 'products.id',
                 'products.name',
                 DB::raw('SUM(order_items.qty) as total_qty'),
@@ -62,7 +69,7 @@ class AnalyticsController extends Controller
             ->limit(10)
             ->get();
 
-        $topCustomers = Order::with('user')
+        $topCustomers = $orderBase()->with('user')
             ->whereBetween('created_at', [$from, $to])
             ->whereNotNull('user_id')
             ->select('user_id', DB::raw('COUNT(*) as orders_count'), DB::raw('SUM(total) as total_spent'))
@@ -71,12 +78,12 @@ class AnalyticsController extends Controller
             ->limit(10)
             ->get();
 
-        $ordersByStatus = Order::whereBetween('created_at', [$from, $to])
+        $ordersByStatus = $orderBase()->whereBetween('created_at', [$from, $to])
             ->select('status', DB::raw('COUNT(*) as count'))
             ->groupBy('status')
             ->get();
 
-        $revenueByPayment = Order::where('status', 'delivered')
+        $revenueByPayment = $orderBase()->where('status', 'delivered')
             ->whereBetween('created_at', [$from, $to])
             ->select('payment_method', DB::raw('SUM(total) as revenue'))
             ->groupBy('payment_method')

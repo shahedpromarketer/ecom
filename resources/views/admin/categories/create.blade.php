@@ -133,7 +133,7 @@
                             Cancel
                         </a>
                         <button type="submit"
-                                class="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-accent hover:bg-yellow-500 rounded-xl transition-colors">
+                                class="flex-1 px-4 py-2.5 text-sm font-semibold text-black bg-accent hover:bg-yellow-500 rounded-xl transition-colors">
                             Create
                         </button>
                     </div>

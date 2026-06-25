@@ -21,7 +21,7 @@ use Illuminate\Support\Str;
 class OrderController extends Controller
 {
     const ALL_STATUSES = [
-        'pending', 'confirmed', 'failed', 'processing', 'hold', 'hold_followup',
+        'pending', 'confirmed', 'processing', 'hold', 'hold_followup',
         'shipped', 'delivered', 'completed', 'cancelled', 'pending_return',
         'returned', 'damage', 'hand_delivery', 'hand_delivery_completed',
         'others', 'return_collection', 'courier_payment_validate',
@@ -31,11 +31,14 @@ class OrderController extends Controller
     {
         // Auto-pull new orders from active WooCommerce sites silently
         try {
-            $sites = \App\Models\WordPressSite::where('is_active', true)
+            $wpQuery = \App\Models\WordPressSite::where('is_active', true)
                 ->whereIn('type', ['woocommerce', 'wordpress'])
                 ->whereNotNull('consumer_key')
-                ->whereNotNull('consumer_secret')
-                ->get();
+                ->whereNotNull('consumer_secret');
+            if (!auth()->user()->is_super_admin) {
+                $wpQuery->where('tenant_id', auth()->user()->tenant_id);
+            }
+            $sites = $wpQuery->get();
 
             foreach ($sites as $site) {
                 if (true) {
@@ -49,7 +52,18 @@ class OrderController extends Controller
         $perPage = in_array((int) $request->get('per_page', 10), [10,25,50,100,150,200,250,300,500,1000,1500,2000])
             ? (int) $request->get('per_page', 10) : 10;
 
-        $query = Order::with(['items.product.images', 'assignedTo', 'orderNotes', 'shipment']);
+        $tenantId = auth()->user()->tenant_id;
+        $isSuperAdmin = auth()->user()->is_super_admin;
+
+        $query = Order::with([
+            'items.product' => fn($q) => $q->with(['images' => fn($q) => $q->where('is_primary', true)->limit(1)]),
+            'assignedTo',
+            'shipment',
+            'latestOrderNote',
+        ])->withCount('orderNotes');
+        if (!$isSuperAdmin) {
+            $query->where('tenant_id', $tenantId);
+        }
 
         // Status filter
         if ($request->filled('status')) {
@@ -144,15 +158,41 @@ class OrderController extends Controller
 
         $orders = $query->paginate($perPage)->withQueryString();
 
+        // Batch-calculate customer stats per phone to avoid N+1 queries in the view
+        $phones = $orders->pluck('shipping_phone')->filter()->unique()->values()->toArray();
+        if ($phones) {
+            $statsBase     = $isSuperAdmin ? Order::query() : Order::where('tenant_id', $tenantId);
+            $phoneTotals   = (clone $statsBase)->whereIn('shipping_phone', $phones)
+                ->select('shipping_phone', DB::raw('COUNT(*) as cnt'))
+                ->groupBy('shipping_phone')
+                ->pluck('cnt', 'shipping_phone');
+            $phoneSuccess  = (clone $statsBase)->whereIn('shipping_phone', $phones)
+                ->whereIn('status', ['delivered', 'completed'])
+                ->select('shipping_phone', DB::raw('COUNT(*) as cnt'))
+                ->groupBy('shipping_phone')
+                ->pluck('cnt', 'shipping_phone');
+            $phoneFailed   = (clone $statsBase)->whereIn('shipping_phone', $phones)
+                ->whereIn('status', ['cancelled', 'failed', 'returned'])
+                ->select('shipping_phone', DB::raw('COUNT(*) as cnt'))
+                ->groupBy('shipping_phone')
+                ->pluck('cnt', 'shipping_phone');
+        } else {
+            $phoneTotals  = collect();
+            $phoneSuccess = collect();
+            $phoneFailed  = collect();
+        }
+
         $categories     = Category::where('is_active', true)->orderBy('name')->get();
-        $districts      = Order::whereNotNull('shipping_district')
+        $baseQuery      = $isSuperAdmin ? Order::query() : Order::where('tenant_id', $tenantId);
+        $districts      = (clone $baseQuery)->whereNotNull('shipping_district')
             ->distinct()->pluck('shipping_district')->filter()->sort()->values();
-        $sources        = Order::whereNotNull('source')
+        $sources        = (clone $baseQuery)->whereNotNull('source')
             ->distinct()->pluck('source')->filter()->sort()->values();
         $activeCouriers = CourierSetting::all();
 
         return view('admin.orders.index', compact(
-            'orders', 'categories', 'districts', 'sources', 'perPage', 'activeCouriers'
+            'orders', 'categories', 'districts', 'sources', 'perPage', 'activeCouriers',
+            'phoneTotals', 'phoneSuccess', 'phoneFailed'
         ));
     }
 
@@ -267,6 +307,7 @@ class OrderController extends Controller
             'reference_no'      => $request->reference_no,
             'skip_followup'     => $request->boolean('skip_followup'),
             'assigned_to'       => $request->assigned_to ?? auth()->id(),
+            'tenant_id'         => auth()->user()->tenant_id,
         ]);
 
         foreach ($request->items as $item) {
@@ -297,6 +338,7 @@ class OrderController extends Controller
                 'shipping'       => $shipping,
                 'total'          => $total,
                 'status'         => 'draft',
+                'tenant_id'      => auth()->user()->tenant_id,
             ]);
         } catch (\Exception $e) {
             \Log::error('Auto-invoice creation failed for order ' . $order->id . ': ' . $e->getMessage());
@@ -309,9 +351,14 @@ class OrderController extends Controller
 
     public function incomplete(Request $request)
     {
+        $incTenantId = auth()->user()->tenant_id;
+        $incIsSuperAdmin = auth()->user()->is_super_admin;
         $query = Order::with(['user', 'items', 'shipment'])
             ->whereIn('status', ['pending', 'confirmed', 'processing'])
             ->latest();
+        if (!$incIsSuperAdmin) {
+            $query->where('tenant_id', $incTenantId);
+        }
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -426,11 +473,12 @@ class OrderController extends Controller
             'product_name' => $request->product_name,
             'qty'          => $request->qty,
             'unit_price'   => $request->unit_price,
-            'total'        => $request->total,
+            'discount'     => 0,
+            'total'        => $request->unit_price * $request->qty,
         ]);
 
-        $newSubtotal = $order->items()->sum('total');
-        $order->update(['subtotal' => $newSubtotal, 'total' => $newSubtotal - $order->discount + $order->shipping_charge]);
+        $newSubtotal = $order->items()->sum(DB::raw('(unit_price * qty) - COALESCE(discount, 0)'));
+        $order->update(['subtotal' => $newSubtotal, 'total' => max(0, $newSubtotal - $order->discount + $order->shipping_charge)]);
 
         return response()->json(['success' => true]);
     }
@@ -439,8 +487,8 @@ class OrderController extends Controller
     {
         $order = $item->order;
         $item->delete();
-        $newSubtotal = $order->items()->sum('total');
-        $order->update(['subtotal' => $newSubtotal, 'total' => $newSubtotal - $order->discount + $order->shipping_charge]);
+        $newSubtotal = $order->items()->sum(DB::raw('(unit_price * qty) - COALESCE(discount, 0)'));
+        $order->update(['subtotal' => $newSubtotal, 'total' => max(0, $newSubtotal - $order->discount + $order->shipping_charge)]);
 
         return response()->json(['success' => true]);
     }
@@ -561,7 +609,7 @@ class OrderController extends Controller
             $order->fresh()->toArray()
         );
 
-        Cache::forget('sidebar_order_counts');
+        $this->clearSidebarCache();
 
         return back()->with('success', 'Order updated successfully.');
     }
@@ -713,6 +761,7 @@ class OrderController extends Controller
         $q        = $request->get('q', '');
         $products = Product::where('status', 'active')
             ->with(['variants', 'images'])
+            ->when(!auth()->user()->is_super_admin, fn($q2) => $q2->where('tenant_id', auth()->user()->tenant_id))
             ->when($q, fn($query) => $query->where('name', 'like', "%{$q}%")
                 ->orWhere('sku', 'like', "%{$q}%"))
             ->limit(20)
@@ -720,16 +769,17 @@ class OrderController extends Controller
             ->map(fn($p) => [
                 'id'        => $p->id,
                 'name'      => $p->name,
+                'price'     => (float) ($p->sale_price ?? $p->price ?? 0),
                 'image_url' => $p->images->where('is_primary', true)->first()
                     ? asset('storage/' . $p->images->where('is_primary', true)->first()->image_path)
                     : ($p->images->first()
                         ? asset('storage/' . $p->images->first()->image_path)
                         : asset('images/no-image.png')),
-                'stock'     => $p->variants->sum('stock') ?? ($p->stock ?? 0),
+                'stock'     => $p->variants->sum('stock') ?? 0,
                 'variants'  => $p->variants->map(fn($v) => [
                     'id'    => $v->id,
                     'name'  => trim(($v->size ?? '') . ' ' . ($v->color ?? '')),
-                    'price' => $v->price ?? $p->sale_price ?? $p->price,
+                    'price' => (float) ($v->price ?? $p->sale_price ?? $p->price ?? 0),
                     'stock' => $v->stock ?? 0,
                 ]),
             ]);
@@ -742,6 +792,7 @@ class OrderController extends Controller
         $q = $request->get('q', '');
         $products = Product::where('status', 'active')
             ->with(['variants', 'images'])
+            ->when(!auth()->user()->is_super_admin, fn($q2) => $q2->where('tenant_id', auth()->user()->tenant_id))
             ->where(function ($query) use ($q) {
                 $query->where('name', 'like', "%{$q}%")
                       ->orWhere('sku', 'like', "%{$q}%");
@@ -754,8 +805,8 @@ class OrderController extends Controller
                 'price'         => $p->price,
                 'sale_price'    => $p->sale_price,
                 'current_price' => $p->sale_price ?? $p->price,
-                'primary_image' => $p->images->where('is_primary', true)->first()?->image_path
-                                   ?? $p->images->first()?->image_path,
+                'primary_image' => $p->images->where('is_primary', true)->first()?->url
+                                   ?? $p->images->first()?->url,
                 'variants'      => $p->variants->map(fn($v) => [
                     'id'    => $v->id,
                     'label' => trim(($v->size ?? '') . ' ' . ($v->color ?? '')),
@@ -769,11 +820,10 @@ class OrderController extends Controller
 
     public function searchCustomer(Request $request)
     {
-        $phone = $request->get('phone', '');
-        $order = Order::where('shipping_phone', $phone)
-            ->with('user')
-            ->latest()
-            ->first();
+        $phone    = $request->get('phone', '');
+        $custBase = Order::where('shipping_phone', $phone);
+        if (!auth()->user()->is_super_admin) { $custBase->where('tenant_id', auth()->user()->tenant_id); }
+        $order = (clone $custBase)->with('user')->latest()->first();
 
         if (!$order) {
             return response()->json(['found' => false]);
@@ -786,15 +836,199 @@ class OrderController extends Controller
             'district'         => $order->shipping_district ?? '',
             'area'             => $order->shipping_area ?? '',
             'address'          => $order->shipping_address ?? '',
-            'total_orders'     => Order::where('shipping_phone', $phone)->count(),
+            'total_orders'     => $custBase->count(),
+        ]);
+    }
+
+    public function quickView(Order $order): \Illuminate\Http\JsonResponse
+    {
+        if (!auth()->user()->is_super_admin && $order->tenant_id !== auth()->user()->tenant_id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $order->load(['items.product.images', 'orderNotes.user', 'shipment', 'assignedTo']);
+
+        $phone = $order->shipping_phone;
+        $baseQ = Order::where('shipping_phone', $phone);
+        $customerTotal     = $baseQ->count();
+        $customerCompleted = (clone $baseQ)->whereIn('status', ['delivered', 'completed'])->count();
+
+        $admins = \App\Models\User::orderBy('name')->get(['id', 'name']);
+
+        $allNotes = $order->orderNotes->sortByDesc('created_at');
+
+        return response()->json([
+            'id'                => $order->id,
+            'order_number'      => $order->order_number ?? $order->id,
+            'status'            => $order->status,
+            'shipping_name'     => $order->shipping_name,
+            'shipping_phone'    => $order->shipping_phone,
+            'alt_phone'         => $order->alt_phone,
+            'email'             => $order->email,
+            'shipping_address'  => $order->shipping_address,
+            'shipping_district' => $order->shipping_district,
+            'payment_method'    => $order->payment_method,
+            'subtotal'          => (float) $order->subtotal,
+            'discount'          => (float) $order->discount,
+            'shipping_charge'   => (float) $order->shipping_charge,
+            'total'             => (float) $order->total,
+            'paid_amount'       => (float) $order->paid_amount,
+            'due'               => max(0, (float) $order->total - (float) $order->paid_amount),
+            'order_tag'         => $order->order_tag,
+            'customer_tag'      => $order->customer_tag,
+            'courier_note'      => $order->courier_note,
+            'packing_note'      => $order->packing_note,
+            'assigned_to'       => $order->assigned_to,
+            'reference_no'      => $order->reference_no,
+            'source'            => $order->source ?? 'Direct',
+            'created_at'        => $order->created_at->format('d/m/Y h:ia'),
+            'updated_at'        => $order->updated_at->format('d/m/Y h:ia'),
+            'customer_total'    => $customerTotal,
+            'customer_completed'=> $customerCompleted,
+            'admins'            => $admins->map(fn($a) => ['id' => $a->id, 'name' => $a->name])->values(),
+            'items'             => $order->items->map(fn($i) => [
+                'id'          => $i->id,
+                'name'        => $i->product_name ?? ($i->product?->name ?? 'Product'),
+                'variant'     => $i->variant_info,
+                'qty'         => (int) $i->qty,
+                'unit_price'  => (float) $i->unit_price,
+                'discount'    => (float) ($i->discount ?? 0),
+                'subtotal'    => (float) (($i->unit_price * $i->qty) - ($i->discount ?? 0)),
+                'image'       => $i->product?->images?->first()
+                    ? (str_starts_with($i->product->images->first()->image_path, 'http')
+                        ? $i->product->images->first()->image_path
+                        : asset('storage/' . $i->product->images->first()->image_path))
+                    : null,
+            ]),
+            'order_notes'    => $allNotes->filter(fn($n) => ($n->type ?? 'order') === 'order')->map(fn($n) => [
+                'id' => $n->id, 'text' => $n->note_text,
+                'user' => $n->user?->name ?? 'System',
+                'created_at' => $n->created_at->format('d M Y, H:i'),
+            ])->values(),
+            'customer_notes' => $allNotes->filter(fn($n) => $n->type === 'customer')->map(fn($n) => [
+                'id' => $n->id, 'text' => $n->note_text,
+                'user' => $n->user?->name ?? 'System',
+                'created_at' => $n->created_at->format('d M Y, H:i'),
+            ])->values(),
+            'shipment' => $order->shipment ? [
+                'courier'       => ucfirst($order->shipment->courier_name),
+                'status'        => $order->shipment->status,
+                'tracking'      => $order->shipment->tracking_code,
+                'tracking_link' => $order->shipment->tracking_link,
+                'consignment'   => $order->shipment->consignment_id,
+                'delivery_fee'  => (float) $order->shipment->delivery_fee,
+                'submitted_at'  => $order->shipment->created_at?->format('d/m/Y h:ia'),
+            ] : null,
+        ]);
+    }
+
+    public function quickField(Request $request, Order $order): \Illuminate\Http\JsonResponse
+    {
+        if (!auth()->user()->is_super_admin && $order->tenant_id !== auth()->user()->tenant_id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $field = $request->input('field');
+        $value = $request->input('value');
+
+        // Item-level field update
+        if ($field === 'item_field') {
+            $data   = is_array($value) ? $value : json_decode($value, true);
+            $item   = OrderItem::findOrFail($data['item_id']);
+            if ($item->order_id !== $order->id) abort(403);
+
+            if ($data['field'] === 'qty')      $item->qty        = max(1, (int) $data['value']);
+            if ($data['field'] === 'price')    $item->unit_price = max(0, (float) $data['value']);
+            if ($data['field'] === 'discount') $item->discount   = max(0, (float) $data['value']);
+            $item->total = ($item->unit_price * $item->qty) - ($item->discount ?? 0);
+            $item->save();
+
+            $subtotal = $order->items()->sum(DB::raw('(unit_price * qty) - COALESCE(discount, 0)'));
+            $order->subtotal = $subtotal;
+            $order->total    = max(0, $subtotal - $order->discount + $order->shipping_charge);
+            $order->save();
+
+            return response()->json([
+                'success'  => true,
+                'subtotal' => (float) $order->subtotal,
+                'total'    => (float) $order->total,
+                'due'      => max(0, (float) $order->total - (float) $order->paid_amount),
+                'item_subtotal' => (float) $item->total,
+            ]);
+        }
+
+        $allowed = [
+            'status', 'shipping_name', 'shipping_phone', 'alt_phone', 'email',
+            'shipping_address', 'shipping_district', 'payment_method', 'paid_amount',
+            'shipping_charge', 'discount', 'order_tag', 'customer_tag', 'courier_note',
+            'packing_note', 'assigned_to', 'reference_no',
+        ];
+
+        if (!in_array($field, $allowed)) {
+            return response()->json(['error' => 'Field not allowed'], 422);
+        }
+
+        $updateData = [$field => $value];
+
+        if (in_array($field, ['shipping_charge', 'discount', 'paid_amount'])) {
+            $shipping = $field === 'shipping_charge' ? (float) $value : (float) $order->shipping_charge;
+            $discount = $field === 'discount'        ? (float) $value : (float) $order->discount;
+            $paid     = $field === 'paid_amount'     ? (float) $value : (float) $order->paid_amount;
+            $total    = max(0, (float) $order->subtotal - $discount + $shipping);
+            $updateData['total']       = $total;
+            $updateData['paid_amount'] = $paid;
+        }
+
+        $order->update($updateData);
+
+        if ($field === 'status') {
+            $this->clearSidebarCache();
+            ActivityLog::log('order.status_changed', $order, "Status changed to {$value}", ['new' => $value]);
+        }
+
+        $order->refresh();
+
+        return response()->json([
+            'success'  => true,
+            'subtotal' => (float) $order->subtotal,
+            'total'    => (float) $order->total,
+            'due'      => max(0, (float) $order->total - (float) $order->paid_amount),
+        ]);
+    }
+
+    public function sidebarCounts(): \Illuminate\Http\JsonResponse
+    {
+        $user = auth()->user();
+        $query = $user->is_super_admin
+            ? Order::query()
+            : Order::where('tenant_id', $user->tenant_id);
+
+        $statuses = $query->select('status', DB::raw('COUNT(*) as cnt'))
+            ->groupBy('status')
+            ->pluck('cnt', 'status');
+
+        return response()->json([
+            'all'            => $statuses->sum(),
+            'pending'        => $statuses['pending']        ?? 0,
+            'confirmed'      => $statuses['confirmed']      ?? 0,
+            'processing'     => $statuses['processing']     ?? 0,
+            'hold'           => $statuses['hold']           ?? 0,
+            'shipped'        => $statuses['shipped']        ?? 0,
+            'delivered'      => $statuses['delivered']      ?? 0,
+            'completed'      => $statuses['completed']      ?? 0,
+            'cancelled'      => $statuses['cancelled']      ?? 0,
+            'pending_return' => $statuses['pending_return'] ?? 0,
+            'returned'       => $statuses['returned']       ?? 0,
         ]);
     }
 
     public function bulkStatus(Request $request)
     {
         $request->validate(['ids' => 'required|array', 'status' => 'required|string']);
-        Order::whereIn('id', $request->ids)->update(['status' => $request->status]);
-        Cache::forget('sidebar_order_counts');
+        $q = Order::whereIn('id', $request->ids);
+        if (!auth()->user()->is_super_admin) { $q->where('tenant_id', auth()->user()->tenant_id); }
+        $q->update(['status' => $request->status]);
+        $this->clearSidebarCache();
         return response()->json(['success' => true]);
     }
 
@@ -862,14 +1096,18 @@ class OrderController extends Controller
     public function bulkTag(Request $request)
     {
         $request->validate(['ids' => 'required|array', 'tag' => 'required|string']);
-        Order::whereIn('id', $request->ids)->update(['order_tag' => $request->tag]);
+        $q = Order::whereIn('id', $request->ids);
+        if (!auth()->user()->is_super_admin) { $q->where('tenant_id', auth()->user()->tenant_id); }
+        $q->update(['order_tag' => $request->tag]);
         return response()->json(['success' => true]);
     }
 
     public function exportCsv(Request $request)
     {
         $ids    = $request->input('ids', []);
-        $orders = Order::with(['items.product'])->whereIn('id', $ids)->get();
+        $expQ   = Order::with(['items.product', 'items.variant'])->whereIn('id', $ids);
+        if (!auth()->user()->is_super_admin) { $expQ->where('tenant_id', auth()->user()->tenant_id); }
+        $orders = $expQ->get();
 
         $headers = [
             'Content-Type'        => 'text/csv',
@@ -878,14 +1116,29 @@ class OrderController extends Controller
 
         $callback = function () use ($orders) {
             $file = fopen('php://output', 'w');
-            fputcsv($file, ['Order#', 'Customer', 'Phone', 'Address', 'Items', 'Total', 'Payment', 'Status', 'Date']);
+            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF)); // UTF-8 BOM for Excel
+            fputcsv($file, ['Order#', 'Customer', 'Phone', 'Alt Phone', 'Address', 'Area', 'District', 'Division', 'Products', 'Total', 'Payment', 'Status', 'Date']);
             foreach ($orders as $order) {
+                $itemLines = $order->items->map(function ($item) {
+                    $name    = $item->product_name ?? ($item->product->name ?? '');
+                    $variant = trim($item->variant_info ?? '');
+                    if (!$variant && $item->variant) {
+                        $variant = trim(($item->variant->size ?? '') . ' ' . ($item->variant->color ?? ''));
+                    }
+                    $label = $variant ? "{$name} ({$variant})" : $name;
+                    return "x{$item->qty} {$label}";
+                })->implode(' | ');
+
                 fputcsv($file, [
                     $order->order_number,
                     $order->shipping_name,
                     $order->shipping_phone,
-                    $order->shipping_district . ', ' . $order->shipping_area,
-                    $order->items->count() . ' items',
+                    $order->alt_phone ?? '',
+                    $order->shipping_address ?? '',
+                    $order->shipping_area ?? '',
+                    $order->shipping_district ?? '',
+                    $order->shipping_division ?? '',
+                    $itemLines,
                     $order->total,
                     $order->payment_method,
                     $order->status,
@@ -901,7 +1154,9 @@ class OrderController extends Controller
     public function bulkPrint(Request $request)
     {
         $ids    = $request->input('ids', []);
-        $orders = Order::with(['items.product', 'items.variant'])->whereIn('id', $ids)->get();
+        $printQ = Order::with(['items.product', 'items.variant'])->whereIn('id', $ids);
+        if (!auth()->user()->is_super_admin) { $printQ->where('tenant_id', auth()->user()->tenant_id); }
+        $orders = $printQ->get();
         return view('admin.orders.bulk-print', compact('orders'));
     }
 
@@ -912,13 +1167,14 @@ class OrderController extends Controller
             return response()->json([]);
         }
 
-        $orders = Order::where(function ($query) use ($q) {
+        $liveQ = Order::where(function ($query) use ($q) {
                 $query->where('id', 'like', "%{$q}%")
                       ->orWhere('order_number', 'like', "%{$q}%")
                       ->orWhere('shipping_phone', 'like', "%{$q}%")
                       ->orWhere('shipping_name', 'like', "%{$q}%");
-            })
-            ->latest()
+            });
+        if (!auth()->user()->is_super_admin) { $liveQ->where('tenant_id', auth()->user()->tenant_id); }
+        $orders = $liveQ->latest()
             ->limit(8)
             ->get()
             ->map(fn ($o) => [
@@ -964,6 +1220,13 @@ class OrderController extends Controller
     {
         [$start, $end] = $this->parseDateRange($range);
         $query->whereDate($column, '>=', $start)->whereDate($column, '<=', $end);
+    }
+
+    private function clearSidebarCache(): void
+    {
+        $user = auth()->user();
+        $key  = 'sidebar_order_counts_' . ($user->is_super_admin ? 'sa' : $user->tenant_id);
+        Cache::forget($key);
     }
 
     private function parseDateRange(string $range): array

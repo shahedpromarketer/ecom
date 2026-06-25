@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\OrderReceiveController;
+use App\Http\Controllers\Api\PluginConnectController;
+use App\Http\Controllers\Api\PluginValidateController;
 use App\Http\Controllers\Api\WordPressSyncController;
 use Illuminate\Support\Facades\Route;
 
@@ -19,6 +21,12 @@ Route::middleware('api.token')->group(function () {
     Route::get('/orders', [OrderReceiveController::class, 'index'])
         ->name('api.orders.index');
 });
+
+// Ecom Pilot Netpilot plugin endpoints (api_key auth via X-API-KEY header)
+Route::post('/plugin/connect',       [PluginConnectController::class, 'connect'])->name('api.plugin.connect');
+Route::post('/plugin/disconnect',    [PluginConnectController::class, 'disconnect'])->name('api.plugin.disconnect');
+Route::get('/plugin/ping',           [PluginConnectController::class, 'ping'])->name('api.plugin.ping');
+Route::post('/plugin/validate-order',[PluginValidateController::class, 'validate'])->name('api.plugin.validate');
 
 // Legacy webhook route (site api_key auth)
 Route::post('/wordpress/sync', [WordPressSyncController::class, 'receiveOrder'])

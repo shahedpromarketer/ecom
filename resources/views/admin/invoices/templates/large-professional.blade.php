@@ -36,13 +36,14 @@ tbody tr:nth-child(even) { background:#fffbf0; }
 .footer { background:#1B2A4A; color:white; padding:12px 24px; text-align:center; font-size:10px; border-radius:6px; }
 .footer .main { font-size:12px; font-weight:bold; margin-bottom:4px; }
 .footer .sub { opacity:.65; line-height:1.8; }
-@media print { @page { size: A4; margin: 12mm; } }
+@media print { @page { size: A4; margin: 12mm; } .no-print { display:none !important; } }
+@media screen { html { background:#f0f2f5; min-height:100vh; padding:64px 20px 20px; } body { max-width:210mm; margin:0 auto; background:white; padding:15mm; box-shadow:0 4px 24px rgba(0,0,0,.15); border-radius:6px; } }
 </style>
 </head>
 <body>
 <div class="header">
     <div class="header-left">
-        <div class="shop-name">{{ $settings['store_name'] ?? 'Clothonic' }}</div>
+        <div class="shop-name">{{ $settings['store_name'] ?? 'Ecom Pilot' }}</div>
         <div class="shop-sub">
             @if(!empty($settings['store_tagline'])){{ $settings['store_tagline'] }}<br>@endif
             @if(!empty($settings['store_address'])){{ $settings['store_address'] }}<br>@endif
@@ -119,14 +120,14 @@ tbody tr:nth-child(even) { background:#fffbf0; }
 <div class="terms">
     <h4>Terms & Conditions</h4>
     <p>1. পণ্য গ্রহণের পর ৩ দিনের মধ্যে ত্রুটি জানাতে হবে। &bull; 2. ডেলিভারির পর পণ্য পরিবর্তন বা ফেরত গ্রহণযোগ্য নয়, যদি না পণ্য ত্রুটিপূর্ণ হয়।<br>
-    3. সকল বিরোধ {{ $settings['store_name'] ?? 'Clothonic' }}-এর নীতি অনুযায়ী নিষ্পত্তি হবে। &bull; 4. এই ইনভয়েস একটি বৈধ দলিল।</p>
+    3. সকল বিরোধ {{ $settings['store_name'] ?? 'Ecom Pilot' }}-এর নীতি অনুযায়ী নিষ্পত্তি হবে। &bull; 4. এই ইনভয়েস একটি বৈধ দলিল।</p>
 </div>
 <div class="signature-row">
     <div class="sig-box">Customer Signature</div>
     <div class="sig-box">Authorized Signature</div>
 </div>
 <div class="footer">
-    <div class="main">{{ $settings['store_name'] ?? 'Clothonic' }}</div>
+    <div class="main">{{ $settings['store_name'] ?? 'Ecom Pilot' }}</div>
     <div class="sub">
         @if(!empty($settings['store_phone'])){{ $settings['store_phone'] }}@endif
         @if(!empty($settings['store_email'])) &bull; {{ $settings['store_email'] }}@endif
@@ -134,6 +135,18 @@ tbody tr:nth-child(even) { background:#fffbf0; }
         <br>ধন্যবাদ আপনার ক্রয়ের জন্য! &bull; Thank you for your purchase!
     </div>
 </div>
+
+@if(!empty($preview))
+<div class="no-print" style="position:fixed;top:0;left:0;right:0;background:#1B2A4A;color:white;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;font-family:Arial,sans-serif;font-size:13px;z-index:9999;box-shadow:0 2px 8px rgba(0,0,0,.3);">
+    <span>&#128065; Preview &mdash; <strong>{{ $template->name ?? '' }}</strong></span>
+    <div style="display:flex;gap:8px;">
+        <a href="/admin/invoice-templates" style="background:transparent;border:1px solid rgba(255,255,255,.4);color:white;padding:5px 14px;border-radius:6px;text-decoration:none;font-size:12px;">&larr; Back</a>
+        <button onclick="window.print()" style="background:#F59E0B;border:none;color:white;padding:6px 16px;border-radius:6px;cursor:pointer;font-weight:bold;font-size:12px;">Print</button>
+    </div>
+</div>
+<div class="no-print" style="height:44px;"></div>
+@else
 <script>window.onload = () => window.print();</script>
+@endif
 </body>
 </html>

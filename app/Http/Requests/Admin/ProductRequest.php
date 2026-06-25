@@ -30,7 +30,7 @@ class ProductRequest extends FormRequest
 
         return [
             'name'              => ['required', 'string', 'max:255'],
-            'slug'              => ['required', 'string', 'max:255', Rule::unique('products', 'slug')->ignore($productId)],
+            'slug'              => ['required', 'string', 'max:255', Rule::unique('products', 'slug')->where('tenant_id', auth()->user()->tenant_id)->ignore($productId)],
             'description'       => ['nullable', 'string'],
             'short_description' => ['nullable', 'string', 'max:500'],
             'price'             => ['required', 'numeric', 'min:0'],
@@ -40,7 +40,7 @@ class ProductRequest extends FormRequest
             'is_featured'       => ['nullable', 'boolean'],
             'meta_title'        => ['nullable', 'string', 'max:255'],
             'meta_description'  => ['nullable', 'string'],
-            'categories'        => ['required', 'array', 'min:1'],
+            'categories'        => ['nullable', 'array'],
             'categories.*'      => ['exists:categories,id'],
             'images'            => ['nullable', 'array'],
             'images.*'          => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],

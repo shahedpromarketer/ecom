@@ -60,7 +60,7 @@
         </div>
 
         <div class="flex gap-3 pt-2">
-            <button type="submit" class="flex-1 py-2.5 font-semibold bg-accent hover:bg-yellow-500 text-white rounded-xl transition-colors active:scale-95">Save Changes</button>
+            <button type="submit" class="flex-1 py-2.5 font-semibold bg-accent hover:bg-yellow-500 text-black rounded-xl transition-colors active:scale-95">Save Changes</button>
             <a href="{{ route('admin.users.show', $user) }}" class="flex-1 py-2.5 text-center font-semibold border border-gray-200 dark:border-gray-600 text-textsecondary dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Cancel</a>
         </div>
     </form>

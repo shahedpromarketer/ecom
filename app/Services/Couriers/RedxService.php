@@ -36,7 +36,17 @@ class RedxService extends BaseCourierService
             'value'                  => (float) $order->total,
         ]);
 
-        return $response->json();
+        $data = $response->json();
+
+        if (empty($data['tracking_id'])) {
+            throw new \Exception('RedX API error: ' . json_encode($data));
+        }
+
+        return [
+            'tracking_code'  => $data['tracking_id'],
+            'consignment_id' => (string) ($data['parcel_id'] ?? $data['tracking_id']),
+            'status'         => 'submitted',
+        ];
     }
 
     public function trackShipment(string $trackingCode): array

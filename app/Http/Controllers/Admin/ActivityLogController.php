@@ -12,6 +12,9 @@ class ActivityLogController extends Controller
     public function index(Request $request)
     {
         $query = ActivityLog::with('user')->latest();
+        if (!auth()->user()->is_super_admin) {
+            $query->where('tenant_id', auth()->user()->tenant_id);
+        }
 
         if ($request->filled('search')) {
             $s = $request->search;
@@ -31,7 +34,9 @@ class ActivityLogController extends Controller
         }
 
         $logs  = $query->paginate(50)->withQueryString();
-        $admins = User::where('role', 'admin')->get();
+        $adminsQ = User::where('role', 'admin');
+        if (!auth()->user()->is_super_admin) { $adminsQ->where('tenant_id', auth()->user()->tenant_id); }
+        $admins = $adminsQ->get();
 
         return view('admin.activity-log.index', compact('logs', 'admins'));
     }

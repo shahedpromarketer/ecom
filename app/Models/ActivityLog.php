@@ -8,6 +8,7 @@ class ActivityLog extends Model
         'user_id', 'action', 'action_performed', 'subject_type', 'subject_id',
         'description', 'properties', 'old_data', 'updated_data',
         'ip_address', 'user_agent',
+        'tenant_id',
     ];
 
     protected $casts = [
@@ -24,6 +25,11 @@ class ActivityLog extends Model
     public function scopeForSubject($query, string $type, int $id)
     {
         return $query->where('subject_type', $type)->where('subject_id', $id);
+    }
+
+    public function scopeForTenant($query)
+    {
+        return $query->where('tenant_id', auth()->user()?->tenant_id);
     }
 
     public static function log(
@@ -47,6 +53,7 @@ class ActivityLog extends Model
                 'updated_data'     => $updatedData ?: null,
                 'ip_address'       => request()->ip(),
                 'user_agent'       => request()->userAgent(),
+                'tenant_id'        => auth()->user()?->tenant_id,
             ]);
         } catch (\Exception $e) {
             \Log::error('ActivityLog failed: ' . $e->getMessage());

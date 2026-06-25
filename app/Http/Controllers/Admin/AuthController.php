@@ -10,8 +10,13 @@ class AuthController extends Controller
 {
     public function showLogin()
     {
-        if (auth()->check() && auth()->user()->role === 'admin') {
-            return redirect()->route('admin.dashboard');
+        if (auth()->check()) {
+            if (auth()->user()->is_super_admin) {
+                return redirect()->route('super.dashboard');
+            }
+            if (auth()->user()->role === 'admin') {
+                return redirect()->route('admin.dashboard');
+            }
         }
 
         return view('admin.auth.login');
@@ -25,7 +30,16 @@ class AuthController extends Controller
         ]);
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
-            if (auth()->user()->role !== 'admin') {
+            $user = auth()->user();
+
+            // Super admin — go to super admin panel
+            if ($user->is_super_admin) {
+                $request->session()->regenerate();
+                return redirect()->route('super.dashboard');
+            }
+
+            // Regular tenant admin
+            if ($user->role !== 'admin') {
                 Auth::logout();
                 return back()->withErrors(['email' => 'Unauthorized access.'])->withInput($request->only('email'));
             }

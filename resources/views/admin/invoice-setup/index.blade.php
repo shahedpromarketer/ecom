@@ -19,13 +19,13 @@
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6"
      x-data="{
-        storeName:    '{{ addslashes($settings['store_name'] ?? 'Clothonic') }}',
+        storeName:    '{{ addslashes($settings['store_name'] ?? 'Ecom Pilot') }}',
         storeAddress: '{{ addslashes($settings['store_address'] ?? 'Dhaka, Bangladesh') }}',
         storePhone:   '{{ addslashes($settings['store_phone'] ?? '') }}',
         storeEmail:   '{{ addslashes($settings['store_email'] ?? '') }}',
         prefix:       '{{ addslashes($settings['invoice_prefix'] ?? 'CLT-INV') }}',
         startNumber:  '{{ $settings['invoice_start_number'] ?? '1001' }}',
-        footerNote:   '{{ addslashes($settings['invoice_footer_note'] ?? 'Thank you for shopping with Clothonic!') }}',
+        footerNote:   '{{ addslashes($settings['invoice_footer_note'] ?? 'Thank you for shopping with Ecom Pilot!') }}',
         accentColor:  '{{ $settings['invoice_accent_color'] ?? '#1a3c5e' }}',
         paperSize:    '{{ $settings['invoice_paper_size'] ?? 'A4' }}',
         showLogo:     {{ ($settings['invoice_show_logo'] ?? '1') ? 'true' : 'false' }},
@@ -124,10 +124,10 @@
             <div>
                 <label class="block text-xs font-medium text-textsecondary dark:text-gray-400 mb-1.5">Store Logo</label>
                 <input type="file" name="store_logo" accept="image/*"
-                       class="w-full text-sm text-textsecondary dark:text-gray-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-accent file:text-white hover:file:bg-yellow-500">
+                       class="w-full text-sm text-textsecondary dark:text-gray-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-accent file:text-black hover:file:bg-yellow-500">
             </div>
 
-            <button type="submit" class="w-full py-2.5 font-semibold bg-accent hover:bg-yellow-500 text-white rounded-xl transition-colors">
+            <button type="submit" class="w-full py-2.5 font-semibold bg-accent hover:bg-yellow-500 text-black rounded-xl transition-colors">
                 Save Invoice Settings
             </button>
         </form>

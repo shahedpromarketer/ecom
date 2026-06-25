@@ -15,7 +15,7 @@
 <div class="flex flex-wrap gap-1 mb-6 bg-white dark:bg-gray-800 rounded-2xl border border-border dark:border-gray-700 shadow-sm p-1.5 w-fit">
     @foreach(['products' => 'Products', 'users' => 'Customers', 'stock' => 'Stock', 'payment' => 'Payments'] as $key => $label)
     <button @click="tab = '{{ $key }}'; loadReport()"
-            :class="tab === '{{ $key }}' ? 'bg-accent text-white' : 'text-textsecondary dark:text-gray-400 hover:text-textprimary dark:hover:text-gray-200'"
+            :class="tab === '{{ $key }}' ? 'bg-accent text-black' : 'text-textsecondary dark:text-gray-400 hover:text-textprimary dark:hover:text-gray-200'"
             class="px-4 py-2 text-sm font-medium rounded-xl transition-colors">
         {{ $label }}
     </button>

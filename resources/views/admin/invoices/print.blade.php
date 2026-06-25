@@ -63,7 +63,7 @@
 
     <div class="header">
         <div>
-            @php $storeName = \App\Models\Setting::getValue('store_name', 'Clothonic'); @endphp
+            @php $storeName = \App\Models\Setting::getValue('store_name', 'Ecom Pilot'); @endphp
             <div class="store-name">{{ $storeName }}</div>
             <div class="store-sub">{{ \App\Models\Setting::getValue('store_address', 'Dhaka, Bangladesh') }}</div>
             <div class="store-sub">{{ \App\Models\Setting::getValue('store_phone', '') }}</div>
@@ -125,7 +125,7 @@
     </div>
 
     <div class="footer">
-        <p class="thank-you">{{ \App\Models\Setting::getValue('invoice_footer_note', 'Thank you for shopping with Clothonic!') }}</p>
+        <p class="thank-you">{{ \App\Models\Setting::getValue('invoice_footer_note', 'Thank you for shopping with Ecom Pilot!') }}</p>
         <p>Payment Method: {{ strtoupper($invoice->order?->payment_method ?? 'COD') }}</p>
     </div>
 </div>
