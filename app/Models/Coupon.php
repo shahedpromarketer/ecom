@@ -9,6 +9,7 @@ class Coupon extends Model
     protected $fillable = [
         'code', 'type', 'value', 'min_order_amount', 'max_discount',
         'usage_limit', 'used_count', 'expires_at', 'is_active',
+        'tenant_id',
     ];
 
     protected $casts = [
@@ -19,5 +20,10 @@ class Coupon extends Model
     public function orders()
     {
         return $this->hasMany(Order::class);
+    }
+
+    public function scopeForTenant($query)
+    {
+        return $query->where('tenant_id', auth()->user()?->tenant_id);
     }
 }

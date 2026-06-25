@@ -21,6 +21,7 @@ use App\Http\Controllers\Admin\OrderNoteController;
 use App\Http\Controllers\Admin\PaymentsController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\ReturnController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SettingsController;
@@ -33,7 +34,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
     Route::post('logout', [AuthController::class, 'logout'])->name('logout');
 
-    Route::middleware(['auth', 'admin'])->group(function () {
+    Route::middleware(['auth', 'admin', 'tenant'])->group(function () {
         Route::get('/', fn () => redirect()->route('admin.dashboard'));
         Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('dashboard/source-data', [DashboardController::class, 'sourceData'])->name('dashboard.source-data');
@@ -64,6 +65,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('orders/search-products', [OrderController::class, 'searchProducts'])->name('orders.searchProducts');
         Route::get('orders/search-customer', [OrderController::class, 'searchCustomer'])->name('orders.searchCustomer');
 
+        Route::get('sidebar-counts', [OrderController::class, 'sidebarCounts'])->name('sidebar.counts');
+        Route::get('orders/{order}/quick-view', [OrderController::class, 'quickView'])->name('orders.quickView');
+        Route::patch('orders/{order}/quick-field', [OrderController::class, 'quickField'])->name('orders.quickField');
         Route::post('orders/bulk-status', [OrderController::class, 'bulkStatus'])->name('orders.bulkStatus');
         Route::post('orders/bulk-courier', [OrderController::class, 'bulkCourier'])->name('orders.bulkCourier');
         Route::post('orders/bulk-tag', [OrderController::class, 'bulkTag'])->name('orders.bulkTag');
@@ -103,10 +107,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Roles
         Route::resource('roles', RoleController::class)->except(['show', 'create', 'edit']);
 
-        // Blacklist
+        // Blacklist (Phone)
         Route::get('blacklist', [BlacklistController::class, 'index'])->name('blacklist.index');
         Route::post('blacklist', [BlacklistController::class, 'store'])->name('blacklist.store');
         Route::delete('blacklist/{blacklist}', [BlacklistController::class, 'destroy'])->name('blacklist.destroy');
+        // Blacklist (IP)
+        Route::post('blacklist/ip', [BlacklistController::class, 'storeIp'])->name('blacklist.ip.store');
+        Route::delete('blacklist/ip/{ip}', [BlacklistController::class, 'destroyIp'])->name('blacklist.ip.destroy');
 
         // Coupons
         Route::patch('coupons/{coupon}/toggle', [CouponController::class, 'toggle'])->name('coupons.toggle');
@@ -131,7 +138,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
 
         // Inventory
+        Route::get('inventory/export-csv', [InventoryController::class, 'exportCsv'])->name('inventory.exportCsv');
         Route::patch('inventory/variants/{variant}', [InventoryController::class, 'updateStock'])->name('inventory.updateStock');
+        Route::post('inventory/variants/{variant}/adjust', [InventoryController::class, 'adjust'])->name('inventory.adjust');
+        Route::get('inventory/variants/{variant}/logs', [InventoryController::class, 'logs'])->name('inventory.logs');
         Route::post('inventory/bulk-update', [InventoryController::class, 'bulkUpdate'])->name('inventory.bulkUpdate');
         Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
 
@@ -168,6 +178,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Activity log
         Route::get('activity-log', [ActivityLogController::class, 'index'])->name('activity-log.index');
 
+        // Profile
+        Route::get('profile', [ProfileController::class, 'show'])->name('profile');
+        Route::post('profile', [ProfileController::class, 'update'])->name('profile.update');
+        Route::post('profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
+
         // Settings
         Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
         Route::post('settings', [SettingsController::class, 'update'])->name('settings.update');
@@ -190,6 +205,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/{site}/sync-products',[IntegrationController::class, 'syncProducts'])->name('syncProducts');
             Route::post('/{site}/test',        [IntegrationController::class, 'testConnection'])->name('test');
             Route::post('/{site}/regenerate',  [IntegrationController::class, 'regenerateKey'])->name('regenerate');
+            Route::post('/{site}/import-recent-orders', [IntegrationController::class, 'importRecentOrders'])->name('importRecentOrders');
+            Route::post('/{site}/force-connect',        [IntegrationController::class, 'forceConnect'])->name('forceConnect');
         });
     });
 

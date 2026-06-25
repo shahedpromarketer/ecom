@@ -8,7 +8,7 @@ class MarketingPixel extends Model
 {
     protected $fillable = [
         'platform', 'pixel_id', 'api_secret', 'test_code',
-        'head_code', 'body_code', 'is_active',
+        'head_code', 'body_code', 'is_active', 'tenant_id',
     ];
 
     protected $casts = [

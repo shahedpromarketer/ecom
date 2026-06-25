@@ -71,13 +71,20 @@ class WordPressSyncController extends Controller
 
             // Detect source
             $source = 'wordpress';
-            if ($request->input('meta_data')) {
-                foreach ($request->input('meta_data', []) as $meta) {
-                    if (($meta['key'] ?? '') === '_cartflow_source') {
-                        $source = 'cartflow';
-                        break;
-                    }
+            $metaData = collect($request->input('meta_data', []))->keyBy('key');
+            foreach ($request->input('meta_data', []) as $meta) {
+                if (($meta['key'] ?? '') === '_cartflow_source') {
+                    $source = 'cartflow';
+                    break;
                 }
+            }
+
+            // Detect platform from WooCommerce order attribution
+            $platform = $metaData->get('_wc_order_attribution_utm_source')['value']
+                ?? $metaData->get('_wc_order_attribution_source_type')['value']
+                ?? null;
+            if ($platform) {
+                $platform = strtolower($platform);
             }
 
             // Create the order
@@ -96,7 +103,10 @@ class WordPressSyncController extends Controller
                 'status'            => 'pending',
                 'source'            => $source,
                 'source_order_id'   => $sourceOrderId,
+                'source_website'    => $site->site_url,
+                'platform'          => $platform,
                 'notes'             => $billing['note'] ?? $request->input('customer_note'),
+                'tenant_id'         => $site->tenant_id,
             ]);
 
             // Create order items
@@ -209,6 +219,14 @@ class WordPressSyncController extends Controller
             $subtotal += (float) ($item['subtotal'] ?? $item['total'] ?? 0);
         }
 
+        $webhookMeta = collect($data['meta_data'] ?? [])->keyBy('key');
+        $platform = $webhookMeta->get('_wc_order_attribution_utm_source')['value']
+            ?? $webhookMeta->get('_wc_order_attribution_source_type')['value']
+            ?? null;
+        if ($platform) {
+            $platform = strtolower($platform);
+        }
+
         $orderData = [
             'shipping_name'     => trim(($billing['first_name'] ?? '') . ' ' . ($billing['last_name'] ?? '')),
             'shipping_phone'    => $phone,
@@ -225,6 +243,7 @@ class WordPressSyncController extends Controller
             'source'            => 'woocommerce',
             'source_order_id'   => $sourceOrderId,
             'source_website'    => $webhookSource,
+            'platform'          => $platform,
             'user_ip'           => $data['customer_ip_address'] ?? '',
             'reference_no'      => (string) ($data['number'] ?? $sourceOrderId),
             'notes'             => $data['customer_note'] ?? '',
@@ -274,14 +293,21 @@ class WordPressSyncController extends Controller
             );
         }
 
-        // Update site stats if we can match the source
+        // Match site for tenant_id and stats
+        $matchedSite = null;
         if ($webhookSource) {
             $host = parse_url($webhookSource, PHP_URL_HOST);
-            $site = WordPressSite::where('site_url', 'like', "%{$host}%")->first();
-            if ($site) {
-                $site->increment('total_synced');
-                $site->update(['last_sync_at' => now()]);
-            }
+            $matchedSite = WordPressSite::where('site_url', 'like', "%{$host}%")->first();
+        }
+
+        // Assign tenant_id from matched site if order is new
+        if (!$existing && $matchedSite?->tenant_id) {
+            $order->update(['tenant_id' => $matchedSite->tenant_id]);
+        }
+
+        if ($matchedSite) {
+            $matchedSite->increment('total_synced');
+            $matchedSite->update(['last_sync_at' => now()]);
         }
 
         \Log::info('WooCommerce webhook order processed', [

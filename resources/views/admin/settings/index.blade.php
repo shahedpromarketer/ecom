@@ -34,7 +34,7 @@ $activeTab = request('tab', 'general');
         <nav class="bg-white dark:bg-gray-800 rounded-2xl border border-border dark:border-gray-700 shadow-sm overflow-hidden">
             @foreach($tabs as $key => $tab)
             <a href="{{ request()->fullUrlWithQuery(['tab' => $key]) }}"
-               class="flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors border-b border-border dark:border-gray-700 last:border-0 {{ $activeTab === $key ? 'bg-accent text-white' : 'text-textsecondary dark:text-gray-400 hover:text-textprimary dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700' }}">
+               class="flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors border-b border-border dark:border-gray-700 last:border-0 {{ $activeTab === $key ? 'bg-accent text-black' : 'text-textsecondary dark:text-gray-400 hover:text-textprimary dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700' }}">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
                     <path stroke-linecap="round" stroke-linejoin="round" d="{{ $tab['icon'] }}"/>
                 </svg>
@@ -150,7 +150,7 @@ $activeTab = request('tab', 'general');
                             <img src="{{ asset($settings['site_logo']) }}" alt="Logo" class="h-12 mb-2 rounded-xl">
                         @endif
                         <input type="file" name="site_logo" accept="image/*"
-                               class="w-full text-sm text-textsecondary dark:text-gray-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-accent file:text-white hover:file:bg-yellow-500">
+                               class="w-full text-sm text-textsecondary dark:text-gray-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-accent file:text-black hover:file:bg-yellow-500">
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-textsecondary dark:text-gray-400 mb-1.5">Favicon</label>
@@ -158,7 +158,7 @@ $activeTab = request('tab', 'general');
                             <img src="{{ asset($settings['favicon']) }}" alt="Favicon" class="h-8 mb-2 rounded-xl">
                         @endif
                         <input type="file" name="favicon" accept="image/*"
-                               class="w-full text-sm text-textsecondary dark:text-gray-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-accent file:text-white hover:file:bg-yellow-500">
+                               class="w-full text-sm text-textsecondary dark:text-gray-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-accent file:text-black hover:file:bg-yellow-500">
                     </div>
                 </div>
 
@@ -185,7 +185,7 @@ $activeTab = request('tab', 'general');
 
                 <div class="pt-2">
                     <button type="submit"
-                            class="px-6 py-2.5 font-semibold bg-accent hover:bg-yellow-500 text-white rounded-xl transition-colors">
+                            class="px-6 py-2.5 font-semibold bg-accent hover:bg-yellow-500 text-black rounded-xl transition-colors">
                         Save {{ $tabs[$activeTab]['label'] }} Settings
                     </button>
                 </div>

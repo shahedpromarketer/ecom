@@ -14,14 +14,17 @@ class WordPressSite extends Model
         'type', 'consumer_key', 'consumer_secret',
         'mobile_number', 'invoice_title', 'invoice_address', 'logo',
         'last_sync_at', 'last_product_sync_at', 'last_order_sync_at',
-        'total_synced', 'total_products_synced',
+        'total_synced', 'total_products_synced', 'tenant_id',
+        'plugin_connected', 'plugin_connected_at', 'plugin_version',
     ];
 
     protected $casts = [
         'is_active'            => 'boolean',
+        'plugin_connected'     => 'boolean',
         'last_sync_at'         => 'datetime',
         'last_product_sync_at' => 'datetime',
         'last_order_sync_at'   => 'datetime',
+        'plugin_connected_at'  => 'datetime',
     ];
 
     public function logs()

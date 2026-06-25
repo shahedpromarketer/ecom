@@ -7,13 +7,28 @@ use App\Models\Invoice;
 use App\Models\InvoiceTemplate;
 use App\Models\Order;
 use App\Models\Setting;
+use App\Models\Tenant;
 use Illuminate\Http\Request;
 
 class InvoiceController extends Controller
 {
+    private function activeTemplate(): ?InvoiceTemplate
+    {
+        $user = auth()->user();
+        if ($user->is_super_admin) {
+            return InvoiceTemplate::where('is_active', true)->first();
+        }
+        $tenant    = Tenant::find($user->tenant_id);
+        $activeId  = $tenant?->settings['active_invoice_template_id'] ?? null;
+        return $activeId ? InvoiceTemplate::find($activeId) : InvoiceTemplate::where('is_active', true)->first();
+    }
+
     public function index(Request $request)
     {
         $query = Invoice::with('order')->latest();
+        if (!auth()->user()->is_super_admin) {
+            $query->where('tenant_id', auth()->user()->tenant_id);
+        }
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -56,6 +71,7 @@ class InvoiceController extends Controller
                 'shipping'       => $order->shipping_charge,
                 'total'          => $order->total,
                 'status'         => 'draft',
+                'tenant_id'      => auth()->user()->tenant_id,
             ]);
         }
 
@@ -75,6 +91,7 @@ class InvoiceController extends Controller
                 'shipping'       => $order->shipping_charge,
                 'total'          => $order->total,
                 'status'         => 'draft',
+                'tenant_id'      => auth()->user()->tenant_id,
             ]);
         }
 
@@ -93,7 +110,7 @@ class InvoiceController extends Controller
         $invoice->load('order.items.product', 'order.items.variant');
         $order    = $invoice->order;
         $settings = Setting::pluck('value', 'key')->toArray();
-        $active   = InvoiceTemplate::where('is_active', true)->first();
+        $active   = $this->activeTemplate();
         $view     = $active ? 'admin.invoices.templates.' . $active->size . '-' . $active->style
                             : 'admin.invoices.templates.medium-standard';
         return view($view, compact('order', 'settings', 'invoice'));
@@ -105,13 +122,16 @@ class InvoiceController extends Controller
         $order    = Order::with(['items.product', 'items.variant'])->whereHas('items')->latest()->firstOrFail();
         $settings = Setting::pluck('value', 'key')->toArray();
         $invoice  = Invoice::where('order_id', $order->id)->first();
+        $preview  = true;
         $view     = 'admin.invoices.templates.' . $template->size . '-' . $template->style;
-        return view($view, compact('order', 'settings', 'invoice', 'template'));
+        return view($view, compact('order', 'settings', 'invoice', 'template', 'preview'));
     }
 
     public function downloadCsv(Request $request)
     {
-        $invoices = Invoice::with('order')->latest()->get()->map(fn($i) => [
+        $csvQ = Invoice::with('order')->latest();
+        if (!auth()->user()->is_super_admin) { $csvQ->where('tenant_id', auth()->user()->tenant_id); }
+        $invoices = $csvQ->get()->map(fn($i) => [
             'Invoice #'    => $i->invoice_number,
             'Order #'      => $i->order?->order_number,
             'Customer'     => $i->order?->shipping_name,
@@ -150,7 +170,9 @@ class InvoiceController extends Controller
             'status' => 'required|in:draft,sent,paid,cancelled',
         ]);
 
-        Invoice::whereIn('id', $request->ids)->update(['status' => $request->status]);
+        $bulkQ = Invoice::whereIn('id', $request->ids);
+        if (!auth()->user()->is_super_admin) { $bulkQ->where('tenant_id', auth()->user()->tenant_id); }
+        $bulkQ->update(['status' => $request->status]);
 
         return back()->with('success', count($request->ids) . ' invoices updated.');
     }

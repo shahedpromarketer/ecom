@@ -18,7 +18,7 @@
       class="flex flex-wrap items-center gap-3 mb-6">
     @foreach(['today' => 'Today', '7' => 'Last 7 Days', '30' => 'Last 30 Days', '90' => 'Last 90 Days'] as $val => $label)
     <a href="{{ request()->fullUrlWithQuery(['range' => $val]) }}"
-       class="px-3 py-1.5 text-xs font-medium rounded-xl transition-colors {{ $range == $val ? 'bg-accent text-white' : 'border border-border dark:border-gray-600 text-textsecondary dark:text-gray-400 hover:text-textprimary dark:hover:text-gray-200' }}">
+       class="px-3 py-1.5 text-xs font-medium rounded-xl transition-colors {{ $range == $val ? 'bg-accent text-black' : 'border border-border dark:border-gray-600 text-textsecondary dark:text-gray-400 hover:text-textprimary dark:hover:text-gray-200' }}">
         {{ $label }}
     </a>
     @endforeach

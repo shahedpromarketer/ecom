@@ -7,6 +7,7 @@ class OrderReturn extends Model {
     protected $fillable = [
         'order_id', 'reason', 'status', 'refund_amount', 'refund_method',
         'admin_note', 'requested_at', 'resolved_at', 'resolved_by',
+        'tenant_id',
     ];
     protected $casts = [
         'refund_amount' => 'decimal:2',
@@ -15,4 +16,9 @@ class OrderReturn extends Model {
     ];
     public function order() { return $this->belongsTo(Order::class); }
     public function resolvedBy() { return $this->belongsTo(User::class, 'resolved_by'); }
+
+    public function scopeForTenant($query)
+    {
+        return $query->where('tenant_id', auth()->user()?->tenant_id);
+    }
 }

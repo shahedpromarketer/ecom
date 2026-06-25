@@ -10,10 +10,20 @@ use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
+    private function tenantUserCount(): int
+    {
+        return User::where('tenant_id', auth()->user()->tenant_id)
+            ->where('is_super_admin', false)
+            ->count();
+    }
+
     public function index(Request $request)
     {
         $query = User::withCount('orders')
             ->withSum('orders', 'total');
+        if (!auth()->user()->is_super_admin) {
+            $query->where('tenant_id', auth()->user()->tenant_id);
+        }
 
         if ($request->filled('search')) {
             $s = $request->search;
@@ -35,16 +45,28 @@ class UserController extends Controller
         }
 
         $users  = $query->latest()->paginate(20)->withQueryString();
-        $total  = User::count();
-        $banned = User::where('is_banned', true)->count();
-        $newThisMonth = User::whereMonth('created_at', now()->month)
+        $userStatBase = auth()->user()->is_super_admin ? User::query() : User::where('tenant_id', auth()->user()->tenant_id);
+        $total  = (clone $userStatBase)->count();
+        $banned = (clone $userStatBase)->where('is_banned', true)->count();
+        $newThisMonth = (clone $userStatBase)->whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year)->count();
 
-        return view('admin.users.index', compact('users', 'total', 'banned', 'newThisMonth'));
+        $tenant   = auth()->user()->is_super_admin ? null : auth()->user()->tenant;
+        $maxUsers = $tenant?->max_users ?? null;
+
+        return view('admin.users.index', compact('users', 'total', 'banned', 'newThisMonth', 'maxUsers'));
+    }
+
+    private function assertSameTenant(User $user): void
+    {
+        if (!auth()->user()->is_super_admin && $user->tenant_id !== auth()->user()->tenant_id) {
+            abort(403);
+        }
     }
 
     public function show(User $user)
     {
+        $this->assertSameTenant($user);
         $user->loadCount('orders')->load('orders.items');
         $totalSpent = $user->orders->sum('total');
         return view('admin.users.show', compact('user', 'totalSpent'));
@@ -52,8 +74,17 @@ class UserController extends Controller
 
     public function create()
     {
+        $tenant   = auth()->user()->tenant;
+        $maxUsers = $tenant?->max_users ?? null;
+        $current  = $this->tenantUserCount();
+
+        if ($maxUsers && $current >= $maxUsers) {
+            return redirect()->route('admin.users.index')
+                ->with('error', "User limit reached ({$current}/{$maxUsers}). Upgrade your plan to add more users.");
+        }
+
         $roles = Role::orderBy('display_name')->get();
-        return view('admin.users.create', compact('roles'));
+        return view('admin.users.create', compact('roles', 'maxUsers', 'current'));
     }
 
     public function store(Request $request)
@@ -66,12 +97,20 @@ class UserController extends Controller
             'role_id'  => 'nullable|exists:roles,id',
         ]);
 
+        $tenant   = auth()->user()->tenant;
+        $maxUsers = $tenant?->max_users ?? null;
+
+        if ($maxUsers && $this->tenantUserCount() >= $maxUsers) {
+            return back()->with('error', "User limit reached. Your plan allows a maximum of {$maxUsers} users.");
+        }
+
         User::create([
-            'name'     => $request->name,
-            'email'    => $request->email,
-            'phone'    => $request->phone,
-            'password' => Hash::make($request->password),
-            'role_id'  => $request->role_id,
+            'name'      => $request->name,
+            'email'     => $request->email,
+            'phone'     => $request->phone,
+            'password'  => Hash::make($request->password),
+            'role_id'   => $request->role_id,
+            'tenant_id' => auth()->user()->tenant_id,
         ]);
 
         return redirect()->route('admin.users.index')->with('success', 'User created successfully.');
@@ -79,12 +118,15 @@ class UserController extends Controller
 
     public function edit(User $user)
     {
+        $this->assertSameTenant($user);
         $roles = Role::orderBy('display_name')->get();
         return view('admin.users.edit', compact('user', 'roles'));
     }
 
     public function update(Request $request, User $user)
     {
+        $this->assertSameTenant($user);
+
         $request->validate([
             'name'    => 'required|string|max:255',
             'email'   => 'required|email|unique:users,email,' . $user->id,
@@ -99,6 +141,7 @@ class UserController extends Controller
 
     public function ban(Request $request, User $user)
     {
+        $this->assertSameTenant($user);
         $request->validate(['reason' => 'nullable|string|max:500']);
 
         $user->update([
@@ -111,6 +154,7 @@ class UserController extends Controller
 
     public function unban(User $user)
     {
+        $this->assertSameTenant($user);
         $user->update(['is_banned' => false, 'ban_reason' => null]);
 
         return response()->json(['success' => true, 'message' => 'User unbanned.']);
@@ -118,6 +162,8 @@ class UserController extends Controller
 
     public function destroy(User $user)
     {
+        $this->assertSameTenant($user);
+
         if ($user->orders()->exists()) {
             return back()->with('error', 'Cannot delete user with existing orders.');
         }

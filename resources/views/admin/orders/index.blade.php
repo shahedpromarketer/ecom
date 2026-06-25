@@ -1,13 +1,8 @@
 @extends('layouts.admin')
 
-@section('title', request('status') ? ucwords(str_replace('_', ' ', request('status'))) . ' Orders' : (request('cod_changed') ? 'COD Changed Orders' : 'All Orders'))
+@section('title', 'Ecom Pilot')
 
-@section('page-title')
-@if(request('status')){{ ucwords(str_replace('_', ' ', request('status'))) }} Orders
-@elseif(request('cod_changed'))COD Changed Orders
-@else Orders
-@endif
-@endsection
+@section('page-title')@endsection
 
 
 @section('content')
@@ -159,7 +154,6 @@
                                 'cancelled'                => 'Cancelled',
                                 'pending_return'           => 'Pending Return',
                                 'returned'                 => 'Returned',
-                                'failed'                   => 'Failed',
                                 'damage'                   => 'Damage',
                                 'hand_delivery'            => 'Hand Delivery',
                                 'hand_delivery_completed'  => 'Hand Delivery Completed',
@@ -416,60 +410,61 @@
     {{-- Table Header Bar --}}
     <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
 
-        {{-- Row 1: Title + ID-only search --}}
-        <div class="flex items-center justify-between gap-4 mb-2">
-            <h3 class="text-sm font-bold text-gray-900 dark:text-white">Order List</h3>
-            <form method="GET" action="{{ route('admin.orders.index') }}" class="flex items-center gap-1 flex-shrink-0">
-                @foreach(request()->except(['id_search','search','page']) as $key => $val)
-                    <input type="hidden" name="{{ $key }}" value="{{ $val }}">
-                @endforeach
-                <span class="inline-flex items-center px-2 py-1.5 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs font-bold rounded-l-lg border border-gray-300 dark:border-gray-500 border-r-0 leading-none">ID</span>
-                <input type="text" name="id_search" value="{{ request('id_search') }}"
-                    placeholder="Search by Only ID"
-                    class="w-40 px-3 py-1.5 text-xs rounded-r-lg border border-gray-300 dark:border-gray-500
-                           bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400
-                           focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
-            </form>
-        </div>
-
-        {{-- Row 2: Show entries (left) + Search (right) --}}
+        {{-- Single Row: Title + Show entries (left) | Both searches (right) --}}
         <div class="flex items-center justify-between gap-4">
-            <div class="flex items-center gap-2 flex-shrink-0">
-                <span class="text-xs text-gray-500 dark:text-gray-400">Show</span>
-                <div class="relative">
+
+            {{-- Left: Title + Show entries --}}
+            <div class="flex items-center gap-4 min-w-0">
+                <h3 class="text-sm font-bold text-gray-900 dark:text-white flex-shrink-0">Order List</h3>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <span class="text-xs text-gray-500 dark:text-gray-400">Show</span>
                     <select onchange="window.location.href='?per_page='+this.value+'&{{ http_build_query(request()->except('per_page', 'page')) }}'"
-                        class="appearance-none pl-2 pr-7 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-500
-                               bg-white dark:bg-gray-700 text-gray-900 dark:text-white cursor-pointer">
+                        class="py-1.5 px-2 pr-6 text-xs rounded-lg border border-gray-300 dark:border-gray-500
+                               bg-white dark:bg-gray-700 text-gray-900 dark:text-white cursor-pointer focus:outline-none min-w-[60px]">
                         @foreach([10,25,50,100,150,200,250,300,500,1000,1500,2000] as $n)
                         <option value="{{ $n }}" {{ request('per_page', 10) == $n ? 'selected' : '' }}>{{ $n }}</option>
                         @endforeach
                     </select>
-                    <svg class="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none"
-                         fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
-                    </svg>
+                    <span class="text-xs text-gray-500 dark:text-gray-400">entries</span>
                 </div>
-                <span class="text-xs text-gray-500 dark:text-gray-400">entries</span>
             </div>
-            <form method="GET" action="{{ route('admin.orders.index') }}" class="flex items-center gap-2">
-                @foreach(request()->except(['search','id_search','page']) as $key => $val)
-                    <input type="hidden" name="{{ $key }}" value="{{ $val }}">
-                @endforeach
-                <label class="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">Search:</label>
-                <input type="text" name="search" value="{{ request('search') }}"
-                    placeholder="Order# or phone..."
-                    class="w-44 px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-500
-                           bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400
-                           focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
-            </form>
+
+            {{-- Right: ID search + General search --}}
+            <div class="flex items-center gap-3 flex-shrink-0">
+
+                {{-- ID-only search --}}
+                {{-- ID search --}}
+                <div class="flex items-center">
+                    <span class="inline-flex items-center h-[30px] px-2 bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-200 text-xs font-bold rounded-l-lg border border-gray-300 dark:border-gray-500 border-r-0">ID</span>
+                    <input type="text" id="id-search-input" value="{{ request('id_search') }}"
+                        placeholder="Search by ID"
+                        class="h-[30px] w-32 px-3 text-xs rounded-r-lg border border-gray-300 dark:border-gray-500
+                               bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400
+                               focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
+                </div>
+
+                {{-- General search --}}
+                <div class="flex items-center gap-1.5">
+                    <label class="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">Search:</label>
+                    <input type="text" id="search-input" value="{{ request('search') }}"
+                        placeholder="Order# or phone..."
+                        class="h-[30px] w-44 px-3 text-xs rounded-lg border border-gray-300 dark:border-gray-500
+                               bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400
+                               focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
+                </div>
+
+            </div>
         </div>
 
         {{-- Row 3: Showing X to Y of Z --}}
-        <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+        <div class="mt-2 text-xs text-gray-500 dark:text-gray-400" id="orders-count-text">
             Showing {{ $orders->firstItem() ?? 0 }} to {{ $orders->lastItem() ?? 0 }} of {{ number_format($orders->total()) }} entries
         </div>
 
     </div>
+
+    {{-- Table + Pagination (replaced on real-time search) --}}
+    <div id="orders-table-container">
 
     {{-- Table --}}
     <div class="overflow-x-auto w-full">
@@ -483,10 +478,9 @@
             <th class="px-3 py-3 text-left border-r border-gray-200 dark:border-gray-700 w-[200px]">Name & Number</th>
             <th class="px-3 py-3 text-left border-r border-gray-200 dark:border-gray-700 w-[160px]">Date</th>
             <th class="px-3 py-3 text-left border-r border-gray-200 dark:border-gray-700 w-[180px]">Address</th>
-            <th class="px-3 py-3 border-r border-gray-200 dark:border-gray-700 w-[40px]"></th>
             <th class="px-3 py-3 text-left border-r border-gray-200 dark:border-gray-700 w-[150px]">Courier</th>
             <th class="px-3 py-3 text-left border-r border-gray-200 dark:border-gray-700 w-[140px]">Summary</th>
-            <th class="px-3 py-3 text-left w-[80px]">Employee</th>
+            <th class="px-3 py-3 text-left border-r border-gray-200 dark:border-gray-700 w-[80px]">Employee</th>
         </tr>
         </thead>
         <tbody>
@@ -500,16 +494,16 @@
             $isDuplicate = ($phoneCounts[$phone] ?? 1) > 1 && in_array($phone, $seenPhones);
             $seenPhones[] = $phone;
         @endphp
-        <tr class="border-b dark:border-gray-800 transition {{ $isDuplicate ? 'bg-yellow-100 dark:bg-yellow-900/25 hover:bg-yellow-200 dark:hover:bg-yellow-900/35' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50' }}"
+        <tr class="border-b dark:border-gray-700 transition {{ $isDuplicate ? 'bg-yellow-100 dark:bg-yellow-900/25 hover:bg-yellow-200 dark:hover:bg-yellow-900/35' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50' }}"
             data-order-id="{{ $order->id }}"
             data-total="{{ $order->total ?? 0 }}"
             data-paid="{{ $order->paid_amount ?? 0 }}"
             data-due="{{ ($order->total ?? 0) - ($order->paid_amount ?? 0) }}">
 
             {{-- Status --}}
-            <td class="px-3 py-3 align-top w-[100px] border-r border-gray-100 dark:border-gray-800">
-                <a href="{{ route('admin.orders.show', $order->id) }}"
-                    class="inline-block px-2 py-1 rounded-lg text-xs font-semibold
+            <td class="px-3 py-3 align-top w-[100px] border-r border-gray-100 dark:border-gray-700">
+                <button type="button" onclick="openQuickView({{ $order->id }})"
+                    class="inline-block px-2 py-1 rounded-lg text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity
                     @if($order->status == 'pending') bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400
                     @elseif($order->status == 'confirmed') bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400
                     @elseif($order->status == 'delivered' || $order->status == 'completed') bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400
@@ -519,12 +513,12 @@
                     @else bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300
                     @endif">
                     {{ ucfirst($order->status) }}
-                </a>
+                </button>
                 <div class="text-xs text-gray-400 mt-1">sl: {{ $sl + 1 }}</div>
             </td>
 
             {{-- Checkbox --}}
-            <td class="px-3 py-3 align-top text-center w-[40px] border-r border-gray-100 dark:border-gray-800">
+            <td class="px-3 py-3 align-top text-center w-[40px] border-r border-gray-100 dark:border-gray-700">
                 <input type="checkbox" name="selected_orders[]" value="{{ $order->id }}"
                     class="order-checkbox rounded"
                     x-on:change="
@@ -536,10 +530,33 @@
                         }
                         updateBulkSummary(selectedOrders);
                     ">
+                @php
+                $copyDataArr = [
+                    'id'       => $order->id,
+                    'name'     => $order->shipping_name ?? '',
+                    'phone'    => $order->shipping_phone ?? '',
+                    'address'  => ($order->shipping_address ?? '').($order->shipping_district ? ', '.$order->shipping_district : ''),
+                    'items'    => $order->items->map(fn($i) => [
+                        'qty'   => $i->qty,
+                        'name'  => $i->product_name ?? ($i->product->name ?? 'Product'),
+                        'price' => floatval($i->total ?? 0),
+                    ])->values()->toArray(),
+                    'shipping' => floatval($order->shipping_charge ?? 0),
+                    'total'    => floatval($order->total ?? 0),
+                    'paid'     => floatval($order->paid_amount ?? 0),
+                    'due'      => floatval(($order->total ?? 0) - ($order->paid_amount ?? 0)),
+                ];
+                @endphp
+                <button type="button"
+                    data-order="{{ json_encode($copyDataArr, JSON_UNESCAPED_UNICODE) }}"
+                    onclick="copyOrderDetails(this)"
+                    class="mt-1 w-6 h-6 flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-500 hover:bg-blue-100 hover:text-blue-600 dark:hover:bg-blue-900/30 dark:hover:text-blue-400 rounded-md mx-auto transition" title="Copy order details">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                </button>
             </td>
 
             {{-- Notes --}}
-            <td class="px-3 py-3 align-top text-center w-[60px] border-r border-gray-100 dark:border-gray-800">
+            <td class="px-3 py-3 align-top text-center w-[60px] border-r border-gray-100 dark:border-gray-700">
                 {{-- Add note button --}}
                 <button type="button" onclick="quickAddNote({{ $order->id }})"
                     class="w-5 h-5 flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 text-blue-500 rounded-md hover:bg-blue-200 mx-auto"
@@ -547,18 +564,17 @@
                     <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 </button>
                 {{-- Note view tooltip icon (only if notes exist) --}}
-                @if($order->orderNotes && $order->orderNotes->count() > 0)
-                @php $lastNote = $order->orderNotes->sortByDesc('created_at')->first(); @endphp
+                @if($order->order_notes_count > 0)
                 <button type="button"
                     class="note-tip-btn mt-0.5 w-5 h-5 flex items-center justify-center bg-amber-100 dark:bg-amber-900/30 text-amber-600 rounded-md hover:bg-amber-200 mx-auto"
-                    data-count="{{ $order->orderNotes->count() }}"
-                    data-text="{{ e(Str::limit($lastNote->note_text ?? '', 220)) }}"
-                    data-date="{{ $lastNote->created_at->format('d/m/Y h:ia') }}">
+                    data-count="{{ $order->order_notes_count }}"
+                    data-text="{{ e(Str::limit($order->latestOrderNote?->note_text ?? '', 220)) }}"
+                    data-date="{{ $order->latestOrderNote?->created_at?->format('d/m/Y h:ia') ?? '' }}">
                     <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                     </svg>
                 </button>
-                <span class="note-count-span text-[10px] text-amber-500 font-semibold leading-none">{{ $order->orderNotes->count() }}</span>
+                <span class="note-count-span text-[10px] text-amber-500 font-semibold leading-none">{{ $order->order_notes_count }}</span>
                 @endif
                 @if($isDuplicate)
                 <span class="inline-block mt-1 px-1 py-0.5 bg-yellow-400 text-yellow-900 text-[9px] font-bold rounded leading-none">DUP</span>
@@ -566,14 +582,18 @@
             </td>
 
             {{-- ID & Products --}}
-            <td class="px-3 py-3 align-top w-[200px] border-r border-gray-100 dark:border-gray-800">
-                <a href="{{ route('admin.orders.show', $order->id) }}" class="text-blue-600 dark:text-blue-400 font-bold text-sm hover:underline">
+            <td class="px-3 py-3 align-top w-[200px] border-r border-gray-100 dark:border-gray-700">
+                <button type="button" onclick="openQuickView({{ $order->id }})" class="text-blue-600 dark:text-blue-400 font-bold text-sm hover:underline">
                     #{{ $order->id }}
-                </a>
+                </button>
                 @foreach($order->items->take(2) as $item)
                 <div class="flex items-center gap-2 mt-1">
                     @if($item->product && $item->product->images && $item->product->images->first())
-                    <img src="{{ asset('storage/'.$item->product->images->first()->image_path) }}" class="w-8 h-8 object-cover rounded-lg border dark:border-gray-700" alt="">
+                    @php $imgPath = $item->product->images->first()->image_path; @endphp
+                    <img src="{{ str_starts_with($imgPath, 'http') ? $imgPath : asset('storage/'.$imgPath) }}"
+                         class="w-8 h-8 object-cover rounded-lg border dark:border-gray-700" alt=""
+                         onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                    <div class="w-8 h-8 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-gray-300 text-xs" style="display:none">?</div>
                     @else
                     <div class="w-8 h-8 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-gray-300 text-xs">?</div>
                     @endif
@@ -590,9 +610,9 @@
             </td>
 
             {{-- Name & Number --}}
-            <td class="px-3 py-3 align-top w-[200px] border-r border-gray-100 dark:border-gray-800">
+            <td class="px-3 py-3 align-top w-[200px] border-r border-gray-100 dark:border-gray-700">
                 <div class="flex items-center gap-1 mb-1">
-                    <a href="{{ route('admin.orders.show', $order->id) }}" class="font-semibold text-gray-800 dark:text-white text-sm hover:text-[#1B2A4A] dark:hover:text-[#F59E0B] hover:underline">{{ $order->shipping_name ?? 'N/A' }}</a>
+                    <button type="button" onclick="openQuickView({{ $order->id }})" class="font-semibold text-gray-800 dark:text-white text-sm hover:text-[#1B2A4A] dark:hover:text-[#F59E0B] hover:underline">{{ $order->shipping_name ?? 'N/A' }}</button>
                 </div>
                 <div class="flex items-center gap-1">
                     <span class="bg-gray-900 dark:bg-gray-700 text-white text-xs px-2 py-0.5 rounded-lg font-mono">{{ $order->shipping_phone ?? 'N/A' }}</span>
@@ -604,10 +624,26 @@
                     </a>
                 </div>
                 <div class="text-xs text-gray-400 mt-1">Source: {{ $order->source ?? 'Direct' }}</div>
+                @if($order->platform)
+                @php
+                    $plMap = [
+                        'facebook'  => 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+                        'google'    => 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+                        'tiktok'    => 'bg-gray-800 text-white dark:bg-gray-700',
+                        'instagram' => 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+                        'youtube'   => 'bg-red-200 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+                        'direct'    => 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+                        'organic'   => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+                    ];
+                    $plLabel = ucfirst($order->platform);
+                    $plClass = $plMap[strtolower($order->platform)] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
+                @endphp
+                <span class="inline-block mt-1 px-1.5 py-0.5 rounded text-[10px] font-semibold {{ $plClass }}">{{ $plLabel }}</span>
+                @endif
             </td>
 
             {{-- Date --}}
-            <td class="px-3 py-3 align-top text-xs text-gray-500 dark:text-gray-400 w-[160px] border-r border-gray-100 dark:border-gray-800">
+            <td class="px-3 py-3 align-top text-xs text-gray-500 dark:text-gray-400 w-[160px] border-r border-gray-100 dark:border-gray-700">
                 <div>C:{{ $order->created_at->format('d/m/Y - h:ia') }}</div>
                 <div>U:{{ $order->updated_at->format('d/m/Y - h:ia') }}</div>
                 @if($order->assignedTo)
@@ -616,33 +652,19 @@
             </td>
 
             {{-- Address --}}
-            <td class="px-3 py-3 align-top w-[180px] border-r border-gray-100 dark:border-gray-800">
+            <td class="px-3 py-3 align-top w-[180px] border-r border-gray-100 dark:border-gray-700">
                 <div class="flex items-start gap-1">
                     <span class="text-xs text-gray-700 dark:text-gray-300 break-words">{{ $order->shipping_address ?? 'N/A' }}{{ $order->shipping_district ? ', '.$order->shipping_district : '' }}</span>
                 </div>
             </td>
 
-            {{-- Copy --}}
-            <td class="px-2 py-3 align-top text-center w-[40px] border-r border-gray-100 dark:border-gray-800">
-                <button type="button" onclick="copyOrderDetails(
-                    '{{ addslashes($order->shipping_name ?? '') }}',
-                    '{{ $order->shipping_phone ?? '' }}',
-                    '{{ addslashes(($order->shipping_address ?? '').($order->shipping_district ? ', '.$order->shipping_district : '')) }}',
-                    '{{ $order->id }}',
-                    '{{ number_format($order->total ?? 0, 0) }}',
-                    '{{ $order->payment_method ?? 'COD' }}'
-                )" class="w-6 h-6 flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md" title="Copy details">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                </button>
-            </td>
-
             {{-- Courier --}}
-            <td class="px-3 py-3 align-top text-xs w-[150px] border-r border-gray-100 dark:border-gray-800">
+            <td class="px-3 py-3 align-top text-xs w-[150px] border-r border-gray-100 dark:border-gray-700">
                 @php
-                    $courierName = $order->shipment->courier_name ?? 'New';
-                    $customerTotal = \App\Models\Order::where('shipping_phone', $order->shipping_phone)->count();
-                    $customerSuccess = \App\Models\Order::where('shipping_phone', $order->shipping_phone)->whereIn('status',['delivered','completed'])->count();
-                    $customerFailed = \App\Models\Order::where('shipping_phone', $order->shipping_phone)->whereIn('status',['cancelled','failed','returned'])->count();
+                    $courierName     = $order->shipment->courier_name ?? 'New';
+                    $customerTotal   = $phoneTotals[$order->shipping_phone]  ?? 0;
+                    $customerSuccess = $phoneSuccess[$order->shipping_phone]  ?? 0;
+                    $customerFailed  = $phoneFailed[$order->shipping_phone]   ?? 0;
                     $percent = $customerTotal > 0 ? round(($customerSuccess/$customerTotal)*100) : 0;
                     $shipmentStatusColors = [
                         'submitted' => 'bg-blue-500',
@@ -692,7 +714,7 @@
             </td>
 
             {{-- Summary --}}
-            <td class="px-3 py-3 align-top text-xs w-[140px] border-r border-gray-100 dark:border-gray-800">
+            <td class="px-3 py-3 align-top text-xs w-[140px] border-r border-gray-100 dark:border-gray-700">
                 <div class="text-gray-700 dark:text-gray-300">Total: <span class="font-bold">৳{{ number_format($order->total ?? 0, 0) }}</span></div>
                 <div class="text-green-600">Less: <span class="font-bold">৳{{ number_format($order->discount ?? 0, 0) }}</span></div>
                 <div class="text-blue-600">Paid: <span class="font-bold">৳{{ number_format($order->paid_amount ?? 0, 0) }}</span></div>
@@ -700,13 +722,14 @@
             </td>
 
             {{-- Employee --}}
-            <td class="px-3 py-3 align-top text-xs text-gray-600 dark:text-gray-400 w-[80px]">
+            <td class="px-3 py-3 align-top text-xs text-gray-600 dark:text-gray-400 w-[80px] border-r border-gray-100 dark:border-gray-700">
                 {{ $order->assignedTo->name ?? 'N/A' }}
             </td>
+
         </tr>
         @empty
         <tr>
-            <td colspan="11" class="px-6 py-16 text-center">
+            <td colspan="9" class="px-6 py-16 text-center">
                 <div class="flex flex-col items-center gap-3">
                     <div class="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
                         <svg class="w-7 h-7 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -729,6 +752,8 @@
     <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex justify-center">
         {{ $orders->links('pagination::tailwind') }}
     </div>
+
+    </div>{{-- end #orders-table-container --}}
 
 </div>
 
@@ -964,6 +989,411 @@
     </div>
 </div>
 
+{{-- ══════════════════════════════════════════════════════════════ --}}
+{{-- Quick View Drawer                                           --}}
+{{-- ══════════════════════════════════════════════════════════════ --}}
+<style>
+/* Mobile: bottom sheet */
+@media (max-width: 1023px) {
+    #quickViewModal  { align-items: flex-end !important; padding: 0 !important; }
+    #quickViewPanel  { border-radius: 16px 16px 0 0 !important; max-height: 92dvh !important; max-width: 100% !important; }
+    #qv-content      { overflow-y: auto !important; flex-direction: column !important; }
+    #qv-content > div { flex: none !important; width: 100% !important; overflow-y: visible !important; max-height: none !important; }
+    #qv-content > div:last-child { border-left: none !important; border-top: 1px solid #e5e7eb; }
+    .dark #qv-content > div:last-child { border-top-color: #374151; }
+}
+/* Tablet: center modal, slightly smaller */
+@media (min-width: 640px) and (max-width: 1023px) {
+    #quickViewModal { align-items: center !important; padding: 12px !important; }
+    #quickViewPanel { border-radius: 16px !important; max-height: 94dvh !important; }
+}
+</style>
+
+<div id="quickViewModal" style="display:none;position:fixed;inset:0;z-index:9100;align-items:center;justify-content:center;padding:16px;" role="dialog" aria-modal="true">
+    {{-- Backdrop --}}
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,0.55);" onclick="closeQuickView()"></div>
+
+    {{-- Dialog box --}}
+    <div id="quickViewPanel"
+         style="position:relative;width:100%;max-width:1100px;max-height:92vh;background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.25);display:flex;flex-direction:column;opacity:0;transform:scale(0.95) translateY(-10px);transition:opacity 0.2s ease,transform 0.2s ease;"
+         class="dark:bg-gray-900">
+
+        {{-- Mobile drag handle --}}
+        <div id="qv-drag-handle" class="lg:hidden flex justify-center pt-2.5 pb-1 flex-shrink-0 cursor-grab active:cursor-grabbing touch-none">
+            <div class="w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></div>
+        </div>
+
+        {{-- Header --}}
+        <div class="flex items-center gap-2 px-3 py-2.5 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 bg-white dark:bg-gray-900 min-w-0">
+            {{-- Order number --}}
+            <span class="text-sm font-bold text-[#1B2A4A] dark:text-white flex-shrink-0" id="qv-order-num">#—</span>
+
+            {{-- Status select --}}
+            <select id="qv-status" onchange="qvSaveField('status', this.value)"
+                    class="min-w-0 flex-shrink text-xs font-semibold rounded-lg px-2 py-1 border border-gray-200 dark:border-gray-600
+                           bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer">
+            </select>
+
+            {{-- Saving indicators --}}
+            <span id="qv-saving-indicator" class="text-xs text-gray-400 hidden flex-shrink-0">Saving…</span>
+            <span id="qv-saved-indicator"  class="text-xs text-green-500 hidden flex-shrink-0">✓ Saved</span>
+
+            {{-- Spacer --}}
+            <div class="flex-1"></div>
+
+            {{-- Full Page: icon-only on mobile, icon+text on sm+ --}}
+            <a id="qv-full-link" href="#"
+               class="inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors flex-shrink-0 whitespace-nowrap">
+                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                <span class="hidden sm:inline">Full Page</span>
+            </a>
+
+            {{-- Close button --}}
+            <button onclick="closeQuickView()"
+                    class="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full text-gray-400
+                           hover:text-gray-600 dark:hover:text-gray-200
+                           hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        {{-- Loading --}}
+        <div id="qv-loading" style="display:none;flex:1;align-items:center;justify-content:center;" class="flex items-center justify-center">
+            <svg class="w-8 h-8 animate-spin text-primary" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+        </div>
+
+        {{-- Content --}}
+        {{-- ── CONTENT (2-column on desktop) ── --}}
+        <div id="qv-content" style="display:none;flex:1;overflow:hidden;" class="flex flex-col lg:flex-row min-h-0">
+
+            {{-- LEFT COLUMN --}}
+            <div class="flex-1 lg:flex-none lg:w-[55%] overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800 min-w-0">
+
+                {{-- Customer Info --}}
+                <div class="p-2 space-y-1.5">
+                    <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Customer Info</h4>
+                    {{-- Row 1: Phone + Alt Phone --}}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                        <div>
+                            <label class="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5 block">Phone *</label>
+                            <div class="flex items-center gap-1">
+                                <input type="text" id="qv-phone" placeholder="01XXXXXXXXX" maxlength="11"
+                                       oninput="qvDebounceSave('shipping_phone', this.value)"
+                                       class="flex-1 min-w-0 rounded-lg border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30">
+                                <a id="qv-wa-link" href="#" target="_blank" title="WhatsApp"
+                                   class="w-7 h-7 flex items-center justify-center bg-green-500 text-white rounded-lg hover:bg-green-600 flex-shrink-0">
+                                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                                </a>
+                                <a id="qv-call-link" href="#" title="Call"
+                                   class="w-7 h-7 flex items-center justify-center bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex-shrink-0">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.948V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 7V5z"/></svg>
+                                </a>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5 block">Alt Phone</label>
+                            <input type="text" id="qv-alt-phone" placeholder="Alternative number" maxlength="11"
+                                   oninput="qvDebounceSave('alt_phone', this.value)"
+                                   class="w-full rounded-lg border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30">
+                        </div>
+                    </div>
+                    {{-- Row 2: Name + Email --}}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                        <div>
+                            <label class="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5 block">Full Name *</label>
+                            <input type="text" id="qv-name" placeholder="Customer name"
+                                   oninput="qvDebounceSave('shipping_name', this.value)"
+                                   class="w-full rounded-lg border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5 block">Email</label>
+                            <input type="email" id="qv-email" placeholder="email@example.com"
+                                   oninput="qvDebounceSave('email', this.value)"
+                                   class="w-full rounded-lg border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30">
+                        </div>
+                    </div>
+                    {{-- Row 3: Address + District --}}
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+                        <div class="sm:col-span-2">
+                            <label class="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5 block">Address</label>
+                            <input type="text" id="qv-address" placeholder="Delivery address"
+                                   oninput="qvDebounceSave('shipping_address', this.value)"
+                                   class="w-full rounded-lg border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5 block">District</label>
+                            <select id="qv-district" onchange="qvSaveField('shipping_district', this.value)"
+                                    class="w-full rounded-lg border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30">
+                                <option value="">Select</option>
+                            </select>
+                        </div>
+                    </div>
+                    {{-- Customer insights row --}}
+                    <div class="flex flex-wrap items-center gap-2 pt-1 border-t border-gray-100 dark:border-gray-800">
+                        <div class="flex items-center gap-1 text-[10px]">
+                            <span class="text-gray-400">Total Orders:</span>
+                            <span id="qv-total-orders" class="font-bold text-[#1B2A4A] dark:text-white">—</span>
+                            <a id="qv-orders-link" href="#" target="_blank" class="text-accent hover:underline">View ↗</a>
+                        </div>
+                        <div class="flex items-center gap-1 text-[10px]">
+                            <span class="text-gray-400">Completed:</span>
+                            <span id="qv-completed" class="font-bold text-green-600">—</span>
+                        </div>
+                        <div class="flex items-center gap-1 text-[10px]">
+                            <span class="text-gray-400">Source:</span>
+                            <span id="qv-source" class="text-gray-700 dark:text-gray-300 font-medium">—</span>
+                        </div>
+                    </div>
+                    {{-- Tags row --}}
+                    <div class="grid grid-cols-2 gap-1.5">
+                        <div>
+                            <label class="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5 block">Order Tag</label>
+                            <select id="qv-order-tag" onchange="qvSaveField('order_tag', this.value)"
+                                    class="w-full rounded-lg border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30">
+                                <option value="">— None —</option>
+                                <option value="vip">VIP</option>
+                                <option value="regular">Regular</option>
+                                <option value="problematic">Problematic</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5 block">Customer Tag</label>
+                            <select id="qv-customer-tag" onchange="qvSaveField('customer_tag', this.value)"
+                                    class="w-full rounded-lg border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30">
+                                <option value="">— None —</option>
+                                <option value="loyal">Loyal</option>
+                                <option value="new">New</option>
+                                <option value="fraud">Fraud Risk</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Order Products --}}
+                <div class="p-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Products</h4>
+                        <button type="button" onclick="qvToggleProductSearch()"
+                                class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-[#1B2A4A] text-white text-[10px] font-semibold hover:bg-[#243a63] transition flex-shrink-0">
+                            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+                            Add Product
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto -mx-1">
+                        <table class="w-full text-xs min-w-[480px]">
+                            <thead>
+                                <tr class="bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                                    <th class="text-left px-2 py-1.5 rounded-l-lg">Product</th>
+                                    <th class="text-center px-2 py-1.5 w-20">Price</th>
+                                    <th class="text-center px-2 py-1.5 w-16">Qty</th>
+                                    <th class="text-center px-2 py-1.5 w-20">Disc.</th>
+                                    <th class="text-center px-2 py-1.5 w-20">Sub</th>
+                                    <th class="text-center px-2 py-1.5 w-8 rounded-r-lg"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="qv-items-tbody"></tbody>
+                        </table>
+                    </div>
+                    {{-- Add product search (hidden by default, toggled by button) --}}
+                    <div id="qv-add-product-wrap" style="display:none;position:relative;" class="mt-2">
+                        <input type="text" id="qv-product-search"
+                               placeholder="Product name লিখুন…"
+                               oninput="qvSearchProduct(this.value)"
+                               autocomplete="off"
+                               class="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-xs bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30">
+                        <div id="qv-product-results"
+                             style="display:none;position:absolute;z-index:200;top:100%;left:0;right:0;margin-top:4px;"
+                             class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-2xl max-h-56 overflow-y-auto">
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Courier Note + Packing Note (inline) --}}
+                <div class="p-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-xs text-gray-500 dark:text-gray-400 mb-0.5 block">Courier Note</label>
+                            <textarea id="qv-courier-note" rows="2" placeholder="Note for courier…"
+                                      oninput="qvDebounceSave('courier_note', this.value)"
+                                      class="w-full rounded-lg border border-gray-200 dark:border-gray-700 px-2 py-1.5 text-sm bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"></textarea>
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 dark:text-gray-400 mb-0.5 block">Packing Note</label>
+                            <textarea id="qv-packing-note" rows="2" placeholder="Packing instructions…"
+                                      oninput="qvDebounceSave('packing_note', this.value)"
+                                      class="w-full rounded-lg border border-gray-200 dark:border-gray-700 px-2 py-1.5 text-sm bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Notes (tabbed) --}}
+                <div class="p-3">
+                    <div class="flex items-center gap-2 mb-2">
+                        <button type="button" id="qv-tab-order" onclick="qvSwitchTab('order')"
+                                class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                            Order Notes <span id="qv-order-note-count" class="ml-1 opacity-70"></span>
+                        </button>
+                        <button type="button" id="qv-tab-customer" onclick="qvSwitchTab('customer')"
+                                class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
+                            Customer Notes <span id="qv-customer-note-count" class="ml-1 opacity-70"></span>
+                        </button>
+                    </div>
+                    <div id="qv-notes-order" class="space-y-1.5 max-h-36 overflow-y-auto mb-2"></div>
+                    <div id="qv-notes-customer" class="space-y-1.5 max-h-36 overflow-y-auto mb-2" style="display:none"></div>
+                    <div class="flex gap-2">
+                        <input type="text" id="qv-note-input" placeholder="Add a note and press Enter…"
+                               class="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 px-2 py-1.5 text-sm bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                               onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();qvAddNote();}">
+                        <button type="button" onclick="qvAddNote()"
+                                class="px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary/90 transition flex-shrink-0">Add</button>
+                    </div>
+                </div>
+
+            </div>{{-- end left --}}
+
+            {{-- RIGHT COLUMN --}}
+            <div class="lg:flex-none lg:w-[45%] flex-shrink-0 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800 border-t lg:border-t-0 lg:border-l border-gray-100 dark:border-gray-800">
+
+                {{-- Payment Summary --}}
+                <div class="p-3">
+                    <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Payment</h4>
+
+                    {{-- Subtotal --}}
+                    <div class="flex justify-between items-center py-1.5 border-b border-gray-100 dark:border-gray-800">
+                        <span class="text-xs text-gray-500 dark:text-gray-400">Subtotal</span>
+                        <span id="qv-subtotal" class="text-xs font-semibold text-gray-800 dark:text-gray-200">৳0</span>
+                    </div>
+
+                    {{-- Discount --}}
+                    <div class="flex justify-between items-center py-1.5 border-b border-gray-100 dark:border-gray-800">
+                        <label class="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">Discount</label>
+                        <div class="flex items-center gap-1">
+                            <span class="text-[10px] text-gray-400">৳</span>
+                            <input type="number" id="qv-discount" min="0" step="1"
+                                   oninput="qvCalcPayment(); qvDebounceSave('discount', this.value)"
+                                   class="w-20 text-right rounded border border-gray-200 dark:border-gray-700 px-1.5 py-0.5 text-xs bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary/40">
+                        </div>
+                    </div>
+
+                    {{-- Shipping --}}
+                    <div class="flex justify-between items-center py-1.5 border-b border-gray-100 dark:border-gray-800">
+                        <label class="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">Shipping</label>
+                        <div class="flex items-center gap-1">
+                            <span class="text-[10px] text-gray-400">৳</span>
+                            <input type="number" id="qv-shipping" min="0" step="1"
+                                   oninput="qvCalcPayment(); qvDebounceSave('shipping_charge', this.value)"
+                                   class="w-20 text-right rounded border border-gray-200 dark:border-gray-700 px-1.5 py-0.5 text-xs bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary/40">
+                        </div>
+                    </div>
+
+                    {{-- Total (highlighted) --}}
+                    <div class="flex justify-between items-center px-2 py-2 my-1.5 rounded-lg bg-[#1B2A4A]/5 dark:bg-white/5">
+                        <span class="text-sm font-bold text-[#1B2A4A] dark:text-white">Total</span>
+                        <span id="qv-total" class="text-sm font-bold text-[#1B2A4A] dark:text-white">৳0</span>
+                    </div>
+
+                    {{-- Paid --}}
+                    <div class="flex justify-between items-center py-1.5 border-b border-gray-100 dark:border-gray-800">
+                        <label class="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">Paid</label>
+                        <div class="flex items-center gap-1">
+                            <span class="text-[10px] text-gray-400">৳</span>
+                            <input type="number" id="qv-paid" min="0" step="1"
+                                   oninput="qvCalcPayment(); qvDebounceSave('paid_amount', this.value)"
+                                   class="w-20 text-right rounded border border-gray-200 dark:border-gray-700 px-1.5 py-0.5 text-xs bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary/40">
+                        </div>
+                    </div>
+
+                    {{-- Due --}}
+                    <div class="flex justify-between items-center py-1.5">
+                        <span class="text-xs font-bold text-red-500">Due</span>
+                        <span id="qv-due" class="text-xs font-bold text-red-500">৳0</span>
+                    </div>
+
+                    {{-- Payment Method --}}
+                    <div class="pt-2 mt-0.5 border-t border-gray-100 dark:border-gray-800">
+                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 block">Payment Method</label>
+                        <select id="qv-payment-method" onchange="qvSaveField('payment_method', this.value)"
+                                class="w-full rounded-lg border border-gray-200 dark:border-gray-700 px-2 py-1.5 text-xs bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30">
+                            <option value="cod">Cash on Delivery</option>
+                            <option value="bkash">bKash</option>
+                            <option value="nagad">Nagad</option>
+                            <option value="rocket">Rocket</option>
+                            <option value="card">Bank Transfer</option>
+                        </select>
+                    </div>
+                </div>
+
+                {{-- Order Info --}}
+                <div class="p-3 space-y-2">
+                    <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Order Info</h4>
+                    <div>
+                        <label class="text-xs text-gray-500 dark:text-gray-400 mb-0.5 block">Assigned To</label>
+                        <select id="qv-assigned" onchange="qvSaveField('assigned_to', this.value)"
+                                class="w-full rounded-lg border border-gray-200 dark:border-gray-700 px-2 py-1.5 text-sm bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30">
+                            <option value="">Unassigned</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500 dark:text-gray-400 mb-0.5 block">Reference No</label>
+                        <input type="text" id="qv-reference" placeholder="Reference number"
+                               oninput="qvDebounceSave('reference_no', this.value)"
+                               class="w-full rounded-lg border border-gray-200 dark:border-gray-700 px-2 py-1.5 text-sm bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30">
+                    </div>
+                </div>
+
+                {{-- Courier & Dates --}}
+                <div class="p-3 space-y-1.5">
+                    <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Courier & Dates</h4>
+                    <div id="qv-courier-info" class="text-sm text-gray-400 space-y-1.5">—</div>
+                    <div class="pt-1.5 space-y-1 border-t border-gray-100 dark:border-gray-800">
+                        <div class="flex justify-between text-xs text-gray-400">
+                            <span>Created</span><span id="qv-created-at" class="text-gray-600 dark:text-gray-300">—</span>
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-400">
+                            <span>Updated</span><span id="qv-updated-at" class="text-gray-600 dark:text-gray-300">—</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>{{-- end right --}}
+
+        </div>{{-- end #qv-content --}}
+    </div>{{-- end panel --}}
+</div>{{-- end modal --}}
+
+{{-- Custom Confirm Dialog --}}
+<div id="qv-confirm-modal" style="display:none;position:fixed;inset:0;z-index:99999;align-items:center;justify-content:center;padding:16px;" class="flex">
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,0.5);" onclick="qvConfirmCancel()"></div>
+    <div style="position:relative;width:100%;max-width:360px;" class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="px-5 pt-5 pb-2 flex items-start gap-3">
+            <div class="w-9 h-9 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <svg class="w-4.5 h-4.5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+                </svg>
+            </div>
+            <div>
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-1">Confirm Action</h3>
+                <p id="qv-confirm-message" class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed"></p>
+            </div>
+        </div>
+        <div class="flex items-center justify-end gap-2 px-5 py-4">
+            <button type="button" onclick="qvConfirmCancel()"
+                    class="px-4 py-1.5 rounded-lg text-xs font-semibold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                Cancel
+            </button>
+            <button type="button" id="qv-confirm-ok" onclick="qvConfirmOk()"
+                    class="px-4 py-1.5 rounded-lg text-xs font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors">
+                Delete
+            </button>
+        </div>
+    </div>
+</div>
+
 {{-- AJAX note toast --}}
 <div id="note-toast"
      class="fixed bottom-5 right-5 z-50 flex items-center gap-2 px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium text-white transition-all duration-300 opacity-0 translate-y-2 pointer-events-none"
@@ -978,7 +1408,7 @@
     <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
     <div class="relative w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
         {{-- Header --}}
-        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700">
             <div class="flex items-center gap-2">
                 <div class="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
                     <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
@@ -1023,7 +1453,7 @@
             </div>
         </div>
         {{-- Footer --}}
-        <div class="flex items-center justify-end gap-2 px-5 py-3 border-t border-gray-100 dark:border-gray-800">
+        <div class="flex items-center justify-end gap-2 px-5 py-3 border-t border-gray-100 dark:border-gray-700">
             <button onclick="closeBulkCourierModal()"
                     class="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
                 Cancel
@@ -1050,9 +1480,25 @@
         copyToClipboard(text);
     }
 
-    function copyOrderDetails(name, phone, address, orderId, total, payment) {
-        const text = `নাম: ${name}\nফোন: ${phone}\nঠিকানা: ${address}\nঅর্ডার: #${orderId}\nমোট: ৳${total}\nপেমেন্ট: ${payment}`;
-        navigator.clipboard.writeText(text).then(() => showToast('Order details copied!', 'success'));
+    function copyOrderDetails(btn) {
+        let d;
+        try { d = JSON.parse(btn.getAttribute('data-order')); }
+        catch(e) { showToast('Copy failed!', 'error'); return; }
+        let text = `#${d.id}\n`;
+        text += `Name: ${d.name}\n`;
+        text += `Address: ${d.address}\n`;
+        text += `Phone: ${d.phone}\n`;
+        text += `------------Products------------\n`;
+        (d.items || []).forEach(item => {
+            text += `${item.qty} x ${item.name} - ${parseFloat(item.price).toFixed(2)} Tk\n`;
+        });
+        text += `----------------------\n`;
+        text += `Shipping: ${parseFloat(d.shipping).toFixed(2)} Tk\n`;
+        text += `Total: ${parseFloat(d.total).toFixed(2)} Tk\n`;
+        text += `Paid: ${parseFloat(d.paid).toFixed(2)} Tk\n`;
+        text += `Due: ${parseFloat(d.due).toFixed(2)} Tk`;
+        navigator.clipboard.writeText(text).then(() => showToast('Order details copied!', 'success'))
+            .catch(() => showToast('Copy failed — clipboard blocked', 'error'));
     }
 
     let _quickNoteOrderId = null;
@@ -1169,7 +1615,7 @@
             showToast('No orders selected', 'error');
             return;
         }
-        if (!confirm(`Change ${selected.length} order(s) to "${status}"?`)) return;
+        if (!await qvConfirm(`${selected.length} টি order-এর status "${status}" করতে চান?`, 'Confirm')) return;
         const response = await fetch('/admin/orders/bulk-status', {
             method: 'POST',
             headers: {
@@ -1181,6 +1627,7 @@
         const data = await response.json();
         if (data.success) {
             showToast(`${selected.length} orders updated to ${status}`, 'success');
+            refreshSidebarCounts();
             setTimeout(() => window.location.reload(), 1000);
         } else {
             showToast('Update failed', 'error');
@@ -1354,6 +1801,612 @@
         const h = n.getHours(), ampm = h >= 12 ? 'pm' : 'am';
         return `${pad(n.getDate())}/${pad(n.getMonth()+1)}/${n.getFullYear()} ${pad(h%12||12)}:${pad(n.getMinutes())}${ampm}`;
     }
+
+    // ── Real-time search ──────────────────────────────────────────────────────
+    (function () {
+        let searchTimer = null;
+
+        function buildSearchUrl(search, idSearch) {
+            const params = new URLSearchParams(window.location.search);
+            params.delete('page');
+            if (search !== null) {
+                search ? params.set('search', search) : params.delete('search');
+                params.delete('id_search');
+            }
+            if (idSearch !== null) {
+                idSearch ? params.set('id_search', idSearch) : params.delete('id_search');
+                params.delete('search');
+            }
+            return window.location.pathname + '?' + params.toString();
+        }
+
+        async function doSearch(url) {
+            const container  = document.getElementById('orders-table-container');
+            const countEl    = document.getElementById('orders-count-text');
+            if (!container) return;
+
+            container.style.opacity = '0.5';
+
+            try {
+                const res  = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                const html = await res.text();
+                const parser  = new DOMParser();
+                const doc     = parser.parseFromString(html, 'text/html');
+
+                const newContainer = doc.getElementById('orders-table-container');
+                const newCount     = doc.getElementById('orders-count-text');
+
+                if (newContainer) container.innerHTML = newContainer.innerHTML;
+                if (newCount && countEl) countEl.innerHTML = newCount.innerHTML;
+
+                // Update URL without reload
+                history.replaceState(null, '', url);
+            } catch (e) {
+                console.error('Search failed', e);
+            } finally {
+                container.style.opacity = '1';
+            }
+        }
+
+        function onInput(search, idSearch) {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => {
+                doSearch(buildSearchUrl(search, idSearch));
+            }, 400);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchInput   = document.getElementById('search-input');
+            const idSearchInput = document.getElementById('id-search-input');
+
+            if (searchInput) {
+                searchInput.addEventListener('input', () => onInput(searchInput.value.trim(), null));
+            }
+            if (idSearchInput) {
+                idSearchInput.addEventListener('input', () => onInput(null, idSearchInput.value.trim()));
+            }
+        });
+    })();
+</script>
+<script>
+// ── Quick View Dialog ─────────────────────────────────────────────────────────
+const QV_DISTRICTS = ['Bagerhat','Bandarban','Barguna','Barishal','Bhola','Bogura','Brahmanbaria','Chandpur','Chapai Nawabganj','Chattogram','Chuadanga',"Cox's Bazar",'Cumilla','Dhaka','Dinajpur','Faridpur','Feni','Gaibandha','Gazipur','Gopalganj','Habiganj','Jamalpur','Jashore','Jhalokati','Jhenaidah','Joypurhat','Khagrachhari','Khulna','Kishoreganj','Kurigram','Kushtia','Lakshmipur','Lalmonirhat','Madaripur','Magura','Manikganj','Meherpur','Moulvibazar','Munshiganj','Mymensingh','Naogaon','Narail','Narayanganj','Narsingdi','Natore','Netrokona','Nilphamari','Noakhali','Pabna','Panchagarh','Patuakhali','Pirojpur','Rajbari','Rajshahi','Rangamati','Rangpur','Satkhira','Shariatpur','Sherpur','Sirajganj','Sunamganj','Sylhet','Tangail','Thakurgaon'];
+const QV_STATUSES = [['pending','Pending'],['confirmed','Confirmed'],['processing','Processing'],['hold','Hold'],['hold_followup','Hold Followup'],['shipped','In Courier'],['delivered','Delivered'],['completed','Completed'],['cancelled','Cancelled'],['pending_return','Pending Return'],['returned','Returned'],['damage','Damage'],['hand_delivery','Hand Delivery'],['hand_delivery_completed','Hand Delivery Completed'],['others','Others'],['return_collection','Return Collection'],['courier_payment_validate','Courier Payment Validate']];
+
+let qvOrderId = null;
+let qvActiveNoteTab = 'order';
+let qvTimers = {};
+const CSRF = () => document.querySelector('meta[name=csrf-token]').content;
+const fmt = v => '৳' + Number(v||0).toLocaleString();
+
+function openQuickView(id) {
+    qvOrderId = id;
+    const modal = document.getElementById('quickViewModal');
+    const panel = document.getElementById('quickViewPanel');
+    const loading = document.getElementById('qv-loading');
+    const content = document.getElementById('qv-content');
+
+    const isMobile = window.innerWidth < 640;
+    modal.style.display = 'flex';
+    loading.style.display = 'flex';
+    content.style.display = 'none';
+    panel.style.opacity = '0';
+    panel.style.transform = isMobile ? 'translateY(100%)' : 'scale(0.95) translateY(-10px)';
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        panel.style.opacity = '1';
+        panel.style.transform = isMobile ? 'translateY(0)' : 'scale(1) translateY(0)';
+    }));
+
+    fetch(`/admin/orders/${id}/quick-view`, { headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF() } })
+        .then(r => { if (!r.ok) throw r.status; return r.json(); })
+        .then(order => { qvPopulate(order); loading.style.display = 'none'; content.style.display = 'flex'; })
+        .catch(() => { loading.style.display = 'none'; });
+}
+
+function closeQuickView() {
+    const panel = document.getElementById('quickViewPanel');
+    const isMobile = window.innerWidth < 640;
+    panel.style.opacity = isMobile ? '1' : '0';
+    panel.style.transform = isMobile ? 'translateY(110%)' : 'scale(0.95) translateY(-10px)';
+    setTimeout(() => { document.getElementById('quickViewModal').style.display = 'none'; panel.style.transform = ''; }, 250);
+}
+
+// ── Swipe-to-close (mobile bottom sheet) ─────────────────────
+(function () {
+    let startY = 0, currentY = 0, dragging = false;
+    const handle = () => document.getElementById('qv-drag-handle');
+    const panel  = () => document.getElementById('quickViewPanel');
+
+    function onStart(e) {
+        if (window.innerWidth >= 640) return;
+        startY   = e.touches ? e.touches[0].clientY : e.clientY;
+        currentY = startY;
+        dragging = true;
+        panel().style.transition = 'none';
+    }
+    function onMove(e) {
+        if (!dragging) return;
+        currentY = e.touches ? e.touches[0].clientY : e.clientY;
+        const dy = Math.max(0, currentY - startY);
+        panel().style.transform = `translateY(${dy}px)`;
+    }
+    function onEnd() {
+        if (!dragging) return;
+        dragging = false;
+        panel().style.transition = 'opacity 0.2s ease, transform 0.25s ease';
+        const dy = Math.max(0, currentY - startY);
+        if (dy > 100) {
+            closeQuickView();
+        } else {
+            panel().style.transform = 'translateY(0)';
+        }
+    }
+
+    document.addEventListener('touchstart', e => {
+        if (handle() && handle().contains(e.target)) onStart(e);
+    }, { passive: true });
+    document.addEventListener('touchmove', e => { if (dragging) onMove(e); }, { passive: true });
+    document.addEventListener('touchend', onEnd);
+})();
+
+function qvPopulate(order) {
+    // Header
+    document.getElementById('qv-order-num').textContent = '#' + (order.order_number || order.id);
+    document.getElementById('qv-full-link').href = `/admin/orders/${order.id}`;
+
+    // Status
+    const statusSel = document.getElementById('qv-status');
+    statusSel.innerHTML = QV_STATUSES.map(([v,l]) => `<option value="${v}" ${order.status===v?'selected':''}>${l}</option>`).join('');
+
+    // Customer
+    const phone = order.shipping_phone || '';
+    document.getElementById('qv-phone').value     = phone;
+    document.getElementById('qv-alt-phone').value = order.alt_phone || '';
+    document.getElementById('qv-name').value      = order.shipping_name || '';
+    document.getElementById('qv-email').value     = order.email || '';
+    document.getElementById('qv-address').value   = order.shipping_address || '';
+    document.getElementById('qv-wa-link').href    = `https://wa.me/880${phone.replace(/^0/,'')}`;
+    document.getElementById('qv-call-link').href  = `tel:${phone}`;
+
+    // District
+    const distSel = document.getElementById('qv-district');
+    distSel.innerHTML = '<option value="">Select</option>' + QV_DISTRICTS.map(d => `<option value="${d}" ${order.shipping_district===d?'selected':''}>${d}</option>`).join('');
+
+    // Customer insights
+    document.getElementById('qv-total-orders').textContent = order.customer_total || 0;
+    document.getElementById('qv-completed').textContent    = order.customer_completed || 0;
+    document.getElementById('qv-source').textContent       = order.source || 'Direct';
+    document.getElementById('qv-orders-link').href         = `/admin/orders?search=${encodeURIComponent(phone)}`;
+
+    // Tags
+    document.getElementById('qv-order-tag').value    = order.order_tag || '';
+    document.getElementById('qv-customer-tag').value = order.customer_tag || '';
+
+    // Payment
+    document.getElementById('qv-subtotal').textContent = fmt(order.subtotal);
+    document.getElementById('qv-discount').value        = order.discount || 0;
+    document.getElementById('qv-shipping').value        = order.shipping_charge || 0;
+    document.getElementById('qv-total').textContent     = fmt(order.total);
+    document.getElementById('qv-paid').value            = order.paid_amount || 0;
+    document.getElementById('qv-due').textContent       = fmt(order.due);
+    const pmSel = document.getElementById('qv-payment-method');
+    [...pmSel.options].forEach(o => o.selected = o.value === order.payment_method);
+
+    // Order info
+    document.getElementById('qv-courier-note').value  = order.courier_note || '';
+    document.getElementById('qv-packing-note').value  = order.packing_note || '';
+    document.getElementById('qv-reference').value     = order.reference_no || order.order_number || '';
+    document.getElementById('qv-created-at').textContent = order.created_at || '—';
+    document.getElementById('qv-updated-at').textContent = order.updated_at || '—';
+
+    // Assigned To
+    const asSel = document.getElementById('qv-assigned');
+    asSel.innerHTML = '<option value="">Unassigned</option>' + (order.admins||[]).map(a => `<option value="${a.id}" ${order.assigned_to==a.id?'selected':''}>${a.name}</option>`).join('');
+
+    // Products table
+    const tbody = document.getElementById('qv-items-tbody');
+    if (order.items && order.items.length) {
+        tbody.innerHTML = order.items.map(i => `
+            <tr class="border-b border-gray-100 dark:border-gray-800 group" data-item-id="${i.id}">
+                <td class="px-2 py-1.5">
+                    <div class="flex items-center gap-1.5">
+                        ${i.image ? `<img src="${i.image}" class="w-7 h-7 rounded object-cover flex-shrink-0" onerror="this.style.display='none'">` : `<div class="w-7 h-7 rounded bg-gray-100 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center text-gray-400 text-[10px]">?</div>`}
+                        <div>
+                            <div class="text-xs font-medium text-gray-800 dark:text-gray-200 leading-tight max-w-[140px] truncate">${i.name}</div>
+                            ${i.variant ? `<div class="text-[10px] text-gray-400">${i.variant}</div>` : ''}
+                        </div>
+                    </div>
+                </td>
+                <td class="px-2 py-1.5 text-center">
+                    <span data-field="price" class="text-xs font-medium text-gray-700 dark:text-gray-200">${fmt(i.unit_price)}</span>
+                </td>
+                <td class="px-2 py-1.5 text-center">
+                    <input type="number" value="${i.qty}" min="1" step="1"
+                           oninput="qvUpdateItemCalc(${i.id}, this.closest('tr')); qvSaveItemField(${i.id}, 'qty', this.value)"
+                           data-field="qty"
+                           class="w-14 text-center rounded border border-gray-200 dark:border-gray-700 px-1 py-0.5 text-xs bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary/40">
+                </td>
+                <td class="px-2 py-1.5 text-center">
+                    <input type="number" value="${i.discount||0}" min="0" step="1"
+                           oninput="qvUpdateItemCalc(${i.id}, this.closest('tr')); qvSaveItemField(${i.id}, 'discount', this.value)"
+                           data-field="disc"
+                           class="w-20 text-center rounded border border-gray-200 dark:border-gray-700 px-1 py-0.5 text-xs bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary/40">
+                </td>
+                <td class="px-2 py-1.5 text-center">
+                    <span class="item-sub-${i.id} text-xs font-semibold text-gray-700 dark:text-gray-200">${fmt(i.subtotal)}</span>
+                </td>
+                <td class="px-2 py-1.5 text-center">
+                    <button type="button" onclick="qvRemoveItem(${i.id})"
+                            class="w-6 h-6 flex items-center justify-center bg-red-50 dark:bg-red-900/20 text-red-400 rounded hover:bg-red-100 dark:hover:bg-red-900/40 transition mx-auto opacity-0 group-hover:opacity-100">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </td>
+            </tr>`).join('');
+    } else {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-xs text-gray-400">No items</td></tr>';
+    }
+
+    // Notes
+    qvRenderNotes('order', order.order_notes || []);
+    qvRenderNotes('customer', order.customer_notes || []);
+    document.getElementById('qv-order-note-count').textContent = order.order_notes?.length ? `(${order.order_notes.length})` : '';
+    document.getElementById('qv-customer-note-count').textContent = order.customer_notes?.length ? `(${order.customer_notes.length})` : '';
+    qvSwitchTab(qvActiveNoteTab);
+
+    // Courier
+    const cEl = document.getElementById('qv-courier-info');
+    if (order.shipment) {
+        const s = order.shipment;
+        cEl.innerHTML = `
+            <div class="flex items-center gap-2 flex-wrap">
+                <span class="px-2 py-0.5 rounded-md bg-[#1B2A4A] text-white text-[11px] font-semibold">${s.courier}</span>
+                <span class="px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 text-[11px]">${s.status}</span>
+            </div>
+            ${s.tracking ? `<div class="flex items-center gap-2 mt-1.5"><span class="text-xs text-gray-400">Tracking:</span><span class="text-xs font-mono text-gray-700 dark:text-gray-300">${s.tracking}</span>${s.tracking_link ? `<a href="${s.tracking_link}" target="_blank" class="w-5 h-5 flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded hover:bg-blue-200"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg></a>` : ''}</div>` : ''}
+            ${s.consignment ? `<div class="text-xs text-gray-400 mt-1">Consignment: <span class="text-gray-600 dark:text-gray-300">${s.consignment}</span></div>` : ''}
+            ${s.delivery_fee > 0 ? `<div class="text-xs text-gray-400 mt-1">Delivery Fee: <span class="font-semibold text-gray-700 dark:text-gray-200">${fmt(s.delivery_fee)}</span></div>` : ''}
+            ${s.submitted_at ? `<div class="text-xs text-gray-400 mt-1">Submitted: <span class="text-gray-600 dark:text-gray-300">${s.submitted_at}</span></div>` : ''}`;
+    } else {
+        cEl.innerHTML = '<span class="text-xs text-gray-400">No courier assigned yet.</span>';
+    }
+}
+
+function qvSwitchTab(tab) {
+    qvActiveNoteTab = tab;
+    const isOrder = tab === 'order';
+    document.getElementById('qv-notes-order').style.display    = isOrder ? '' : 'none';
+    document.getElementById('qv-notes-customer').style.display = isOrder ? 'none' : '';
+    const tabOrder    = document.getElementById('qv-tab-order');
+    const tabCustomer = document.getElementById('qv-tab-customer');
+    tabOrder.className    = 'px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ' + (isOrder  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800');
+    tabCustomer.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ' + (!isOrder ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800');
+    document.getElementById('qv-note-input').placeholder = isOrder ? 'Add order note and press Enter…' : 'Add customer note and press Enter…';
+}
+
+function qvRenderNotes(type, notes) {
+    const el = document.getElementById(`qv-notes-${type}`);
+    const isOrder = type === 'order';
+    const cardCls = isOrder
+        ? 'bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-800/20'
+        : 'bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-800/20';
+    if (!notes.length) {
+        el.innerHTML = `<p class="text-xs text-gray-400 text-center py-3">No ${type} notes yet.</p>`;
+        return;
+    }
+    el.innerHTML = notes.map(n => `
+        <div class="group rounded-lg px-2.5 py-1.5 border ${cardCls}">
+            <div class="flex items-start gap-2">
+                <p class="flex-1 text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap">${n.text.replace(/</g,'&lt;')}</p>
+                <button type="button" onclick="qvDeleteNote(${n.id})"
+                        class="flex-shrink-0 w-5 h-5 flex items-center justify-center bg-red-100 dark:bg-red-900/30 text-red-400 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-200 mt-0.5">
+                    <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="flex items-center gap-1 mt-0.5">
+                <span class="text-[10px] font-medium text-gray-500">${n.user}</span>
+                <span class="text-gray-300 dark:text-gray-600 text-[10px]">·</span>
+                <span class="text-[10px] text-gray-400">${n.created_at}</span>
+            </div>
+        </div>`).join('');
+}
+
+async function qvAddNote() {
+    const input = document.getElementById('qv-note-input');
+    const text  = (input.value || '').trim();
+    if (!text || !qvOrderId) return;
+    input.disabled = true;
+    try {
+        const r = await fetch(`/admin/orders/${qvOrderId}/notes`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF() },
+            body: JSON.stringify({ note_text: text, type: qvActiveNoteTab })
+        });
+        if (r.ok) {
+            input.value = '';
+            const data = await fetch(`/admin/orders/${qvOrderId}/quick-view`, { headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF() } }).then(r => r.json());
+            qvRenderNotes('order', data.order_notes || []);
+            qvRenderNotes('customer', data.customer_notes || []);
+            document.getElementById('qv-order-note-count').textContent = data.order_notes?.length ? `(${data.order_notes.length})` : '';
+            document.getElementById('qv-customer-note-count').textContent = data.customer_notes?.length ? `(${data.customer_notes.length})` : '';
+        } else {
+            showToast('Note save করা যায়নি।', 'error');
+        }
+    } catch(e) {
+        showToast('Note save করা যায়নি।', 'error');
+    } finally { input.disabled = false; input.focus(); }
+}
+
+let _qvConfirmResolve = null;
+
+function qvConfirm(message, okLabel = 'Delete') {
+    return new Promise(resolve => {
+        _qvConfirmResolve = resolve;
+        document.getElementById('qv-confirm-message').textContent = message;
+        document.getElementById('qv-confirm-ok').textContent = okLabel;
+        document.getElementById('qv-confirm-modal').style.display = 'flex';
+    });
+}
+function qvConfirmOk()     { document.getElementById('qv-confirm-modal').style.display = 'none'; if (_qvConfirmResolve) _qvConfirmResolve(true);  _qvConfirmResolve = null; }
+function qvConfirmCancel() { document.getElementById('qv-confirm-modal').style.display = 'none'; if (_qvConfirmResolve) _qvConfirmResolve(false); _qvConfirmResolve = null; }
+
+async function qvDeleteNote(noteId) {
+    if (!await qvConfirm('এই note টি delete করতে চান?')) return;
+    try {
+        const r = await fetch(`/admin/orders/${qvOrderId}/notes/${noteId}`, {
+            method: 'DELETE',
+            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF() }
+        });
+        if (r.ok) {
+            const data = await fetch(`/admin/orders/${qvOrderId}/quick-view`, { headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF() } }).then(r => r.json());
+            qvRenderNotes('order', data.order_notes || []);
+            qvRenderNotes('customer', data.customer_notes || []);
+            document.getElementById('qv-order-note-count').textContent = data.order_notes?.length ? `(${data.order_notes.length})` : '';
+            document.getElementById('qv-customer-note-count').textContent = data.customer_notes?.length ? `(${data.customer_notes.length})` : '';
+        } else {
+            showToast('Note delete করা যায়নি।', 'error');
+        }
+    } catch(e) {
+        showToast('Note delete করা যায়নি।', 'error');
+    }
+}
+
+async function qvRemoveItem(itemId) {
+    if (!await qvConfirm('এই product টি remove করতে চান?', 'Remove')) return;
+    const r = await fetch(`/admin/orders/items/${itemId}`, {
+        method: 'DELETE',
+        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF() }
+    });
+    if (r.ok) {
+        const data = await fetch(`/admin/orders/${qvOrderId}/quick-view`, { headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF() } }).then(r => r.json());
+        qvPopulate(data);
+    }
+}
+
+function qvSaveItemField(itemId, field, value) {
+    clearTimeout(qvTimers[`item_${itemId}_${field}`]);
+    qvTimers[`item_${itemId}_${field}`] = setTimeout(() => {
+        qvShowSaving();
+        fetch(`/admin/orders/${qvOrderId}/quick-field`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF() },
+            body: JSON.stringify({ field: 'item_field', value: { item_id: itemId, field, value } })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                if (data.subtotal !== undefined) document.getElementById('qv-subtotal').textContent = fmt(data.subtotal);
+                if (data.total   !== undefined) document.getElementById('qv-total').textContent    = fmt(data.total);
+                if (data.due     !== undefined) document.getElementById('qv-due').textContent      = fmt(data.due);
+                if (data.item_subtotal !== undefined) {
+                    const el = document.querySelector(`.item-sub-${itemId}`);
+                    if (el) el.textContent = fmt(data.item_subtotal);
+                }
+                qvShowSaved();
+            }
+        }).catch(() => qvHideSavingIndicators());
+    }, 500);
+}
+
+// Instant item row recalculation
+function qvUpdateItemCalc(itemId, row) {
+    const priceEl = row.querySelector('[data-field="price"]');
+    const qtyEl   = row.querySelector('[data-field="qty"]');
+    const discEl  = row.querySelector('[data-field="disc"]');
+    const subEl   = row.querySelector('.item-sub-' + itemId);
+
+    const price = parseFloat(priceEl ? priceEl.textContent.replace(/[^\d.]/g, '') : 0) || 0;
+    const qty   = Math.max(1, parseInt(qtyEl ? qtyEl.value : 1) || 1);
+    const disc  = parseFloat(discEl ? discEl.value : 0) || 0;
+    const sub   = Math.max(0, price * qty - disc);
+
+    if (subEl) subEl.textContent = fmt(sub);
+
+    // Recalculate order subtotal from all rows
+    let orderSub = 0;
+    document.querySelectorAll('#qv-items-tbody tr[data-item-id]').forEach(r => {
+        const p2  = parseFloat((r.querySelector('[data-field="price"]') || {}).textContent?.replace(/[^\d.]/g,'') || 0) || 0;
+        const q2  = parseInt((r.querySelector('[data-field="qty"]') || {}).value || 1) || 1;
+        const d2  = parseFloat((r.querySelector('[data-field="disc"]') || {}).value || 0) || 0;
+        orderSub += Math.max(0, p2 * q2 - d2);
+    });
+
+    document.getElementById('qv-subtotal').textContent = fmt(orderSub);
+    qvCalcPayment();
+}
+
+// Instant local payment recalculation (no server round-trip)
+function qvCalcPayment() {
+    const subtotalText = document.getElementById('qv-subtotal').textContent.replace(/[^\d.]/g, '');
+    const subtotal = parseFloat(subtotalText) || 0;
+    const discount = parseFloat(document.getElementById('qv-discount').value) || 0;
+    const shipping = parseFloat(document.getElementById('qv-shipping').value) || 0;
+    const paid     = parseFloat(document.getElementById('qv-paid').value)     || 0;
+    const total    = Math.max(0, subtotal - discount + shipping);
+    const due      = Math.max(0, total - paid);
+    document.getElementById('qv-total').textContent = fmt(total);
+    document.getElementById('qv-due').textContent   = fmt(due);
+}
+
+function qvSaveField(field, value) {
+    qvShowSaving();
+    fetch(`/admin/orders/${qvOrderId}/quick-field`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF(), 'Accept': 'application/json' },
+        body: JSON.stringify({ field, value })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            // Sync display with server-confirmed values
+            if (data.subtotal !== undefined) document.getElementById('qv-subtotal').textContent = fmt(data.subtotal);
+            if (data.total    !== undefined) document.getElementById('qv-total').textContent    = fmt(data.total);
+            if (data.due      !== undefined) document.getElementById('qv-due').textContent      = fmt(data.due);
+            if (field === 'status') refreshSidebarCounts();
+            qvShowSaved();
+        }
+    })
+    .catch(() => qvHideSavingIndicators());
+}
+
+function qvDebounceSave(field, value) {
+    clearTimeout(qvTimers[field]);
+    qvTimers[field] = setTimeout(() => qvSaveField(field, value), 700);
+}
+
+function qvShowSaving() {
+    document.getElementById('qv-saving-indicator').classList.remove('hidden');
+    document.getElementById('qv-saved-indicator').classList.add('hidden');
+}
+function qvShowSaved() {
+    document.getElementById('qv-saving-indicator').classList.add('hidden');
+    document.getElementById('qv-saved-indicator').classList.remove('hidden');
+    setTimeout(() => document.getElementById('qv-saved-indicator').classList.add('hidden'), 2000);
+}
+function qvHideSavingIndicators() {
+    document.getElementById('qv-saving-indicator').classList.add('hidden');
+    document.getElementById('qv-saved-indicator').classList.add('hidden');
+}
+
+// ── Product Search & Add ──────────────────────────────────────
+let qvProductTimer = null;
+
+function qvToggleProductSearch() {
+    const wrap = document.getElementById('qv-add-product-wrap');
+    const input = document.getElementById('qv-product-search');
+    const res = document.getElementById('qv-product-results');
+    if (wrap.style.display === 'none') {
+        wrap.style.display = 'block';
+        input.value = '';
+        res.style.display = 'none';
+        setTimeout(() => input.focus(), 50);
+    } else {
+        wrap.style.display = 'none';
+        input.value = '';
+        res.style.display = 'none';
+    }
+}
+
+function qvSearchProduct(q) {
+    clearTimeout(qvProductTimer);
+    const res = document.getElementById('qv-product-results');
+    if (!q.trim()) { res.style.display = 'none'; return; }
+    res.style.display = 'block';
+    res.innerHTML = '<p class="text-center text-xs text-gray-400 py-3">Searching…</p>';
+    qvProductTimer = setTimeout(async () => {
+        try {
+            const r = await fetch(`/admin/orders/${qvOrderId}/products-search?q=${encodeURIComponent(q)}`, {
+                headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF() }
+            });
+            const data = await r.json();
+            if (!data.length) {
+                res.innerHTML = '<p class="text-center text-xs text-gray-400 py-3">কোনো product পাওয়া যায়নি।</p>';
+                return;
+            }
+            const rows = [];
+            data.forEach(p => {
+                if (p.variants && p.variants.length) {
+                    p.variants.forEach(v => {
+                        const label = p.name + (v.name.trim() ? ' — ' + v.name : '');
+                        rows.push(`
+                        <div class="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700/50 last:border-0"
+                             data-pid="${p.id}" data-vid="${v.id}" data-price="${v.price}"
+                             data-name="${encodeURIComponent(label)}"
+                             onclick="qvAddProduct(this)">
+                            <img src="${p.image_url}" class="w-7 h-7 rounded object-cover flex-shrink-0" onerror="this.style.display='none'">
+                            <div class="flex-1 min-w-0">
+                                <div class="text-xs font-medium text-gray-800 dark:text-gray-200 truncate">${p.name}</div>
+                                ${v.name.trim() ? `<div class="text-[10px] text-gray-400">${v.name}</div>` : ''}
+                            </div>
+                            <span class="text-xs font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0 ml-2">৳${v.price}</span>
+                        </div>`);
+                    });
+                } else {
+                    const price = p.price ?? 0;
+                    rows.push(`
+                    <div class="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700/50 last:border-0"
+                         data-pid="${p.id}" data-vid="" data-price="${price}"
+                         data-name="${encodeURIComponent(p.name)}"
+                         onclick="qvAddProduct(this)">
+                        <img src="${p.image_url}" class="w-7 h-7 rounded object-cover flex-shrink-0" onerror="this.style.display='none'">
+                        <div class="flex-1 min-w-0">
+                            <div class="text-xs font-medium text-gray-800 dark:text-gray-200 truncate">${p.name}</div>
+                        </div>
+                        <span class="text-xs font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0 ml-2">৳${price}</span>
+                    </div>`);
+                }
+            });
+            res.innerHTML = rows.join('');
+        } catch(e) {
+            res.innerHTML = '<p class="text-center text-xs text-red-400 py-3">Error loading products.</p>';
+        }
+    }, 300);
+}
+
+async function qvAddProduct(el) {
+    const productId = parseInt(el.dataset.pid);
+    const variantId = el.dataset.vid ? parseInt(el.dataset.vid) : null;
+    const name      = decodeURIComponent(el.dataset.name);
+    const price     = parseFloat(el.dataset.price) || 0;
+
+    document.getElementById('qv-product-results').style.display = 'none';
+    document.getElementById('qv-product-search').value = '';
+    document.getElementById('qv-add-product-wrap').style.display = 'none';
+    qvShowSaving();
+
+    try {
+        const body = { product_id: productId, product_name: name, qty: 1, unit_price: price, total: price };
+        if (variantId) body.variant_id = variantId;
+
+        const r = await fetch(`/admin/orders/${qvOrderId}/items`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF(), 'Accept': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        const d = await r.json();
+        if (d.success || r.ok) {
+            // Refresh popup data to show new item + updated totals
+            const r2 = await fetch(`/admin/orders/${qvOrderId}/quick-view`, {
+                headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF() }
+            });
+            const order = await r2.json();
+            qvPopulate(order);
+            qvShowSaved();
+        }
+    } catch(e) {
+        qvHideSavingIndicators();
+    }
+}
+
+// Close product results when clicking outside
+document.addEventListener('click', e => {
+    const wrap = document.getElementById('qv-add-product-wrap');
+    if (wrap && !wrap.contains(e.target)) {
+        const res = document.getElementById('qv-product-results');
+        if (res) res.style.display = 'none';
+    }
+});
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeQuickView(); });
 </script>
 @endpush
 

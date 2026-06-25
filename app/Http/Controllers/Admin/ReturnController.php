@@ -13,6 +13,9 @@ class ReturnController extends Controller
     public function index(Request $request)
     {
         $query = OrderReturn::with(['order', 'resolvedBy'])->latest();
+        if (!auth()->user()->is_super_admin) {
+            $query->where('tenant_id', auth()->user()->tenant_id);
+        }
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -26,11 +29,12 @@ class ReturnController extends Controller
 
         $returns = $query->paginate(25)->withQueryString();
 
+        $retBase = auth()->user()->is_super_admin ? OrderReturn::query() : OrderReturn::where('tenant_id', auth()->user()->tenant_id);
         $stats = [
-            'total'     => OrderReturn::count(),
-            'pending'   => OrderReturn::where('status', 'requested')->count(),
-            'approved'  => OrderReturn::where('status', 'approved')->count(),
-            'completed' => OrderReturn::where('status', 'completed')->count(),
+            'total'     => (clone $retBase)->count(),
+            'pending'   => (clone $retBase)->where('status', 'requested')->count(),
+            'approved'  => (clone $retBase)->where('status', 'approved')->count(),
+            'completed' => (clone $retBase)->where('status', 'completed')->count(),
         ];
 
         return view('admin.returns.index', compact('returns', 'stats'));
@@ -51,6 +55,7 @@ class ReturnController extends Controller
             'refund_method' => $request->refund_method,
             'status'        => 'requested',
             'requested_at'  => now(),
+            'tenant_id'     => auth()->user()->tenant_id,
         ]);
 
         $order->update(['status' => 'pending_return']);

@@ -21,7 +21,7 @@ html {
 @layer components {
     /* ── Sidebar ── */
     .admin-sidebar {
-        @apply fixed inset-y-0 left-0 bg-primary text-white flex flex-col transition-all duration-300 z-50;
+        @apply fixed inset-y-0 left-0 bg-primary text-white flex flex-col z-50;
     }
 
     .admin-nav-item {

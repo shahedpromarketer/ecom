@@ -19,12 +19,13 @@ td { padding: 3px 4px; border-bottom: 1px solid #eee; font-size:9px; }
 .total-row { font-weight:bold; font-size:11px; }
 .footer { text-align:center; padding: 5px 4px; font-size:9px; color:#777; border-top:1px dashed #ccc; }
 .barcode-area { text-align:center; padding:4px; letter-spacing:3px; font-size:8px; font-family:monospace; }
-@media print { @page { size: 80mm auto; margin: 0; } body { width:80mm; } }
+@media print { @page { size: 80mm auto; margin: 0; } html { display:flex; justify-content:center; } body { width:80mm; margin:0 auto; } .no-print { display:none !important; } }
+@media screen { html { background:#f0f2f5; min-height:100vh; } body { width:80mm; margin:64px auto 20px; background:white; box-shadow:0 4px 24px rgba(0,0,0,.15); border-radius:4px; } }
 </style>
 </head>
 <body>
 <div class="header">
-    <h1>{{ $settings['store_name'] ?? 'Clothonic' }}</h1>
+    <h1>{{ $settings['store_name'] ?? 'Ecom Pilot' }}</h1>
     @if(!empty($settings['store_phone']))<p>{{ $settings['store_phone'] }}</p>@endif
     @if(!empty($settings['store_tagline']))<p>{{ $settings['store_tagline'] }}</p>@endif
 </div>
@@ -66,7 +67,19 @@ td { padding: 3px 4px; border-bottom: 1px solid #eee; font-size:9px; }
     @endif
 </div>
 <div class="barcode-area">|||| {{ $order->order_number }} ||||</div>
-<div class="footer">{{ $settings['store_name'] ?? 'Clothonic' }} &bull; ধন্যবাদ!</div>
+<div class="footer">{{ $settings['store_name'] ?? 'Ecom Pilot' }} &bull; ধন্যবাদ!</div>
+
+@if(!empty($preview))
+<div class="no-print" style="position:fixed;top:0;left:0;right:0;background:#1B2A4A;color:white;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;font-family:Arial,sans-serif;font-size:13px;z-index:9999;box-shadow:0 2px 8px rgba(0,0,0,.3);">
+    <span>&#128065; Preview &mdash; <strong>{{ $template->name ?? '' }}</strong></span>
+    <div style="display:flex;gap:8px;">
+        <a href="/admin/invoice-templates" style="background:transparent;border:1px solid rgba(255,255,255,.4);color:white;padding:5px 14px;border-radius:6px;text-decoration:none;font-size:12px;">&larr; Back</a>
+        <button onclick="window.print()" style="background:#F59E0B;border:none;color:white;padding:6px 16px;border-radius:6px;cursor:pointer;font-weight:bold;font-size:12px;">Print</button>
+    </div>
+</div>
+<div class="no-print" style="height:44px;"></div>
+@else
 <script>window.onload = () => window.print();</script>
+@endif
 </body>
 </html>

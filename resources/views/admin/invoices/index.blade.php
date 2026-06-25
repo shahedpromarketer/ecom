@@ -33,12 +33,17 @@
           class="flex flex-wrap gap-3 px-6 py-4 border-b border-border dark:border-gray-700">
         <input type="text" name="search" value="{{ request('search') }}" placeholder="Invoice # or Order #…"
                class="flex-1 min-w-[180px] px-4 py-2.5 text-sm rounded-xl border border-border dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 placeholder-textsecondary dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary dark:focus:border-primary transition-all duration-200">
-        <select name="status" class="px-4 py-2.5 text-sm rounded-xl border border-border dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary dark:focus:border-primary transition-all duration-200">
-            <option value="">All Statuses</option>
-            @foreach(['draft','sent','paid','cancelled'] as $s)
-                <option value="{{ $s }}" {{ request('status') === $s ? 'selected' : '' }}>{{ ucfirst($s) }}</option>
-            @endforeach
-        </select>
+        <div class="relative">
+            <select name="status" class="cs pl-3 py-2.5 text-sm rounded-xl border border-border dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary dark:focus:border-primary transition-all duration-200 cursor-pointer">
+                <option value="">All Statuses</option>
+                @foreach(['draft','sent','paid','cancelled'] as $s)
+                    <option value="{{ $s }}" {{ request('status') === $s ? 'selected' : '' }}>{{ ucfirst($s) }}</option>
+                @endforeach
+            </select>
+            <span class="pointer-events-none absolute inset-y-0 right-2.5 flex items-center">
+                <svg class="w-4 h-4 text-textsecondary dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </span>
+        </div>
         <input type="date" name="date_from" value="{{ request('date_from') }}"
                class="px-4 py-2.5 text-sm rounded-xl border border-border dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary dark:focus:border-primary transition-all duration-200">
         <input type="date" name="date_to" value="{{ request('date_to') }}"

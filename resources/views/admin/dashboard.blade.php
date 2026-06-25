@@ -7,27 +7,81 @@
 @section('content')
 
 {{-- ═══ Date Range Filter ═══ --}}
-<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
-    <div class="flex items-center gap-2">
-        <span class="text-xs font-semibold text-textsecondary dark:text-gray-400 uppercase tracking-wider">Period:</span>
-        <span class="px-3 py-1 text-sm font-semibold bg-primary/10 text-primary dark:bg-primary/20 dark:text-blue-300 rounded-lg">{{ $rangeLabel }}</span>
-    </div>
-    <div class="flex flex-wrap items-center gap-2">
-        @foreach([
-            'all'        => 'All Time',
-            'today'      => 'Today',
-            'last_7'     => 'Last 7 Days',
-            'this_month' => 'This Month',
-            'this_year'  => 'This Year',
-        ] as $rKey => $rLabel)
-        <a href="{{ route('admin.dashboard', ['range' => $rKey]) }}"
-           class="px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors
-                  {{ request('range', 'all') === $rKey
-                      ? 'bg-primary text-white border-primary'
-                      : 'border-border dark:border-gray-600 text-textsecondary dark:text-gray-400 hover:text-textprimary dark:hover:text-gray-200 bg-white dark:bg-gray-800' }}">
-            {{ $rLabel }}
-        </a>
-        @endforeach
+<div class="mb-6 flex flex-wrap items-center justify-end gap-3">
+    {{-- Single Period Dropdown --}}
+    <div x-data="periodDropdown()" class="relative" @click.outside="open = false">
+        <button @click="open = !open"
+                class="px-4 py-2 bg-primary hover:bg-primary/90 text-white text-sm font-semibold rounded-lg flex items-center gap-2 transition-colors shadow-sm min-w-[130px] justify-between"
+                :class="loading ? 'opacity-75 cursor-wait' : ''">
+            <span x-text="label"></span>
+            <svg x-show="!loading" class="w-4 h-4 flex-shrink-0 transition-transform duration-200" :class="open ? 'rotate-180' : ''"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+            </svg>
+            <svg x-show="loading" class="w-4 h-4 flex-shrink-0 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+            </svg>
+        </button>
+
+        <div x-show="open" x-cloak
+             x-transition:enter="transition ease-out duration-100"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100"
+             x-transition:leave="transition ease-in duration-75"
+             x-transition:leave-start="opacity-100 scale-100"
+             x-transition:leave-end="opacity-0 scale-95"
+             class="absolute right-0 top-full mt-1.5 w-52 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-50 py-1 overflow-hidden">
+
+            @foreach([
+                'all'        => 'All Time',
+                'today'      => 'Today',
+                'yesterday'  => 'Yesterday',
+                'last_7'     => 'Last 7 Days',
+                'last_30'    => 'Last 30 Days',
+                'this_month' => 'This Month',
+                'last_month' => 'Last Month',
+                'this_year'  => 'This Year',
+                'last_year'  => 'Last Year',
+            ] as $rKey => $rLabel)
+            <button @click="goRange('{{ $rKey }}', '{{ $rLabel }}')"
+                    class="w-full flex items-center justify-between px-4 py-2 text-xs transition-colors"
+                    :class="range === '{{ $rKey }}' ? 'text-primary font-semibold bg-primary/5 dark:bg-primary/10' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'">
+                <span>{{ $rLabel }}</span>
+                <svg x-show="range === '{{ $rKey }}'" class="w-3.5 h-3.5 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                </svg>
+            </button>
+            @endforeach
+
+            {{-- Custom Range --}}
+            <div class="border-t border-gray-100 dark:border-gray-700 mt-1 pt-1">
+                <button @click="showCustom = !showCustom"
+                        class="w-full flex items-center justify-between px-4 py-2 text-xs transition-colors"
+                        :class="range === 'custom' ? 'text-primary font-semibold bg-primary/5 dark:bg-primary/10' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        <span>Custom Range</span>
+                    </div>
+                    <svg x-show="range === 'custom'" class="w-3.5 h-3.5 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                    </svg>
+                </button>
+
+                <div x-show="showCustom" x-cloak class="px-3 pb-3 pt-1 space-y-1.5">
+                    <input type="date" x-model="customFrom"
+                           class="w-full px-2.5 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-primary">
+                    <input type="date" x-model="customTo"
+                           class="w-full px-2.5 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-primary">
+                    <button @click="applyCustom()"
+                            class="w-full py-1.5 text-xs font-semibold bg-primary hover:bg-primary/90 text-white rounded-lg transition-colors">
+                        Apply
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -44,7 +98,7 @@
             </div>
             <span class="text-xs font-medium bg-white/15 px-2 py-0.5 rounded-full">Orders</span>
         </div>
-        <p class="text-3xl font-bold">{{ number_format($totalOrders) }}</p>
+        <p id="summary-total-orders" class="text-3xl font-bold">{{ number_format($totalOrders) }}</p>
         <p class="text-xs text-white/70 mt-1">Total for period</p>
     </div>
 
@@ -58,7 +112,7 @@
             </div>
             <span class="text-xs font-medium bg-white/15 px-2 py-0.5 rounded-full">Revenue</span>
         </div>
-        <p class="text-3xl font-bold">৳{{ number_format($totalRevenue, 0) }}</p>
+        <p id="summary-revenue" class="text-3xl font-bold">৳{{ number_format($totalRevenue, 0) }}</p>
         <p class="text-xs text-white/70 mt-1">Delivered & completed</p>
     </div>
 
@@ -72,7 +126,7 @@
             </div>
             <span class="text-xs font-medium bg-white/15 px-2 py-0.5 rounded-full">Pending</span>
         </div>
-        <p class="text-3xl font-bold">{{ number_format($pendingOrders) }}</p>
+        <p id="summary-pending" class="text-3xl font-bold">{{ number_format($pendingOrders) }}</p>
         <p class="text-xs text-white/70 mt-1">Awaiting action</p>
     </div>
 
@@ -86,7 +140,7 @@
             </div>
             <span class="text-xs font-medium bg-white/15 px-2 py-0.5 rounded-full">Shipped</span>
         </div>
-        <p class="text-3xl font-bold">{{ number_format($inCourier) }}</p>
+        <p id="summary-in-courier" class="text-3xl font-bold">{{ number_format($inCourier) }}</p>
         <p class="text-xs text-white/70 mt-1">In transit</p>
     </div>
 
@@ -100,7 +154,7 @@
             </div>
             <span class="text-xs font-medium bg-white/15 px-2 py-0.5 rounded-full">Rate</span>
         </div>
-        <p class="text-3xl font-bold">{{ $conversionRate }}%</p>
+        <p id="summary-conversion" class="text-3xl font-bold">{{ $conversionRate }}%</p>
         <p class="text-xs text-white/70 mt-1">Completion rate</p>
     </div>
 
@@ -131,7 +185,7 @@ $dashStatusCards = [
             <span class="w-2 h-2 rounded-full bg-gray-400 flex-shrink-0"></span>
         </div>
         <p id="total-orders-count" class="text-2xl font-bold text-textprimary dark:text-gray-100">{{ number_format($periodTotal) }}</p>
-        <p class="text-xs text-textsecondary dark:text-gray-500 mt-0.5">{{ $rangeLabel }} · <span id="return-ratio">{{ $returnRatio }}</span>% return</p>
+        <p class="text-xs text-textsecondary dark:text-gray-500 mt-0.5"><span id="summary-range-label">{{ $rangeLabel }}</span> · <span id="return-ratio">{{ $returnRatio }}</span>% return</p>
     </a>
 
     @foreach($dashStatusCards as $card)
@@ -147,6 +201,83 @@ $dashStatusCards = [
     </a>
     @endforeach
 </div>
+
+{{-- ═══ Period Comparison ═══ --}}
+@if($comparison)
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+
+    {{-- Orders comparison --}}
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-5">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-xs text-textsecondary dark:text-gray-400 font-medium uppercase tracking-wide mb-1">Orders · {{ $rangeLabel }}</p>
+                <p class="text-2xl font-bold text-textprimary dark:text-gray-100">{{ number_format($totalOrders) }}</p>
+            </div>
+            <div class="text-right">
+                <p class="text-xs text-textsecondary dark:text-gray-400 mb-1">vs {{ $comparison['label'] }}: <span class="font-semibold text-textprimary dark:text-gray-300">{{ number_format($comparison['orders']) }}</span></p>
+                @if($comparison['orders_diff'] !== null)
+                @php $od = $comparison['orders_diff']; @endphp
+                <span class="inline-flex items-center gap-0.5 text-sm font-bold {{ $od >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400' }}">
+                    @if($od >= 0)
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/></svg>
+                    @else
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                    @endif
+                    {{ abs($od) }}%
+                </span>
+                @else
+                <span class="text-xs text-textsecondary dark:text-gray-500">No prev. data</span>
+                @endif
+            </div>
+        </div>
+        @php $oMax = max($totalOrders, $comparison['orders'], 1); $oPct = round($totalOrders / $oMax * 100); $oPrevPct = round($comparison['orders'] / $oMax * 100); @endphp
+        <div class="mt-3 space-y-1">
+            <div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5">
+                <div class="h-1.5 rounded-full bg-blue-500 transition-all" style="width:{{ $oPct }}%"></div>
+            </div>
+            <div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5">
+                <div class="h-1.5 rounded-full bg-blue-200 dark:bg-blue-800 transition-all" style="width:{{ $oPrevPct }}%"></div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Revenue comparison --}}
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-5">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-xs text-textsecondary dark:text-gray-400 font-medium uppercase tracking-wide mb-1">Revenue · {{ $rangeLabel }}</p>
+                <p class="text-2xl font-bold text-textprimary dark:text-gray-100">৳{{ number_format($totalRevenue, 0) }}</p>
+            </div>
+            <div class="text-right">
+                <p class="text-xs text-textsecondary dark:text-gray-400 mb-1">vs {{ $comparison['label'] }}: <span class="font-semibold text-textprimary dark:text-gray-300">৳{{ number_format($comparison['revenue'], 0) }}</span></p>
+                @if($comparison['revenue_diff'] !== null)
+                @php $rd = $comparison['revenue_diff']; @endphp
+                <span class="inline-flex items-center gap-0.5 text-sm font-bold {{ $rd >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400' }}">
+                    @if($rd >= 0)
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/></svg>
+                    @else
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                    @endif
+                    {{ abs($rd) }}%
+                </span>
+                @else
+                <span class="text-xs text-textsecondary dark:text-gray-500">No prev. data</span>
+                @endif
+            </div>
+        </div>
+        @php $rMax = max($totalRevenue, $comparison['revenue'], 1); $rPct = round($totalRevenue / $rMax * 100); $rPrevPct = round($comparison['revenue'] / $rMax * 100); @endphp
+        <div class="mt-3 space-y-1">
+            <div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5">
+                <div class="h-1.5 rounded-full bg-green-500 transition-all" style="width:{{ $rPct }}%"></div>
+            </div>
+            <div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5">
+                <div class="h-1.5 rounded-full bg-green-200 dark:bg-green-800 transition-all" style="width:{{ $rPrevPct }}%"></div>
+            </div>
+        </div>
+    </div>
+
+</div>
+@endif
 
 {{-- ═══ SECTION 2: Charts Row ═══ --}}
 @php
@@ -361,15 +492,18 @@ $statusMeta = [
         @if($topProducts->isEmpty())
         <div class="px-6 py-10 text-center text-xs text-textsecondary dark:text-gray-400">No sales data for period</div>
         @else
-        <div class="divide-y divide-gray-100 dark:divide-gray-700">
-            @foreach($topProducts as $i => $product)
-            <div class="flex items-center gap-3 px-5 py-3">
-                <span class="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs font-bold text-textsecondary dark:text-gray-400 flex-shrink-0">{{ $i + 1 }}</span>
+        <div class="px-4 pt-4" style="height:200px;position:relative;">
+            <canvas id="topProductsChart"></canvas>
+        </div>
+        <div class="divide-y divide-gray-100 dark:divide-gray-700 mt-2">
+            @foreach($topProducts->take(5) as $i => $product)
+            <div class="flex items-center gap-3 px-5 py-2.5">
+                <span class="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs font-bold text-textsecondary dark:text-gray-400 flex-shrink-0">{{ $i + 1 }}</span>
                 <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-textprimary dark:text-gray-100 truncate">{{ $product->product_name }}</p>
-                    <p class="text-xs text-textsecondary dark:text-gray-400">{{ number_format($product->total_qty) }} units sold</p>
+                    <p class="text-xs font-medium text-textprimary dark:text-gray-100 truncate">{{ $product->product_name }}</p>
+                    <p class="text-[10px] text-textsecondary dark:text-gray-400">{{ number_format($product->total_qty) }} units</p>
                 </div>
-                <span class="text-sm font-semibold text-textprimary dark:text-gray-100 flex-shrink-0">৳{{ number_format($product->total_revenue, 0) }}</span>
+                <span class="text-xs font-semibold text-textprimary dark:text-gray-100 flex-shrink-0">৳{{ number_format($product->total_revenue, 0) }}</span>
             </div>
             @endforeach
         </div>
@@ -437,9 +571,16 @@ $statusMeta = [
                 <span class="text-sm text-textsecondary dark:text-gray-400">Units Sold</span>
                 <span class="text-sm font-semibold text-textprimary dark:text-gray-100">{{ number_format($totalUnits) }}</span>
             </div>
-            <div class="flex items-center justify-between py-3">
+            <div class="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700">
                 <span class="text-sm text-textsecondary dark:text-gray-400">Returns</span>
                 <span class="text-sm font-semibold {{ $returnsCount > 0 ? 'text-danger' : 'text-textprimary dark:text-gray-100' }}">{{ $returnsCount }}</span>
+            </div>
+            <div class="flex items-center justify-between py-3">
+                <div>
+                    <span class="text-sm text-textsecondary dark:text-gray-400">Repeat Customers</span>
+                    <p class="text-[10px] text-textsecondary dark:text-gray-500">Ordered more than once</p>
+                </div>
+                <span class="text-sm font-semibold {{ $repeatRate > 30 ? 'text-green-600 dark:text-green-400' : ($repeatRate > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-textprimary dark:text-gray-100') }}">{{ $repeatRate }}%</span>
             </div>
         </div>
     </div>
@@ -451,6 +592,65 @@ $statusMeta = [
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
+// ── Period dropdown (top-level filter — AJAX, no page reload) ────────────────
+function periodDropdown() {
+    return {
+        open:       false,
+        showCustom: {{ request('range') === 'custom' ? 'true' : 'false' }},
+        range:      '{{ request('range', 'today') }}',
+        label:      '{{ $rangeLabel }}',
+        customFrom: '{{ request('from', '') }}',
+        customTo:   '{{ request('to', '') }}',
+        loading:    false,
+
+        goRange(r, lbl) {
+            this.open      = false;
+            this.range     = r;
+            this.label     = lbl;
+            this.fetch(r);
+        },
+
+        applyCustom() {
+            if (!this.customFrom || !this.customTo) return;
+            this.open  = false;
+            this.range = 'custom';
+            this.label = 'Custom Range';
+            this.fetch('custom', this.customFrom, this.customTo);
+        },
+
+        fetch(range, from, to) {
+            this.loading = true;
+            let url = '{{ route('admin.dashboard.summaryData') }}?range=' + range;
+            if (from && to) url += '&from=' + encodeURIComponent(from) + '&to=' + encodeURIComponent(to);
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(r => r.json())
+                .then(d => {
+                    this.label   = d.rangeLabel;
+                    this.loading = false;
+                    this.updateDom(d);
+                });
+        },
+
+        updateDom(d) {
+            const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+            set('summary-total-orders', d.totalOrders.toLocaleString());
+            set('summary-revenue',      '৳' + Math.round(d.totalRevenue).toLocaleString());
+            set('summary-pending',      d.pendingOrders.toLocaleString());
+            set('summary-in-courier',   d.inCourier.toLocaleString());
+            set('summary-conversion',   d.conversionRate + '%');
+            set('total-orders-count',   d.periodTotal.toLocaleString());
+            set('summary-range-label',  d.rangeLabel);
+            set('return-ratio',         d.returnRatio);
+            Object.entries(d.cards).forEach(([status, info]) => {
+                const cEl = document.getElementById('status-count-' + status);
+                const rEl = document.getElementById('status-revenue-' + status);
+                if (cEl) cEl.textContent = info.count.toLocaleString();
+                if (rEl) rEl.textContent = '৳' + Math.round(info.revenue).toLocaleString();
+            });
+        },
+    };
+}
+
 // ── Shared constants ──────────────────────────────────────────────────────────
 const SOURCE_COLORS = @json($sourceColors);
 const SOURCE_LABELS = @json($sourceLabels);
@@ -493,17 +693,16 @@ function applyStatusChart(statuses) {
 function statusCardData() {
     return {
         open:       false,
-        range:      '{{ $range }}',
-        rangeLabel: '{{ $rangeLabel }}',
+        range:      'this_month',
+        rangeLabel: 'This Month',
         showCustom: false,
-        customFrom: '{{ $from ?? '' }}',
-        customTo:   '{{ $to ?? '' }}',
+        customFrom: '',
+        customTo:   '',
         total:      {{ $periodTotal }},
         loading:    false,
 
         init() {
-            // Chart rendered with SSR data; just sync total display
-            this.total = {{ $periodTotal }};
+            this.load('this_month');
         },
 
         selectRange(r, label) {
@@ -645,6 +844,40 @@ document.addEventListener('DOMContentLoaded', function () {
         },
         options: { cutout: '72%', plugins: { legend: { display: false }, tooltip: { enabled: !statusEmpty } } },
     });
+
+    // Top Products horizontal bar chart
+    const topProdCtx = document.getElementById('topProductsChart');
+    if (topProdCtx) {
+        const topProdData = @json($topProducts->map(fn($p) => ['name' => \Illuminate\Support\Str::limit($p->product_name, 22), 'revenue' => (float)$p->total_revenue]));
+        const barColors = ['#3B82F6','#8B5CF6','#10B981','#F59E0B','#EF4444','#06B6D4','#EC4899','#F97316'];
+        new Chart(topProdCtx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: topProdData.map(p => p.name),
+                datasets: [{
+                    data: topProdData.map(p => p.revenue),
+                    backgroundColor: topProdData.map((_, i) => barColors[i % barColors.length]),
+                    borderRadius: 4,
+                }],
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: ctx => '৳' + Math.round(ctx.raw).toLocaleString() } },
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(0,0,0,0.05)' },
+                        ticks: { font: { size: 9 }, callback: v => v >= 1000 ? (v/1000).toFixed(0)+'k' : v },
+                    },
+                    y: { ticks: { font: { size: 9 } } },
+                },
+            },
+        });
+    }
 
     const srcCtx = document.getElementById('orderSourceChart');
     if (!srcCtx) return;

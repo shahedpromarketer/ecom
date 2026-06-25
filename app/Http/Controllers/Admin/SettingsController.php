@@ -19,18 +19,20 @@ class SettingsController extends Controller
 
     public function index()
     {
-        $settings = Setting::all()->pluck('value', 'key');
+        $tenantId = auth()->user()->tenant_id;
+        $settings  = Setting::forTenant($tenantId)->pluck('value', 'key');
         return view('admin.settings.index', compact('settings'));
     }
 
     public function update(Request $request)
     {
-        $group = $request->get('group', 'general');
-        $keys  = $this->groups[$group] ?? [];
+        $tenantId = auth()->user()->tenant_id;
+        $group    = $request->get('group', 'general');
+        $keys     = $this->groups[$group] ?? [];
 
         foreach ($keys as $key) {
             if ($request->has($key)) {
-                Setting::setValue($key, $request->input($key), $group);
+                Setting::setValue($key, $request->input($key), $group, $tenantId);
             }
         }
 
@@ -38,12 +40,12 @@ class SettingsController extends Controller
             foreach (['site_logo', 'favicon'] as $file) {
                 if ($request->hasFile($file)) {
                     $path = $request->file($file)->store('public/logo');
-                    Setting::setValue($file, str_replace('public/', 'storage/', $path), 'appearance');
+                    Setting::setValue($file, str_replace('public/', 'storage/', $path), 'appearance', $tenantId);
                 }
             }
         }
 
-        Cache::store('file')->forget('settings_all');
+        Cache::store('file')->forget('settings_all_' . $tenantId);
 
         return back()->with('success', 'Settings saved successfully.');
     }

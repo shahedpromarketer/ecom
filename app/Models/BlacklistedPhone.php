@@ -6,15 +6,19 @@ use Illuminate\Database\Eloquent\Model;
 
 class BlacklistedPhone extends Model
 {
-    protected $fillable = ['phone', 'reason', 'blacklisted_by'];
+    protected $fillable = ['phone', 'reason', 'blacklisted_by', 'tenant_id'];
 
     public function blacklistedByUser()
     {
         return $this->belongsTo(User::class, 'blacklisted_by');
     }
 
-    public static function isBlacklisted(string $phone): bool
+    public static function isBlacklisted(string $phone, ?int $tenantId = null): bool
     {
-        return static::where('phone', $phone)->exists();
+        $q = static::where('phone', $phone);
+        if ($tenantId) {
+            $q->where('tenant_id', $tenantId);
+        }
+        return $q->exists();
     }
 }

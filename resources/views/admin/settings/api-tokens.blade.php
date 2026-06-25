@@ -24,7 +24,7 @@
             </div>
             <div>
                 <h3 class="text-sm font-bold text-gray-900 dark:text-white">Plugin Access Token</h3>
-                <p class="text-xs text-gray-400 mt-0.5">Add this token to your Clothonic WordPress Plugin settings</p>
+                <p class="text-xs text-gray-400 mt-0.5">Add this token to your Ecom Pilot WordPress Plugin settings</p>
             </div>
         </div>
 
@@ -116,8 +116,8 @@
         <h3 class="text-sm font-bold text-gray-900 dark:text-white mb-4">How to Connect</h3>
         <div class="space-y-3">
             @foreach([
-                'Download and install Clothonic Plugin on your WordPress site.',
-                'Go to WordPress Admin → Clothonic → Settings.',
+                'Download and install Ecom Pilot Plugin on your WordPress site.',
+                'Go to WordPress Admin → Ecom Pilot → Settings.',
                 'Paste the CRM URL and Access Token shown above.',
                 'Click "Test Connection" to verify the connection.',
                 'Enable "Auto Sync Orders" to start receiving orders in this CRM.',

@@ -10,6 +10,7 @@ class Product extends Model
         'wp_product_id', 'name', 'slug', 'description', 'short_description',
         'price', 'regular_price', 'sale_price',
         'sku', 'status', 'is_featured', 'meta_title', 'meta_description',
+        'tenant_id',
     ];
 
     protected $casts = [
@@ -68,5 +69,10 @@ class Product extends Model
     public function scopeFeatured($query)
     {
         return $query->where('is_featured', true);
+    }
+
+    public function scopeForTenant($query)
+    {
+        return $query->where('tenant_id', auth()->user()?->tenant_id);
     }
 }

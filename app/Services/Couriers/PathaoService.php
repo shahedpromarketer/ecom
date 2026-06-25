@@ -55,7 +55,17 @@ class PathaoService extends BaseCourierService
                 'item_description'    => '',
             ]);
 
-        return $response->json();
+        $data = $response->json();
+
+        if (empty($data['data']['consignment_id'])) {
+            throw new \Exception('Pathao API error: ' . ($data['message'] ?? json_encode($data)));
+        }
+
+        return [
+            'tracking_code'  => $data['data']['consignment_id'],
+            'consignment_id' => $data['data']['consignment_id'],
+            'status'         => 'submitted',
+        ];
     }
 
     public function trackShipment(string $trackingCode): array

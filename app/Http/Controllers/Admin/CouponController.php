@@ -11,6 +11,9 @@ class CouponController extends Controller
     public function index(Request $request)
     {
         $query = Coupon::query();
+        if (!auth()->user()->is_super_admin) {
+            $query->where('tenant_id', auth()->user()->tenant_id);
+        }
 
         if ($request->filled('status')) {
             $query->where('is_active', $request->status === 'active');
@@ -24,10 +27,11 @@ class CouponController extends Controller
 
         $coupons = $query->latest()->paginate(20)->withQueryString();
 
+        $statsBase = auth()->user()->is_super_admin ? Coupon::query() : Coupon::where('tenant_id', auth()->user()->tenant_id);
         $stats = [
-            'total'  => Coupon::count(),
-            'active' => Coupon::where('is_active', true)->count(),
-            'used'   => Coupon::sum('used_count'),
+            'total'  => (clone $statsBase)->count(),
+            'active' => (clone $statsBase)->where('is_active', true)->count(),
+            'used'   => (clone $statsBase)->sum('used_count'),
         ];
 
         return view('admin.coupons.index', compact('coupons', 'stats'));
@@ -60,6 +64,7 @@ class CouponController extends Controller
             'usage_limit'      => $request->usage_limit,
             'expires_at'       => $request->expires_at,
             'is_active'        => $request->boolean('is_active', true),
+            'tenant_id'        => auth()->user()->tenant_id,
         ]);
 
         return redirect()->route('admin.coupons.index')->with('success', 'Coupon created successfully.');

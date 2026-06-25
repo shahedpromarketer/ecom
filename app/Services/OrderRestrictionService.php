@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\BlacklistedPhone;
+use App\Models\IpBlocklist;
 use App\Models\Order;
 use App\Models\Setting;
 
@@ -43,21 +44,47 @@ class OrderRestrictionService
         ];
     }
 
-    public function checkDuplicateOrder(string $phone, array $productIds, string $address): array
+    public function checkDuplicateOrder(string $phone, array $productIds = [], string $address = ''): array
     {
         $minutes = (int) Setting::getValue('order_duplicate_block_minutes', 60);
 
         $recentOrder = Order::where('shipping_phone', $phone)
-            ->where('shipping_address', $address)
             ->where('created_at', '>=', now()->subMinutes($minutes))
-            ->whereHas('items', function ($q) use ($productIds) {
-                $q->whereIn('product_id', $productIds);
-            })
+            ->whereNotIn('status', ['cancelled', 'returned'])
             ->exists();
 
         return [
             'allowed' => !$recentOrder,
-            'message' => 'A similar order was recently placed. Please wait before ordering again',
+            'message' => 'এই নম্বর থেকে সম্প্রতি একটি অর্ডার করা হয়েছে। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন।',
+        ];
+    }
+
+    public function checkIpBlock(string $ip, ?int $tenantId = null): array
+    {
+        if (!$ip || $ip === '127.0.0.1') {
+            return ['allowed' => true, 'message' => ''];
+        }
+
+        $blocked = IpBlocklist::isBlocked($ip, $tenantId);
+        return [
+            'allowed' => !$blocked,
+            'message' => 'Orders are not accepted from your location.',
+        ];
+    }
+
+    public function check24hLimit(string $phone, ?int $tenantId = null): array
+    {
+        $q = Order::where('shipping_phone', $phone)
+            ->where('created_at', '>=', now()->subHours(24))
+            ->whereNotIn('status', ['cancelled', 'returned']);
+        if ($tenantId) {
+            $q->where('tenant_id', $tenantId);
+        }
+        $exists = $q->exists();
+
+        return [
+            'allowed' => !$exists,
+            'message' => 'আপনি ইতিমধ্যে ২৪ ঘণ্টার মধ্যে একটি অর্ডার করেছেন। অনুগ্রহ করে পরে আবার চেষ্টা করুন।',
         ];
     }
 

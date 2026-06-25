@@ -6,31 +6,62 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Dashboard') — Clothonic Admin</title>
+    <title>@yield('title', 'Dashboard') — Ecom Pilot Admin</title>
     <script>if(localStorage.getItem('adminTheme')==='dark')document.documentElement.classList.add('dark');</script>
     @vite(['resources/css/admin.css'])
     @stack('styles')
     <style>
         .nav-collapsed .sidebar-section-label { display: none !important; }
         .nav-collapsed > div > span { display: none !important; }
+        .nav-collapsed > div { padding: 0 !important; margin: 0 !important; }
         .nav-collapsed a span.truncate,
         .nav-collapsed button span.truncate { display: none !important; }
+        .nav-collapsed {
+            scrollbar-width: none;
+        }
+        .nav-collapsed::-webkit-scrollbar {
+            display: none;
+        }
         .nav-collapsed a, .nav-collapsed > a {
+            display: flex !important;
             justify-content: center !important;
-            padding-left: 0.5rem !important;
-            padding-right: 0.5rem !important;
-            margin-left: 0.25rem;
-            margin-right: 0.25rem;
+            align-items: center !important;
+            padding: 0.75rem 0 !important;
+            margin: 0 !important;
             border-left: 0 !important;
+            width: 100% !important;
+            gap: 0 !important;
         }
         .nav-collapsed a svg { flex-shrink: 0; }
-        .nav-collapsed div[x-data] button { justify-content: center; padding-left: 0.5rem; padding-right: 0.5rem; }
-        .nav-collapsed div[x-data] a { justify-content: center !important; padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
         .nav-collapsed div[x-data] { display: none !important; }
         [x-cloak] { display: none !important; }
+        select.cs {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='%236b7280' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.6rem center;
+            background-size: 1rem 1rem;
+            padding-right: 2rem !important;
+        }
     </style>
 </head>
 <body class="font-body bg-gray-50 dark:bg-gray-900 transition-colors duration-200" x-data="sidebar">
+
+{{-- Impersonation Banner --}}
+@if(session('impersonating_super_admin_id'))
+<div class="fixed top-0 left-0 right-0 z-[9999] bg-amber-500 text-white text-sm font-semibold px-4 py-2 flex items-center justify-between shadow-lg">
+    <span>⚠️ You are impersonating a tenant account. Actions here are real.</span>
+    <form method="POST" action="{{ route('super.stop-impersonating') }}">
+        @csrf
+        <button type="submit" class="ml-4 px-3 py-1 bg-white text-amber-700 rounded text-xs font-bold hover:bg-amber-100 transition">
+            Exit Impersonation
+        </button>
+    </form>
+</div>
+<div class="h-10"></div>
+@endif
 
 {{-- Mobile overlay --}}
 <div x-show="mobileOpen"
@@ -57,7 +88,7 @@
     <div class="flex items-center h-16 px-3 border-b border-white/10 flex-shrink-0 overflow-hidden"
          :class="collapsed ? 'justify-center' : 'gap-2 px-5 justify-between'">
         <div class="flex items-center gap-2 overflow-hidden" x-show="!collapsed">
-            <span class="font-heading text-xl font-bold text-white whitespace-nowrap">Clothonic</span>
+            <span class="font-heading text-xl font-bold text-white whitespace-nowrap">Ecom Pilot</span>
             <span class="text-xs bg-accent text-white px-1.5 py-0.5 rounded font-medium flex-shrink-0">Admin</span>
         </div>
         <button @click="collapseToggle()" class="hidden lg:flex w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 items-center justify-center text-white/70 hover:text-white transition-colors flex-shrink-0" title="Toggle sidebar">
@@ -123,21 +154,33 @@
         </div>
 
         @php
-            $counts = \Illuminate\Support\Facades\Cache::remember('sidebar_order_counts', 120, fn() => [
-                'all'            => \App\Models\Order::count(),
-                'pending'        => \App\Models\Order::where('status','pending')->count(),
-                'confirmed'      => \App\Models\Order::where('status','confirmed')->count(),
-                'processing'     => \App\Models\Order::where('status','processing')->count(),
-                'hold'           => \App\Models\Order::where('status','hold')->count(),
-                'shipped'        => \App\Models\Order::where('status','shipped')->count(),
-                'delivered'      => \App\Models\Order::where('status','delivered')->count(),
-                'completed'      => \App\Models\Order::where('status','completed')->count(),
-                'cancelled'      => \App\Models\Order::where('status','cancelled')->count(),
-                'failed'         => \App\Models\Order::where('status','failed')->count(),
-                'pending_return' => \App\Models\Order::where('status','pending_return')->count(),
-                'returned'       => \App\Models\Order::where('status','returned')->count(),
-                'incomplete'     => \App\Models\Order::where('status','pending')->where('payment_status','unpaid')->where('source','!=','manual')->count(),
-            ]);
+            $sidebarUser   = auth()->user();
+            $sidebarTenant = $sidebarUser?->tenant_id;
+            $sidebarIsSA   = $sidebarUser?->is_super_admin;
+            $sidebarCacheKey = 'sidebar_order_counts_' . ($sidebarIsSA ? 'sa' : $sidebarTenant);
+
+            $counts = \Illuminate\Support\Facades\Cache::remember($sidebarCacheKey, 120, function () use ($sidebarTenant, $sidebarIsSA) {
+                $base = fn($s = null) => $sidebarIsSA
+                    ? ($s ? \App\Models\Order::where('status', $s) : \App\Models\Order::query())
+                    : ($s ? \App\Models\Order::where('tenant_id', $sidebarTenant)->where('status', $s)
+                          : \App\Models\Order::where('tenant_id', $sidebarTenant));
+
+                return [
+                    'all'            => $base()->count(),
+                    'pending'        => $base('pending')->count(),
+                    'confirmed'      => $base('confirmed')->count(),
+                    'processing'     => $base('processing')->count(),
+                    'hold'           => $base('hold')->count(),
+                    'shipped'        => $base('shipped')->count(),
+                    'delivered'      => $base('delivered')->count(),
+                    'completed'      => $base('completed')->count(),
+                    'cancelled'      => $base('cancelled')->count(),
+                    'pending_return' => $base('pending_return')->count(),
+                    'returned'       => $base('returned')->count(),
+                    'incomplete'     => ($sidebarIsSA ? \App\Models\Order::query() : \App\Models\Order::where('tenant_id', $sidebarTenant))
+                                        ->where('status','pending')->where('payment_status','unpaid')->where('source','!=','manual')->count(),
+                ];
+            });
             $ordersActive = request()->is('admin/orders*') || request()->is('admin/payments*');
         @endphp
 
@@ -155,9 +198,10 @@
                     <span class="text-sm font-medium truncate">Orders</span>
                 </div>
                 <div class="flex items-center gap-1.5 flex-shrink-0">
-                    @if($counts['pending'] > 0)
-                        <span class="px-1.5 py-0.5 text-[10px] font-bold rounded-md bg-accent/20 text-accent border border-accent/30 min-w-[20px] text-center tabular-nums">{{ $counts['pending'] > 999 ? '999+' : $counts['pending'] }}</span>
-                    @endif
+                    <span data-sidebar-count="pending"
+                          class="px-1.5 py-0.5 text-[10px] font-bold rounded-md bg-accent/20 text-accent border border-accent/30 min-w-[20px] text-center tabular-nums {{ $counts['pending'] > 0 ? '' : 'hidden' }}">
+                        {{ $counts['pending'] > 999 ? '999+' : $counts['pending'] }}
+                    </span>
                     <svg class="w-3.5 h-3.5 text-white/40 transition-transform duration-200" :class="ordersOpen ? 'rotate-180' : ''"
                          fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
@@ -189,7 +233,6 @@
                     ['key' => null,             'label' => 'All Orders',     'count' => $counts['all'],            'param' => null],
                     ['key' => 'pending',        'label' => 'Pending',        'count' => $counts['pending'],        'param' => 'status'],
                     ['key' => 'confirmed',      'label' => 'Confirmed',      'count' => $counts['confirmed'],      'param' => 'status'],
-                    ['key' => 'failed',         'label' => 'Failed Orders',  'count' => $counts['failed'],         'param' => 'status'],
                     ['key' => 'processing',     'label' => 'Processing',     'count' => $counts['processing'],     'param' => 'status'],
                     ['key' => 'hold',           'label' => 'Hold',           'count' => $counts['hold'],           'param' => 'status'],
                     ['key' => 'shipped',        'label' => 'In Courier',     'count' => $counts['shipped'],        'param' => 'status'],
@@ -220,9 +263,10 @@
                         <span class="w-1 h-1 rounded-full flex-shrink-0 transition-colors {{ $isActive ? 'bg-yellow-400' : 'bg-white/30 group-hover:bg-white/60' }}"></span>
                         <span class="truncate">{{ $item['label'] }}</span>
                     </span>
-                    @if($item['count'] > 0)
-                        <span class="px-1.5 py-0.5 text-[10px] font-bold rounded-md bg-yellow-400/20 text-yellow-300 border border-yellow-400/40 min-w-[20px] text-center tabular-nums flex-shrink-0 ml-1">{{ $item['count'] > 999 ? '999+' : number_format($item['count']) }}</span>
-                    @endif
+                    <span data-sidebar-count="{{ $item['key'] ?? 'all' }}"
+                          class="px-1.5 py-0.5 text-[10px] font-bold rounded-md bg-yellow-400/20 text-yellow-300 border border-yellow-400/40 min-w-[20px] text-center tabular-nums flex-shrink-0 ml-1 {{ $item['count'] > 0 ? '' : 'hidden' }}">
+                        {{ $item['count'] > 999 ? '999+' : number_format($item['count']) }}
+                    </span>
                 </a>
                 @endforeach
 
@@ -487,9 +531,15 @@
                    bg-white dark:bg-gray-800
                    border-b border-border dark:border-gray-700
                    h-16 flex items-center px-4 sm:px-6 gap-3
-                   transition-colors duration-200">
+                   transition-colors duration-200"
+            x-data="{
+                searchOpen: false,
+                openSearch()  { this.searchOpen = true;  this.$nextTick(() => document.getElementById('globalSearchInput')?.focus()); },
+                closeSearch() { this.searchOpen = false; const i = document.getElementById('globalSearchInput'); const r = document.getElementById('globalSearchResults'); if(i) i.value=''; if(r) r.classList.add('hidden'); }
+            }"
+            @click.outside="closeSearch()">
 
-        {{-- Mobile hamburger (hidden on desktop) --}}
+        {{-- Mobile hamburger + brand name --}}
         <button @click="toggle()"
                 class="p-2 rounded-xl flex-shrink-0 transition-colors lg:hidden
                        text-textsecondary dark:text-gray-400
@@ -500,70 +550,81 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>
             </svg>
         </button>
+        <span x-show="!searchOpen"
+              class="lg:hidden font-bold text-sm text-textprimary dark:text-gray-100 flex-shrink-0 -ml-1">Ecom Pilot</span>
 
-        <div class="flex items-center gap-2 flex-1 min-w-0">
-            <h1 class="font-heading font-semibold text-base sm:text-lg truncate flex-shrink-0
+        <div class="flex items-center flex-1 min-w-0 relative">
+            {{-- Page title: visible when search closed --}}
+            <h1 x-show="!searchOpen"
+                class="font-heading font-semibold text-base sm:text-lg truncate flex-shrink-0
                        text-textprimary dark:text-gray-100
                        @if(request()->routeIs('admin.dashboard')) hidden sm:block @endif">
                 @yield('page-title', 'Dashboard')
             </h1>
+
+            {{-- Inline search input: visible when search open (dashboard only) --}}
             @if(request()->routeIs('admin.dashboard'))
-            <div class="relative flex-1 min-w-0 sm:ml-2 sm:max-w-xs" id="globalSearchWrapper">
-                <div class="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-xl px-3 py-1.5 w-full">
-                    <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            <div x-show="searchOpen" x-cloak
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0 -translate-x-2"
+                 x-transition:enter-end="opacity-100 translate-x-0"
+                 x-transition:leave="transition ease-in duration-150"
+                 x-transition:leave-start="opacity-100 translate-x-0"
+                 x-transition:leave-end="opacity-0 -translate-x-2"
+                 class="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-xl px-3 py-1.5 w-full">
+                <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                <input type="text" id="globalSearchInput"
+                    placeholder="Order ID বা ফোন নম্বর..."
+                    autocomplete="off"
+                    style="outline:none !important; box-shadow:none !important; border:none !important;"
+                    class="flex-1 min-w-0 bg-transparent text-sm text-gray-700 dark:text-white placeholder-gray-400"
+                    oninput="globalSearch(this.value)"
+                    @keydown.escape="closeSearch()">
+                <span id="searchSpinner" class="hidden flex-shrink-0">
+                    <svg class="w-4 h-4 text-gray-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
                     </svg>
-                    <input type="text" id="globalSearchInput"
-                        placeholder="Order ID বা ফোন নম্বর..."
-                        autocomplete="off"
-                        style="outline:none !important; box-shadow:none !important; border:none !important;"
-                        class="flex-1 min-w-0 bg-transparent text-sm text-gray-700 dark:text-white placeholder-gray-400"
-                        oninput="globalSearch(this.value)"
-                        onkeydown="if(event.key==='Escape') document.getElementById('globalSearchResults').classList.add('hidden')">
-                    <span id="searchSpinner" class="hidden flex-shrink-0">
-                        <svg class="w-4 h-4 text-gray-400 animate-spin" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                        </svg>
-                    </span>
-                </div>
-                <div id="globalSearchResults"
-                    class="absolute top-full left-0 mt-2 w-full min-w-[280px] bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-xl z-50 hidden overflow-hidden">
-                    <div id="searchResultsInner"></div>
-                </div>
+                </span>
+            </div>
+            <div id="globalSearchResults"
+                 class="absolute top-full left-0 mt-2 w-full min-w-[280px] bg-white dark:bg-gray-900
+                        border border-gray-100 dark:border-gray-700 rounded-2xl shadow-xl z-50 hidden overflow-hidden">
+                <div id="searchResultsInner"></div>
             </div>
             @endif
         </div>
 
         <div class="flex items-center gap-1 flex-shrink-0">
 
+            {{-- Search icon toggle (dashboard only) --}}
+            @if(request()->routeIs('admin.dashboard'))
+            <button @click="searchOpen ? closeSearch() : openSearch()"
+                    class="p-2 rounded-xl transition-colors text-textsecondary dark:text-gray-400
+                           border border-gray-200 dark:border-gray-600
+                           hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-textprimary dark:hover:text-gray-200">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+            </button>
+            @endif
+
             {{-- New Order shortcut (orders + dashboard) --}}
             @if(request()->is('admin/orders*') || request()->is('admin/dashboard') || request()->is('admin'))
             <a href="{{ route('admin.orders.create') }}"
-               class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex-shrink-0 mr-1">
-                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+               class="p-2 rounded-xl transition-colors flex-shrink-0
+                      bg-primary hover:bg-primary/90 text-white">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
                 </svg>
-                <span class="hidden sm:inline">New Order</span>
             </a>
             @endif
 
-            {{-- Dark mode toggle --}}
-            <button @click="$store.theme.toggle()"
-                    class="p-2 rounded-xl transition-colors
-                           text-textsecondary dark:text-gray-400
-                           hover:bg-gray-100 dark:hover:bg-gray-700
-                           hover:text-textprimary dark:hover:text-gray-200">
-                <svg class="w-5 h-5 dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/>
-                </svg>
-                <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/>
-                </svg>
-            </button>
-
             {{-- Notification bell --}}
             <button class="relative p-2 rounded-xl transition-colors
+                           border border-gray-200 dark:border-gray-600
                            text-textsecondary dark:text-gray-400
                            hover:bg-gray-100 dark:hover:bg-gray-700
                            hover:text-textprimary dark:hover:text-gray-200">
@@ -576,18 +637,11 @@
             {{-- User dropdown --}}
             <div x-data="{ open: false }" class="relative">
                 <button @click="open = !open"
-                        class="flex items-center gap-2 px-2 py-1.5 rounded-xl transition-colors text-sm
-                               hover:bg-gray-100 dark:hover:bg-gray-700
-                               text-textprimary dark:text-gray-200">
-                    <div class="w-8 h-8 bg-primary dark:bg-accent rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                        class="flex items-center p-1 rounded-xl transition-colors
+                               hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <div class="w-8 h-8 bg-primary dark:bg-accent rounded-full flex items-center justify-center text-white text-xs font-bold">
                         {{ substr(auth()->user()->name ?? 'A', 0, 1) }}
                     </div>
-                    <span class="hidden sm:block font-medium max-w-[120px] truncate">{{ auth()->user()->name ?? 'Admin' }}</span>
-                    <svg class="w-4 h-4 text-textsecondary dark:text-gray-400 flex-shrink-0 transition-transform duration-200"
-                         :class="{ 'rotate-180': open }"
-                         fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
-                    </svg>
                 </button>
 
                 <div x-show="open"
@@ -606,7 +660,7 @@
                         <p class="text-xs font-medium text-textprimary dark:text-gray-200 truncate">{{ auth()->user()->name ?? 'Admin' }}</p>
                         <p class="text-xs text-textsecondary dark:text-gray-500 truncate">{{ auth()->user()->email ?? '' }}</p>
                     </div>
-                    <a href="#"
+                    <a href="{{ route('admin.profile') }}"
                        class="flex items-center gap-2 px-3 py-2 text-sm transition-colors
                               text-textprimary dark:text-gray-200
                               hover:bg-gray-50 dark:hover:bg-gray-700">
@@ -615,6 +669,19 @@
                         </svg>
                         Profile
                     </a>
+                    <button @click="$store.theme.toggle()"
+                            class="w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors
+                                   text-textprimary dark:text-gray-200
+                                   hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <svg class="w-4 h-4 text-textsecondary dark:text-gray-400 dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/>
+                        </svg>
+                        <svg class="w-4 h-4 text-textsecondary dark:text-gray-400 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/>
+                        </svg>
+                        <span class="dark:hidden">Dark Mode</span>
+                        <span class="hidden dark:block">Light Mode</span>
+                    </button>
                     <div class="border-t border-border dark:border-gray-700 my-1"></div>
                     <form method="POST" action="{{ route('admin.logout') }}">
                         @csrf
@@ -644,7 +711,7 @@
                    border-border dark:border-gray-700
                    transition-colors duration-200">
         <p class="text-xs text-center text-textsecondary dark:text-gray-500">
-            &copy; {{ date('Y') }} Clothonic Admin. All rights reserved.
+            &copy; {{ date('Y') }} Ecom Pilot Admin. All rights reserved.
         </p>
     </footer>
 
@@ -670,6 +737,23 @@ document.addEventListener('DOMContentLoaded', function () {
     const itemHeight = activeLink.offsetHeight;
     nav.scrollTop    = itemPos - (nav.offsetHeight / 2) + (itemHeight / 2);
 });
+</script>
+
+<script>
+function refreshSidebarCounts() {
+    fetch('/admin/sidebar-counts', {
+        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content }
+    })
+    .then(r => r.json())
+    .then(counts => {
+        document.querySelectorAll('[data-sidebar-count]').forEach(el => {
+            const val = counts[el.dataset.sidebarCount] ?? 0;
+            el.textContent = val > 999 ? '999+' : val.toLocaleString();
+            el.classList.toggle('hidden', val === 0);
+        });
+    })
+    .catch(() => {});
+}
 </script>
 
 <script>
@@ -722,12 +806,6 @@ function globalSearch(q) {
     }, 300);
 }
 
-document.addEventListener('click', function(e) {
-    const wrapper = document.getElementById('globalSearchWrapper');
-    if (wrapper && !wrapper.contains(e.target)) {
-        document.getElementById('globalSearchResults').classList.add('hidden');
-    }
-});
 </script>
 
 </body>

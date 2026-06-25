@@ -8,6 +8,7 @@ class Category extends Model
 {
     protected $fillable = [
         'name', 'slug', 'parent_id', 'image', 'description', 'is_active', 'sort_order',
+        'tenant_id',
     ];
 
     protected $casts = [
@@ -27,5 +28,10 @@ class Category extends Model
     public function parent()
     {
         return $this->belongsTo(Category::class, 'parent_id');
+    }
+
+    public function scopeForTenant($query)
+    {
+        return $query->where('tenant_id', auth()->user()?->tenant_id);
     }
 }

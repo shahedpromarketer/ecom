@@ -15,6 +15,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name', 'email', 'phone', 'password', 'role', 'avatar',
         'role_id', 'is_banned', 'ban_reason', 'last_login_at', 'order_cancel_count',
+        'tenant_id', 'is_super_admin',
     ];
 
     protected $hidden = [
@@ -29,8 +30,13 @@ class User extends Authenticatable
             'password'          => 'hashed',
             'is_active'         => 'boolean',
             'is_banned'         => 'boolean',
+            'is_super_admin'    => 'boolean',
         ];
     }
+
+    public function tenant() { return $this->belongsTo(Tenant::class); }
+
+    public function isSuperAdmin(): bool { return (bool) $this->is_super_admin; }
 
     public function orders()
     {

@@ -40,7 +40,11 @@
       "Bash(Get-ChildItem -Directory)",
       "Bash(Get-ChildItem -Path \"D:\\\\clothonic\\\\database\\\\migrations\" -Filter \"*.php\")",
       "Bash(Select-Object -ExpandProperty Name)",
-      "Bash(Sort-Object)"
+      "Bash(Sort-Object)",
+      "Bash(git checkout *)",
+      "Bash(php -l /home/clothonic/htdocs/laravel.netpilotdigital.com/app/Http/Controllers/Admin/DashboardController.php)",
+      "Bash(php -l /home/clothonic/htdocs/laravel.netpilotdigital.com/app/Http/Controllers/Admin/OrderController.php)",
+      "Bash(php -l /home/clothonic/htdocs/laravel.netpilotdigital.com/resources/views/admin/orders/show.blade.php)"
     ]
   }
 }

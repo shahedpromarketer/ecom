@@ -25,6 +25,10 @@ class ProductController extends Controller
             ->withSum('variants', 'stock')
             ->withMin('variants', 'stock');
 
+        if (!auth()->user()->is_super_admin) {
+            $query->where('tenant_id', auth()->user()->tenant_id);
+        }
+
         if ($request->filled('search')) {
             $s = $request->search;
             $query->where(fn ($q) => $q->where('name', 'like', "%{$s}%")->orWhere('sku', 'like', "%{$s}%"));
@@ -39,14 +43,18 @@ class ProductController extends Controller
         }
 
         $products   = $query->latest()->paginate(15)->withQueryString();
-        $categories = Category::whereNull('parent_id')->with('children')->orderBy('name')->get();
+        $catQuery   = Category::whereNull('parent_id')->with('children')->orderBy('name');
+        if (!auth()->user()->is_super_admin) { $catQuery->where('tenant_id', auth()->user()->tenant_id); }
+        $categories = $catQuery->get();
 
         return view('admin.products.index', compact('products', 'categories'));
     }
 
     public function create()
     {
-        $categories = Category::whereNull('parent_id')->with('children')->orderBy('name')->get();
+        $catQ = Category::whereNull('parent_id')->with('children')->orderBy('name');
+        if (!auth()->user()->is_super_admin) { $catQ->where('tenant_id', auth()->user()->tenant_id); }
+        $categories = $catQ->get();
 
         return view('admin.products.create', compact('categories'));
     }
@@ -69,9 +77,10 @@ class ProductController extends Controller
                 'is_featured'       => $data['is_featured'],
                 'meta_title'        => $data['meta_title'] ?? null,
                 'meta_description'  => $data['meta_description'] ?? null,
+                'tenant_id'         => auth()->user()->tenant_id,
             ]);
 
-            $product->categories()->sync($data['categories'] ?? []);
+            $product->categories()->sync($this->resolveCategories($data['categories'] ?? []));
 
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $idx => $file) {
@@ -111,7 +120,9 @@ class ProductController extends Controller
             'variants',
         ]);
 
-        $categories = Category::whereNull('parent_id')->with('children')->orderBy('name')->get();
+        $catQ = Category::whereNull('parent_id')->with('children')->orderBy('name');
+        if (!auth()->user()->is_super_admin) { $catQ->where('tenant_id', auth()->user()->tenant_id); }
+        $categories = $catQ->get();
 
         $variantsData = collect(old('variants'))
             ? collect(old('variants'))->values()->map(fn ($v, $i) => [
@@ -160,7 +171,7 @@ class ProductController extends Controller
                 'meta_description'  => $data['meta_description'] ?? null,
             ]);
 
-            $product->categories()->sync($data['categories'] ?? []);
+            $product->categories()->sync($this->resolveCategories($data['categories'] ?? []));
 
             if ($request->hasFile('images')) {
                 $existingCount = $product->images()->count();
@@ -259,7 +270,9 @@ class ProductController extends Controller
         }
 
         if ($action === 'delete') {
-            $products = Product::whereIn('id', $ids)->with('images')->get();
+            $delQ = Product::whereIn('id', $ids)->with('images');
+            if (!auth()->user()->is_super_admin) { $delQ->where('tenant_id', auth()->user()->tenant_id); }
+            $products = $delQ->get();
             foreach ($products as $p) {
                 foreach ($p->images as $img) {
                     Storage::disk('public')->delete($img->image_path);
@@ -270,7 +283,9 @@ class ProductController extends Controller
         }
 
         if (in_array($action, ['active', 'inactive', 'draft'], true)) {
-            Product::whereIn('id', $ids)->update(['status' => $action]);
+            $statusQ = Product::whereIn('id', $ids);
+            if (!auth()->user()->is_super_admin) { $statusQ->where('tenant_id', auth()->user()->tenant_id); }
+            $statusQ->update(['status' => $action]);
             return back()->with('success', count($ids) . ' product(s) set to ' . $action . '.');
         }
 
@@ -282,9 +297,16 @@ class ProductController extends Controller
         $product->load(['categories', 'variants', 'images']);
 
         $new = $product->replicate();
-        $new->name       = $product->name . ' (Copy)';
-        $new->slug       = $product->slug . '-copy-' . time();
-        $new->status     = 'draft';
+        $new->name   = $product->name . ' (Copy)';
+        $new->status = 'draft';
+
+        $baseSlug  = $product->slug . '-copy';
+        $slug      = $baseSlug;
+        $i         = 1;
+        while (Product::where('slug', $slug)->where('tenant_id', $product->tenant_id)->exists()) {
+            $slug = $baseSlug . '-' . $i++;
+        }
+        $new->slug = $slug;
         $new->is_featured = false;
         $new->save();
 
@@ -301,8 +323,8 @@ class ProductController extends Controller
             $oldPath     = $image->image_path;
             $newFilename = 'clone_' . time() . '_' . basename($oldPath);
             $newPath     = 'products/' . $newFilename;
-            if (Storage::exists('public/' . $oldPath)) {
-                Storage::copy('public/' . $oldPath, 'public/' . $newPath);
+            if (Storage::disk('public')->exists($oldPath)) {
+                Storage::disk('public')->copy($oldPath, $newPath);
             }
             ProductImage::create([
                 'product_id'  => $new->id,
@@ -322,5 +344,25 @@ class ProductController extends Controller
         return redirect()
             ->route('admin.products.edit', $new)
             ->with('success', 'Product cloned. Review and publish when ready.');
+    }
+
+    private function resolveCategories(array $categories): array
+    {
+        if (!empty($categories)) {
+            return $categories;
+        }
+
+        $tenantId = auth()->user()->tenant_id;
+
+        $unknown = Category::firstOrCreate(
+            ['name' => 'Unknown', 'tenant_id' => $tenantId],
+            [
+                'slug'       => 'unknown-' . $tenantId,
+                'is_active'  => true,
+                'sort_order' => 0,
+            ]
+        );
+
+        return [$unknown->id];
     }
 }

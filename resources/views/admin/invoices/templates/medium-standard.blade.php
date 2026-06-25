@@ -27,13 +27,14 @@ tbody tr:nth-child(even) { background:#fafafa; }
 .grand { font-weight:bold; font-size:14px; color:#1B2A4A; border-top:2px solid #1B2A4A; padding-top:5px; margin-top:5px; }
 .due { color:#e53e3e; }
 .footer { text-align:center; margin-top:16px; padding-top:10px; border-top:1px dashed #ddd; font-size:9px; color:#aaa; }
-@media print { @page { size: A5; margin: 6mm; } }
+@media print { @page { size: A5; margin: 6mm; } .no-print { display:none !important; } }
+@media screen { html { background:#f0f2f5; min-height:100vh; padding:64px 20px 20px; } body { max-width:148mm; margin:0 auto; background:white; padding:14mm; box-shadow:0 4px 24px rgba(0,0,0,.15); border-radius:6px; } }
 </style>
 </head>
 <body>
 <div class="header">
     <div>
-        <div class="shop-name">{{ $settings['store_name'] ?? 'Clothonic' }}</div>
+        <div class="shop-name">{{ $settings['store_name'] ?? 'Ecom Pilot' }}</div>
         <div class="shop-sub">{{ $settings['store_tagline'] ?? '' }}</div>
         @if(!empty($settings['store_address']))<div class="shop-sub">{{ $settings['store_address'] }}</div>@endif
     </div>
@@ -87,7 +88,19 @@ tbody tr:nth-child(even) { background:#fafafa; }
     <div class="t-row due"><span>Due:</span><span>৳{{ number_format($order->total - $order->paid_amount, 0) }}</span></div>
     @endif
 </div>
-<div class="footer">{{ $settings['store_name'] ?? 'Clothonic' }} &bull; {{ $settings['store_phone'] ?? '' }} &bull; ধন্যবাদ আপনার ক্রয়ের জন্য!</div>
+<div class="footer">{{ $settings['store_name'] ?? 'Ecom Pilot' }} &bull; {{ $settings['store_phone'] ?? '' }} &bull; ধন্যবাদ আপনার ক্রয়ের জন্য!</div>
+
+@if(!empty($preview))
+<div class="no-print" style="position:fixed;top:0;left:0;right:0;background:#1B2A4A;color:white;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;font-family:Arial,sans-serif;font-size:13px;z-index:9999;box-shadow:0 2px 8px rgba(0,0,0,.3);">
+    <span>&#128065; Preview &mdash; <strong>{{ $template->name ?? '' }}</strong></span>
+    <div style="display:flex;gap:8px;">
+        <a href="/admin/invoice-templates" style="background:transparent;border:1px solid rgba(255,255,255,.4);color:white;padding:5px 14px;border-radius:6px;text-decoration:none;font-size:12px;">&larr; Back</a>
+        <button onclick="window.print()" style="background:#F59E0B;border:none;color:white;padding:6px 16px;border-radius:6px;cursor:pointer;font-weight:bold;font-size:12px;">Print</button>
+    </div>
+</div>
+<div class="no-print" style="height:44px;"></div>
+@else
 <script>window.onload = () => window.print();</script>
+@endif
 </body>
 </html>

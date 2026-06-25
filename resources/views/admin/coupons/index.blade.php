@@ -58,18 +58,26 @@
           class="flex flex-wrap gap-3 px-6 py-4 border-b border-border dark:border-gray-700">
         <input type="text" name="search" value="{{ request('search') }}" placeholder="Search by code…"
                class="flex-1 min-w-[180px] px-4 py-2.5 text-sm rounded-xl border border-border dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 placeholder-textsecondary dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all duration-200">
-        <select name="type"
-                class="px-4 py-2.5 text-sm rounded-xl border border-border dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all duration-200">
-            <option value="">All Types</option>
-            <option value="percent" {{ request('type') === 'percent' ? 'selected' : '' }}>Percent</option>
-            <option value="fixed"   {{ request('type') === 'fixed'   ? 'selected' : '' }}>Fixed</option>
-        </select>
-        <select name="status"
-                class="px-4 py-2.5 text-sm rounded-xl border border-border dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all duration-200">
-            <option value="">All Statuses</option>
-            <option value="active"   {{ request('status') === 'active'   ? 'selected' : '' }}>Active</option>
-            <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
-        </select>
+        <div class="relative">
+            <select name="type" class="cs pl-3 py-2.5 text-sm rounded-xl border border-border dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all duration-200 cursor-pointer">
+                <option value="">All Types</option>
+                <option value="percent" {{ request('type') === 'percent' ? 'selected' : '' }}>Percent</option>
+                <option value="fixed"   {{ request('type') === 'fixed'   ? 'selected' : '' }}>Fixed</option>
+            </select>
+            <span class="pointer-events-none absolute inset-y-0 right-2.5 flex items-center">
+                <svg class="w-4 h-4 text-textsecondary dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </span>
+        </div>
+        <div class="relative">
+            <select name="status" class="cs pl-3 py-2.5 text-sm rounded-xl border border-border dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all duration-200 cursor-pointer">
+                <option value="">All Statuses</option>
+                <option value="active"   {{ request('status') === 'active'   ? 'selected' : '' }}>Active</option>
+                <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
+            </select>
+            <span class="pointer-events-none absolute inset-y-0 right-2.5 flex items-center">
+                <svg class="w-4 h-4 text-textsecondary dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </span>
+        </div>
         <button type="submit"
                 class="px-4 py-2.5 text-sm font-semibold bg-primary hover:bg-primary/90 text-white rounded-xl transition-colors">
             Filter

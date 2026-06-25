@@ -124,12 +124,12 @@
                                  :class="img.primary ? 'border-accent' : 'border-border dark:border-gray-600'">
                                 <img :src="img.preview" class="w-full aspect-square object-cover">
                                 <div x-show="img.primary"
-                                     class="absolute top-1 left-1 px-1 py-0.5 bg-accent text-white text-[10px] font-bold rounded leading-none">
+                                     class="absolute top-1 left-1 px-1 py-0.5 bg-accent text-black text-[10px] font-bold rounded leading-none">
                                     Primary
                                 </div>
                                 <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                                     <button type="button" @click.stop="setPrimaryNew(i)" title="Set as primary"
-                                            class="p-1 bg-white/20 hover:bg-accent rounded text-white transition-colors">
+                                            class="p-1 bg-white/20 hover:bg-accent rounded text-black transition-colors">
                                         <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005z"/></svg>
                                     </button>
                                     <button type="button" @click.stop="removeNewImage(i)" title="Remove"
@@ -345,7 +345,7 @@
                             Cancel
                         </a>
                         <button type="submit"
-                                class="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-accent hover:bg-yellow-500 active:bg-yellow-600 rounded-xl transition-colors">
+                                class="flex-1 px-4 py-2.5 text-sm font-semibold text-black bg-accent hover:bg-yellow-500 active:bg-yellow-600 rounded-xl transition-colors">
                             Publish
                         </button>
                     </div>
