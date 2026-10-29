@@ -60,7 +60,8 @@ jobs:
             php8.4 artisan config:cache
             php8.4 artisan view:cache
             php8.4 artisan queue:restart || true
-            chmod -R g+rwX storage bootstrap/cache
+            # Only files this user owns; files the web server created can't be chmod-ed by us.
+            find storage bootstrap/cache -user "\$(whoami)" -exec chmod g+rwX {} +
           EOF
 
       - name: Smoke test
