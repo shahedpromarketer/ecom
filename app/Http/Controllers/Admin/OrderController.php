@@ -640,8 +640,7 @@ class OrderController extends Controller
         }
 
         try {
-            $service = CourierFactory::make($request->courier);
-            $result  = $service->createShipment($order);
+            $result = CourierFactory::forOrder($order, $request->courier, fn ($service) => $service->createShipment($order));
 
             $order->shipment()->updateOrCreate(
                 ['order_id' => $order->id],
@@ -676,8 +675,8 @@ class OrderController extends Controller
         }
 
         try {
-            $service  = CourierFactory::make($shipment->courier_name);
-            $raw      = $service->trackShipment($shipment->tracking_code);
+            $raw      = CourierFactory::forOrder($order, $shipment->courier_name,
+                fn ($service) => $service->trackShipment($shipment->tracking_code));
             $events   = $this->normalizeTrackingEvents($shipment->courier_name, $raw);
 
             return response()->json([
@@ -1056,8 +1055,7 @@ class OrderController extends Controller
             }
 
             try {
-                $service = CourierFactory::make($request->courier);
-                $result  = $service->createShipment($order);
+                $result = CourierFactory::forOrder($order, $request->courier, fn ($service) => $service->createShipment($order));
 
                 CourierShipment::updateOrCreate(
                     ['order_id' => $order->id],
@@ -1073,17 +1071,9 @@ class OrderController extends Controller
                 $order->update(['status' => 'shipped']);
 
             } catch (\Exception $e) {
+                // The parcel was NOT booked, so leave the order as it is (marking it shipped
+                // would also deduct stock). Staff see the reason and can retry.
                 $errors[] = 'Order #' . $order->order_number . ': ' . $e->getMessage();
-                // Still mark as assigned even if API fails
-                CourierShipment::updateOrCreate(
-                    ['order_id' => $order->id],
-                    [
-                        'courier_name' => $request->courier,
-                        'delivery_fee' => $order->shipping_charge ?? 0,
-                        'status'       => 'assigned',
-                    ]
-                );
-                $order->update(['status' => 'shipped']);
             }
         }
 

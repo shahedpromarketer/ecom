@@ -28,6 +28,9 @@ class WordPressSyncController extends Controller
             return response()->json(['error' => 'Invalid or inactive API key'], 401);
         }
 
+        // Duplicate check, SKU lookup and the new order all stay inside this site's shop.
+        \App\Support\Tenancy::set($site->tenant_id);
+
         // Validate minimal required fields
         $data = $request->validate([
             'id'              => 'required',
@@ -177,15 +180,32 @@ class WordPressSyncController extends Controller
         }
     }
 
+    /**
+     * WooCommerce native webhook (WooCommerce > Settings > Advanced > Webhooks).
+     *
+     * The webhook's "Secret" must be this site's API key from Ecom Pilot.
+     * WooCommerce signs the raw body: X-WC-Webhook-Signature = base64(HMAC-SHA256(body, secret)).
+     */
     public function receiveWebhook(Request $request)
     {
         $topic         = $request->header('X-WC-Webhook-Topic', '');
         $webhookSource = $request->header('X-WC-Webhook-Source', '');
 
-        \Log::info('WooCommerce native webhook received', [
-            'topic'  => $topic,
-            'source' => $webhookSource,
-        ]);
+        // WooCommerce sends a "ping" (webhook_id only) when the webhook is saved.
+        if ($request->has('webhook_id') && ! $request->has('id')) {
+            return response()->json(['success' => true, 'message' => 'pong']);
+        }
+
+        $matchedSite = $this->siteForWebhookSource($webhookSource);
+
+        if (! $matchedSite || ! $this->hasValidWooSignature($request, $matchedSite)) {
+            \Log::warning('WooCommerce webhook rejected (unknown site or bad signature)', ['source' => $webhookSource]);
+
+            return response()->json(['error' => 'Invalid webhook signature'], 401);
+        }
+
+        // From here on everything (duplicate check, SKU lookup, new order) is inside this shop.
+        \App\Support\Tenancy::set($matchedSite->tenant_id);
 
         // Ignore non-order topics
         if ($topic && !in_array($topic, ['order.created', 'order.updated', ''])) {
@@ -199,7 +219,10 @@ class WordPressSyncController extends Controller
             return response()->json(['error' => 'Missing order ID'], 422);
         }
 
-        $existing = Order::where('source_order_id', $sourceOrderId)->first();
+        $existing = Order::where('source_order_id', $sourceOrderId)
+            ->where('source_website', $webhookSource)
+            ->first()
+            ?? Order::where('source_order_id', $sourceOrderId)->where('source', 'woocommerce')->first();
 
         // Skip duplicate creates; allow updates
         if ($existing && $topic !== 'order.updated') {
@@ -293,22 +316,8 @@ class WordPressSyncController extends Controller
             );
         }
 
-        // Match site for tenant_id and stats
-        $matchedSite = null;
-        if ($webhookSource) {
-            $host = parse_url($webhookSource, PHP_URL_HOST);
-            $matchedSite = WordPressSite::where('site_url', 'like', "%{$host}%")->first();
-        }
-
-        // Assign tenant_id from matched site if order is new
-        if (!$existing && $matchedSite?->tenant_id) {
-            $order->update(['tenant_id' => $matchedSite->tenant_id]);
-        }
-
-        if ($matchedSite) {
-            $matchedSite->increment('total_synced');
-            $matchedSite->update(['last_sync_at' => now()]);
-        }
+        $matchedSite->increment('total_synced');
+        $matchedSite->update(['last_sync_at' => now()]);
 
         \Log::info('WooCommerce webhook order processed', [
             'order_id'     => $order->id,
@@ -321,6 +330,38 @@ class WordPressSyncController extends Controller
             'order_number' => $order->order_number,
             'order_id'     => $order->id,
         ]);
+    }
+
+    /** Active site whose URL has exactly the same host as the webhook source. */
+    private function siteForWebhookSource(string $source): ?WordPressSite
+    {
+        $host = strtolower((string) parse_url($source, PHP_URL_HOST));
+        if ($host === '') {
+            return null;
+        }
+
+        $host = preg_replace('/^www\./', '', $host);
+
+        return WordPressSite::withoutGlobalScope('tenant')
+            ->where('is_active', true)
+            ->get()
+            ->first(function (WordPressSite $site) use ($host) {
+                $siteHost = strtolower((string) parse_url($site->site_url, PHP_URL_HOST));
+
+                return preg_replace('/^www\./', '', $siteHost) === $host;
+            });
+    }
+
+    private function hasValidWooSignature(Request $request, WordPressSite $site): bool
+    {
+        $signature = (string) $request->header('X-WC-Webhook-Signature', '');
+        if ($signature === '' || empty($site->api_key)) {
+            return false;
+        }
+
+        $expected = base64_encode(hash_hmac('sha256', $request->getContent(), $site->api_key, true));
+
+        return hash_equals($expected, $signature);
     }
 
     private function mapPaymentMethod(string $wpMethod): string

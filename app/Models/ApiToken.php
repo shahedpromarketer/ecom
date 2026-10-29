@@ -20,7 +20,38 @@ class ApiToken extends Model
         'expires_at'   => 'datetime',
     ];
 
+    protected $hidden = ['token'];
+
+    /** Only filled right after generate(); the database keeps a SHA-256 hash. */
     public string $plainToken = '';
+
+    /**
+     * Look a token up by the value a client sends.
+     * Tokens made before hashing was introduced were stored in plain text;
+     * those still work once and are upgraded to a hash on first use.
+     */
+    public static function findActiveByPlainToken(string $plain): ?self
+    {
+        $hashed = hash('sha256', $plain);
+
+        $token = static::withoutGlobalScope('tenant')
+            ->where('token', $hashed)
+            ->where('is_active', true)
+            ->first();
+
+        if ($token) {
+            return $token;
+        }
+
+        $legacy = static::withoutGlobalScope('tenant')
+            ->where('token', $plain)
+            ->where('is_active', true)
+            ->first();
+
+        $legacy?->forceFill(['token' => $hashed])->saveQuietly();
+
+        return $legacy;
+    }
 
     public function creator()
     {

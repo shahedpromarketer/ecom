@@ -5,37 +5,30 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ApiToken;
 
+/**
+ * One plugin access token per shop. The token is stored as a SHA-256 hash,
+ * so its plain value is shown exactly once — right after it is generated.
+ */
 class ApiTokenController extends Controller
 {
     public function index()
     {
-        $token = ApiToken::where('is_active', true)
-            ->where('created_by', auth()->id())
-            ->first();
-
-        if (!$token) {
-            $token = ApiToken::create([
-                'name'       => 'Clothonic Plugin Token',
-                'token'      => bin2hex(random_bytes(32)),
-                'is_active'  => true,
-                'created_by' => auth()->id(),
-            ]);
-        }
+        $token = ApiToken::where('is_active', true)->latest('id')->first();
 
         return view('admin.settings.api-tokens', compact('token'));
     }
 
     public function regenerate()
     {
-        ApiToken::where('created_by', auth()->id())->delete();
+        // Scoped to the current shop by BelongsToTenant, so only this shop's token is replaced.
+        ApiToken::query()->delete();
 
-        ApiToken::create([
-            'name'       => 'Clothonic Plugin Token',
-            'token'      => bin2hex(random_bytes(32)),
-            'is_active'  => true,
-            'created_by' => auth()->id(),
+        $token = ApiToken::generate('Ecom Pilot Plugin Token');
+        $token->update(['is_active' => true]);
+
+        return response()->json([
+            'success' => true,
+            'token'   => $token->plainToken,
         ]);
-
-        return response()->json(['success' => true]);
     }
 }

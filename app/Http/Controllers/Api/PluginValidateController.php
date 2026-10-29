@@ -41,7 +41,11 @@ class PluginValidateController extends Controller
         }
 
         $tenantId   = $site->tenant_id;
-        $phone      = preg_replace('/[^0-9]/', '', $request->input('phone', ''));
+
+        // Blacklist, duplicate and order-limit checks must only look at this shop's data.
+        \App\Support\Tenancy::set($tenantId);
+
+        $phone     = preg_replace('/[^0-9]/', '', $request->input('phone', ''));
         $ip         = $request->input('ip') ?: $request->ip();
         $total      = (float) $request->input('total', 0);
         $productIds = $request->input('product_ids', []);

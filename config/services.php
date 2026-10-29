@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'woocommerce' => [
+        // Keep true. Only set WOO_VERIFY_SSL=false for a client site with a broken certificate,
+        // because without verification the WooCommerce keys can be intercepted.
+        'verify_ssl' => env('WOO_VERIFY_SSL', true),
+    ],
+
 ];

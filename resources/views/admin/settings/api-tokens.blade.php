@@ -28,23 +28,37 @@
             </div>
         </div>
 
-        {{-- Token display --}}
+        {{-- Token display: the plain token only exists right after it is generated --}}
         <div class="space-y-1.5 mb-6">
             <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Access Token</label>
-            <div class="flex items-center gap-2">
-                <div class="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600
-                            font-mono text-sm text-gray-900 dark:text-white break-all select-all leading-relaxed">
-                    {{ $token->token }}
+
+            <div id="new-token-box" class="hidden space-y-2">
+                <div class="flex items-center gap-2">
+                    <div id="new-token-value"
+                         class="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600
+                                font-mono text-sm text-gray-900 dark:text-white break-all select-all leading-relaxed"></div>
+                    <button onclick="copyText(document.getElementById('new-token-value').textContent)"
+                            title="Copy token"
+                            class="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl
+                                   bg-primary text-white hover:bg-primary/90 active:scale-95 transition-all">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                  d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                        </svg>
+                    </button>
                 </div>
-                <button onclick="copyText('{{ $token->token }}')"
-                        title="Copy token"
-                        class="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl
-                               bg-primary text-white hover:bg-primary/90 active:scale-95 transition-all">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                              d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                    </svg>
-                </button>
+                <p class="text-xs text-amber-600 dark:text-amber-400">
+                    Copy it now and paste it into the plugin. For security it will not be shown again.
+                </p>
+            </div>
+
+            <div id="token-status" class="px-4 py-3 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 text-sm text-gray-600 dark:text-gray-300">
+                @if($token)
+                    A token is active (created {{ $token->created_at?->diffForHumans() }}).
+                    Lost it? Generate a new one below and update the plugin.
+                @else
+                    No token yet. Click <strong>Generate Token</strong> below.
+                @endif
             </div>
         </div>
 
@@ -93,7 +107,7 @@
             <p class="text-xs text-gray-400">
                 Last used:
                 <span class="font-medium text-gray-500 dark:text-gray-300">
-                    {{ $token->last_used_at ? $token->last_used_at->diffForHumans() : 'Never' }}
+                    {{ $token?->last_used_at ? $token->last_used_at->diffForHumans() : 'Never' }}
                 </span>
             </p>
             <button onclick="regenerateToken()"
@@ -105,7 +119,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round"
                           d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/>
                 </svg>
-                Regenerate Token
+                {{ $token ? 'Regenerate Token' : 'Generate Token' }}
             </button>
         </div>
 
@@ -143,7 +157,9 @@
     }
 
     async function regenerateToken() {
+        @if($token)
         if (!confirm('Regenerate token? The old token will stop working immediately.')) return;
+        @endif
 
         const res = await fetch('{{ route('admin.settings.api-tokens.regenerate') }}', {
             method: 'POST',
@@ -155,8 +171,10 @@
 
         const data = await res.json();
         if (data.success) {
-            showToast('Token regenerated!', 'success');
-            setTimeout(() => window.location.reload(), 800);
+            document.getElementById('new-token-value').textContent = data.token;
+            document.getElementById('new-token-box').classList.remove('hidden');
+            document.getElementById('token-status').classList.add('hidden');
+            showToast('New token generated — copy it now.', 'success');
         }
     }
 </script>

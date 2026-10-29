@@ -151,7 +151,7 @@ class IntegrationController extends Controller
             $credentials = base64_encode($site->consumer_key . ':' . $site->consumer_secret);
 
             $response = Http::timeout(30)
-                ->withoutVerifying()
+                ->withOptions(['verify' => (bool) config('services.woocommerce.verify_ssl', true)])
                 ->withHeaders([
                     'Authorization' => 'Basic ' . $credentials,
                 ])
@@ -308,7 +308,7 @@ class IntegrationController extends Controller
 
             do {
                 $response = Http::timeout(30)
-                    ->withoutVerifying()
+                    ->withOptions(['verify' => (bool) config('services.woocommerce.verify_ssl', true)])
                     ->withHeaders(['Authorization' => 'Basic ' . $credentials])
                     ->get($site->site_url . '/wp-json/wc/v3/products', [
                         'per_page' => 50,
@@ -481,7 +481,7 @@ class IntegrationController extends Controller
             $credentials = base64_encode($site->consumer_key . ':' . $site->consumer_secret);
 
             $response = Http::timeout(30)
-                ->withoutVerifying()
+                ->withOptions(['verify' => (bool) config('services.woocommerce.verify_ssl', true)])
                 ->withHeaders([
                     'Authorization' => 'Basic ' . $credentials,
                 ])
@@ -635,7 +635,7 @@ class IntegrationController extends Controller
 
         try {
             $response = Http::timeout(10)
-                ->withoutVerifying()
+                ->withOptions(['verify' => (bool) config('services.woocommerce.verify_ssl', true)])
                 ->withHeaders(['Authorization' => 'Basic ' . $credentials])
                 ->get(rtrim($site->site_url, '/') . '/wp-json/wc/v3/orders', $params);
 

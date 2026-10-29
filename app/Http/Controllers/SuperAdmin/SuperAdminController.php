@@ -114,12 +114,15 @@ class SuperAdminController extends Controller {
             ->where('tenant_id', $id)
             ->firstOrFail();
 
+        // Work as that shop for the rest of this request (duplicate checks, SKU matching, new orders).
+        \App\Support\Tenancy::set((int) $id);
+
         $after       = now()->subDays((int) $request->days)->toIso8601String();
         $credentials = base64_encode($site->consumer_key . ':' . $site->consumer_secret);
 
         try {
             $response = Http::timeout(30)
-                ->withoutVerifying()
+                ->withOptions(['verify' => (bool) config('services.woocommerce.verify_ssl', true)])
                 ->withHeaders(['Authorization' => 'Basic ' . $credentials])
                 ->get(rtrim($site->site_url, '/') . '/wp-json/wc/v3/orders', [
                     'per_page' => 100,

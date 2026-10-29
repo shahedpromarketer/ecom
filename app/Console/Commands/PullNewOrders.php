@@ -23,7 +23,8 @@ class PullNewOrders extends Command
                 ->get();
 
             foreach ($sites as $site) {
-                $result = $controller->pullNewOrders($site);
+                // Duplicate checks and SKU matching must stay inside this site's shop.
+                $result = \App\Support\Tenancy::as($site->tenant_id, fn () => $controller->pullNewOrders($site));
                 $synced = $result['synced'] ?? 0;
 
                 if ($synced > 0) {
