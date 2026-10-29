@@ -24,14 +24,7 @@
 @endif
 
 @php
-$permissionGroups = [
-    'Orders'    => ['view_orders', 'manage_orders', 'export_orders'],
-    'Products'  => ['view_products', 'manage_products'],
-    'Customers' => ['view_customers', 'manage_customers', 'ban_customers'],
-    'Marketing' => ['manage_marketing'],
-    'Reports'   => ['view_reports', 'export_reports'],
-    'Settings'  => ['manage_settings'],
-];
+$permissionGroups = \App\Support\Permissions::GROUPS;
 @endphp
 
 {{-- Edit Modal --}}
@@ -152,9 +145,13 @@ $permissionGroups = [
                     </td>
                     <td class="px-4 py-3">
                         <div class="flex items-center gap-1.5">
+                            @if($role->tenant_id !== null || auth()->user()->is_super_admin)
                             <button @click="openEdit({{ json_encode(['id' => $role->id, 'name' => $role->name, 'display_name' => $role->display_name, 'permissions' => $role->permissions ?? [], 'is_system' => $role->is_system]) }})"
                                     type="button"
                                     class="px-2.5 py-1 text-xs font-medium bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">Edit</button>
+                            @else
+                            <span class="px-2.5 py-1 text-xs text-textsecondary dark:text-gray-400" title="Shared starter role — create your own role to customise">Built-in</span>
+                            @endif
                             @if(!$role->is_system)
                             <form method="POST" action="{{ route('admin.roles.destroy', $role) }}" onsubmit="return confirm('Delete role {{ $role->display_name }}?')">
                                 @csrf @method('DELETE')

@@ -33,7 +33,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
     Route::post('logout', [AuthController::class, 'logout'])->name('logout');
 
-    Route::middleware(['auth', 'admin', 'tenant'])->group(function () {
+    Route::middleware(['auth', 'admin', 'tenant', 'permission'])->group(function () {
         Route::get('/', fn () => redirect()->route('admin.dashboard'));
         Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('dashboard/source-data', [DashboardController::class, 'sourceData'])->name('dashboard.source-data');

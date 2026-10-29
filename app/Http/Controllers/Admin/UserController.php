@@ -64,6 +64,38 @@ class UserController extends Controller
         }
     }
 
+    /** Role must be one of this shop's roles or a shared system role. */
+    private function roleRule(): \Illuminate\Validation\Rules\Exists
+    {
+        return \Illuminate\Validation\Rule::exists('roles', 'id')->where(function ($q) {
+            if (\App\Support\Tenancy::active()) {
+                $q->where(fn ($w) => $w->where('tenant_id', \App\Support\Tenancy::id())->orWhereNull('tenant_id'));
+            }
+        });
+    }
+
+    /** The "Administrator" system role makes a user a full-access admin; any other role makes them staff. */
+    private function accessLevelFor(?int $roleId): string
+    {
+        $role = $roleId ? Role::find($roleId) : null;
+
+        return ($role && $role->tenant_id === null && $role->name === 'admin') ? 'admin' : 'staff';
+    }
+
+    /** Nobody locks themselves out, and the shop owner cannot be removed by their staff. */
+    private function guardProtectedUser(User $user): ?string
+    {
+        if ($user->id === auth()->id()) {
+            return 'You cannot do this to your own account.';
+        }
+
+        if ($user->tenant && $user->tenant->owner_id === $user->id && ! auth()->user()->is_super_admin) {
+            return 'The shop owner account cannot be changed here.';
+        }
+
+        return null;
+    }
+
     public function show(User $user)
     {
         $this->assertSameTenant($user);
@@ -94,7 +126,7 @@ class UserController extends Controller
             'email'    => 'required|email|unique:users,email',
             'phone'    => 'nullable|string|max:20',
             'password' => 'required|string|min:8',
-            'role_id'  => 'nullable|exists:roles,id',
+            'role_id'  => ['required', $this->roleRule()],
         ]);
 
         $tenant   = auth()->user()->tenant;
@@ -110,6 +142,7 @@ class UserController extends Controller
             'phone'     => $request->phone,
             'password'  => Hash::make($request->password),
             'role_id'   => $request->role_id,
+            'role'      => $this->accessLevelFor((int) $request->role_id),
             'tenant_id' => auth()->user()->tenant_id,
         ]);
 
@@ -131,10 +164,21 @@ class UserController extends Controller
             'name'    => 'required|string|max:255',
             'email'   => 'required|email|unique:users,email,' . $user->id,
             'phone'   => 'nullable|string|max:20',
-            'role_id' => 'nullable|exists:roles,id',
+            'role_id' => ['required', $this->roleRule()],
         ]);
 
-        $user->update($request->only('name', 'email', 'phone', 'role_id'));
+        $data = $request->only('name', 'email', 'phone');
+
+        // Changing someone's role: not your own (no self-promotion/lock-out), not the owner's.
+        if ((int) $request->role_id !== (int) $user->role_id || $this->accessLevelFor((int) $request->role_id) !== $user->role) {
+            if ($error = $this->guardProtectedUser($user)) {
+                return back()->with('error', $error);
+            }
+            $data['role_id'] = $request->role_id;
+            $data['role']    = $this->accessLevelFor((int) $request->role_id);
+        }
+
+        $user->update($data);
 
         return redirect()->route('admin.users.index')->with('success', 'User updated successfully.');
     }
@@ -142,6 +186,9 @@ class UserController extends Controller
     public function ban(Request $request, User $user)
     {
         $this->assertSameTenant($user);
+        if ($error = $this->guardProtectedUser($user)) {
+            return response()->json(['success' => false, 'message' => $error], 422);
+        }
         $request->validate(['reason' => 'nullable|string|max:500']);
 
         $user->update([
@@ -163,6 +210,10 @@ class UserController extends Controller
     public function destroy(User $user)
     {
         $this->assertSameTenant($user);
+
+        if ($error = $this->guardProtectedUser($user)) {
+            return back()->with('error', $error);
+        }
 
         if ($user->orders()->exists()) {
             return back()->with('error', 'Cannot delete user with existing orders.');

@@ -23,5 +23,15 @@ class AppServiceProvider extends ServiceProvider
         $this->app->terminating(fn () => Tenancy::forget());
         Event::listen(JobProcessing::class, fn () => Tenancy::forget());
         Event::listen(JobProcessed::class, fn () => Tenancy::forget());
+
+        // @can('view_orders') etc. in Blade use the user's role permissions.
+        // Shop owners/admins and super admins pass every check.
+        \Illuminate\Support\Facades\Gate::before(function ($user, string $ability) {
+            if (in_array($ability, \App\Support\Permissions::all(), true)) {
+                return $user->hasPermission($ability);
+            }
+
+            return null;
+        });
     }
 }

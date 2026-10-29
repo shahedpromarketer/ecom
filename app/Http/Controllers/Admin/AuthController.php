@@ -14,7 +14,7 @@ class AuthController extends Controller
             if (auth()->user()->is_super_admin) {
                 return redirect()->route('super.dashboard');
             }
-            if (auth()->user()->role === 'admin') {
+            if (auth()->user()->canUseAdminPanel()) {
                 return redirect()->route('admin.dashboard');
             }
         }
@@ -55,8 +55,8 @@ class AuthController extends Controller
                 return redirect()->route('super.dashboard');
             }
 
-            // Regular tenant admin
-            if ($user->role !== 'admin') {
+            // Shop owner/admin, or staff with a role
+            if (! $user->canUseAdminPanel()) {
                 Auth::logout();
                 return back()->withErrors(['email' => 'Unauthorized access.'])->withInput($request->only('email'));
             }

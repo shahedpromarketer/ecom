@@ -68,12 +68,25 @@ class User extends Authenticatable
 
     public function getRoleDisplayNameAttribute(): string
     {
-        return match($this->attributes['role'] ?? 'customer') {
-            'admin'   => 'Admin',
-            'manager' => 'Manager',
-            'support' => 'Support',
-            default   => 'Customer',
-        };
+        if (($this->attributes['role'] ?? null) === 'admin') {
+            return 'Admin';
+        }
+
+        return $this->roleModel?->display_name ?? 'Staff';
+    }
+
+    /** Can sign in to the shop panel (owner/admin or staff with a role). */
+    public function canUseAdminPanel(): bool
+    {
+        return $this->is_super_admin
+            || ($this->attributes['role'] ?? null) === 'admin'
+            || (($this->attributes['role'] ?? null) === 'staff' && $this->role_id);
+    }
+
+    /** Shop owners/admins and super admins skip permission checks. */
+    public function hasFullAccess(): bool
+    {
+        return $this->is_super_admin || ($this->attributes['role'] ?? null) === 'admin';
     }
 
     public function isAdmin(): bool
@@ -93,6 +106,10 @@ class User extends Authenticatable
 
     public function hasPermission(string $permission): bool
     {
-        return in_array($permission, $this->roleModel?->permissions ?? []);
+        if ($this->hasFullAccess()) {
+            return true;
+        }
+
+        return in_array($permission, $this->roleModel?->permissions ?? [], true);
     }
 }

@@ -67,10 +67,8 @@
         <div class="relative">
             <select name="role" class="cs pl-3 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary dark:focus:border-primary transition-all duration-200 cursor-pointer">
                 <option value="">All Roles</option>
-                <option value="admin"    {{ request('role') === 'admin'    ? 'selected' : '' }}>Admin</option>
-                <option value="manager"  {{ request('role') === 'manager'  ? 'selected' : '' }}>Manager</option>
-                <option value="support"  {{ request('role') === 'support'  ? 'selected' : '' }}>Support</option>
-                <option value="customer" {{ request('role') === 'customer' ? 'selected' : '' }}>Customer</option>
+                <option value="admin" {{ request('role') === 'admin' ? 'selected' : '' }}>Admin (full access)</option>
+                <option value="staff" {{ request('role') === 'staff' ? 'selected' : '' }}>Staff</option>
             </select>
             <span class="pointer-events-none absolute inset-y-0 right-2.5 flex items-center">
                 <svg class="w-4 h-4 text-textsecondary dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>

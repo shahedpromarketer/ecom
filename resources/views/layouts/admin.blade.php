@@ -126,6 +126,7 @@
             <span class="truncate">Dashboard</span>
         </a>
 
+        @can('view_products')
         {{-- CATALOG --}}
         <div class="px-4 mt-4 mb-1">
             <span class="text-white/30 text-xs font-semibold uppercase tracking-widest">Catalog</span>
@@ -148,6 +149,8 @@
             <span class="truncate">Categories</span>
         </a>
 
+        @endcan
+        @can('view_orders')
         {{-- SALES --}}
         <div class="px-4 mt-4 mb-1">
             <span class="text-white/30 text-xs font-semibold uppercase tracking-widest">Sales</span>
@@ -316,6 +319,8 @@
             <span class="truncate">Returns</span>
         </a>
 
+        @endcan
+        @can('manage_staff')
         {{-- USER MANAGEMENT --}}
         <div class="px-4 mt-4 mb-1">
             <span class="text-white/30 text-xs font-semibold uppercase tracking-widest">User Management</span>
@@ -337,6 +342,8 @@
             <span class="truncate">Roles</span>
         </a>
 
+        @endcan
+        @can('manage_marketing')
         {{-- MARKETING --}}
         <div class="px-4 mt-4 mb-1">
             <span class="text-white/30 text-xs font-semibold uppercase tracking-widest">Marketing</span>
@@ -358,6 +365,8 @@
             <span class="truncate">Marketing & Pixels</span>
         </a>
 
+        @endcan
+        @can('manage_settings')
         {{-- COURIER --}}
         <div class="px-4 mt-4 mb-1">
             <span class="text-white/30 text-xs font-semibold uppercase tracking-widest">Courier</span>
@@ -371,6 +380,8 @@
             <span class="truncate">Courier Setup</span>
         </a>
 
+        @endcan
+        @can('manage_settings')
         {{-- INTEGRATIONS --}}
         <div class="px-4 mt-4 mb-1">
             <span class="text-white/30 text-xs font-semibold uppercase tracking-widest">Integrations</span>
@@ -384,6 +395,8 @@
             <span class="truncate">WordPress Sync</span>
         </a>
 
+        @endcan
+        @can('ban_customers')
         {{-- FRAUD CONTROL --}}
         <div class="px-4 mt-4 mb-1">
             <span class="text-white/30 text-xs font-semibold uppercase tracking-widest">Fraud Control</span>
@@ -397,6 +410,8 @@
             <span class="truncate">Blacklisted Phones</span>
         </a>
 
+        @endcan
+        @can('view_orders')
         {{-- FINANCE --}}
         <div class="px-4 mt-4 mb-1">
             <span class="text-white/30 text-xs font-semibold uppercase tracking-widest">Finance</span>
@@ -427,6 +442,8 @@
             <span class="truncate">Invoice Templates</span>
         </a>
 
+        @endcan
+        @can('view_reports')
         {{-- ANALYTICS --}}
         <div class="px-4 mt-4 mb-1">
             <span class="text-white/30 text-xs font-semibold uppercase tracking-widest">Analytics</span>
@@ -440,6 +457,8 @@
             <span class="truncate">Analytics</span>
         </a>
 
+        @endcan
+        @can('view_products')
         {{-- INVENTORY --}}
         <div class="px-4 mt-4 mb-1">
             <span class="text-white/30 text-xs font-semibold uppercase tracking-widest">Inventory</span>
@@ -453,6 +472,8 @@
             <span class="truncate">Inventory</span>
         </a>
 
+        @endcan
+        @can('view_reports')
         {{-- REPORTS --}}
         <div class="px-4 mt-4 mb-1">
             <span class="text-white/30 text-xs font-semibold uppercase tracking-widest">Reports</span>
@@ -466,6 +487,8 @@
             <span class="truncate">Reports</span>
         </a>
 
+        @endcan
+        @can('manage_settings')
         {{-- SYSTEM --}}
         <div class="px-4 mt-4 mb-1">
             <span class="text-white/30 text-xs font-semibold uppercase tracking-widest">System</span>
@@ -496,6 +519,7 @@
             <span class="truncate">Activity Log</span>
         </a>
 
+        @endcan
     </nav>
 
     {{-- Sidebar footer --}}
@@ -694,6 +718,14 @@
 
     {{-- Page Content --}}
     <main class="flex-1 p-4 sm:p-6">
+        @if(session('permission_error'))
+            <div class="mb-4 flex items-center gap-3 p-3.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                <svg class="w-4 h-4 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/>
+                </svg>
+                <p class="text-sm text-amber-800 dark:text-amber-300">{{ session('permission_error') }}</p>
+            </div>
+        @endif
         @yield('content')
     </main>
 
@@ -712,6 +744,16 @@
 <x-admin.confirm-modal />
 
 @vite(['resources/js/admin.js'])
+<script>
+// Shared toast for every admin page; a page may still define its own showToast().
+window.showToast = window.showToast || function (msg, type = 'success') {
+    const t = document.createElement('div');
+    t.className = 'fixed top-4 right-4 z-[9999] px-4 py-3 rounded-xl text-white text-sm font-medium shadow-lg ' + (type === 'error' ? 'bg-red-500' : 'bg-green-500');
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+};
+</script>
 @stack('scripts')
 
 <script>
