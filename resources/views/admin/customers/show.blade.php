@@ -105,6 +105,14 @@
                 <button type="submit" class="w-full px-4 py-2.5 text-sm font-semibold bg-primary text-white rounded-xl hover:bg-primary/90">Save</button>
             @endif
         </form>
+
+        @if($canEdit)
+            <form method="POST" action="{{ route('admin.customers.destroy', $customer) }}"
+                  onsubmit="return confirm('Move this customer to the Recycle Bin? Their orders are kept.')">
+                @csrf @method('DELETE')
+                <button class="w-full px-4 py-2 text-xs text-red-500 hover:underline">Delete customer</button>
+            </form>
+        @endif
     </div>
 
     {{-- ── Right: stats, orders, notes ── --}}

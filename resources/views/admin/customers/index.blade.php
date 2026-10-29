@@ -32,6 +32,7 @@
 </div>
 
 {{-- Filters --}}
+<x-admin.saved-filters page="customers" />
 <form method="GET" class="mb-5 p-4 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
         <input type="text" name="search" value="{{ request('search') }}" placeholder="Name or phone…" class="{{ $input }} lg:col-span-2">

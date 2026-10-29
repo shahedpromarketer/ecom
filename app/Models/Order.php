@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Order extends Model
 {
-    use \App\Models\Concerns\BelongsToTenant;
+    use \App\Models\Concerns\BelongsToTenant, \App\Models\Concerns\GoesToRecycleBin;
 
     protected $fillable = [
         'user_id', 'customer_id', 'order_number', 'status', 'subtotal', 'discount', 'discount_type',

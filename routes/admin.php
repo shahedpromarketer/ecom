@@ -100,6 +100,17 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('customers/{customer}/notes', [CustomerController::class, 'storeNote'])->name('customers.notes.store');
         Route::delete('customers/notes/{note}', [CustomerController::class, 'destroyNote'])->name('customers.notes.destroy');
 
+        // Recycle bin (shop owners only — not mapped in Permissions)
+        Route::get('recycle-bin', [\App\Http\Controllers\Admin\RecycleBinController::class, 'index'])->name('recycle-bin.index');
+        Route::post('recycle-bin/{type}/restore', [\App\Http\Controllers\Admin\RecycleBinController::class, 'restore'])->name('recycle-bin.restore');
+        Route::post('recycle-bin/{type}/delete', [\App\Http\Controllers\Admin\RecycleBinController::class, 'destroy'])->name('recycle-bin.destroy');
+        Route::delete('orders/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
+        Route::delete('customers/{customer}', [CustomerController::class, 'destroy'])->name('customers.destroy');
+
+        // Saved list filters (orders, customers, leads, follow-ups)
+        Route::post('saved-filters', [\App\Http\Controllers\Admin\SavedFilterController::class, 'store'])->name('saved-filters.store');
+        Route::delete('saved-filters/{savedFilter}', [\App\Http\Controllers\Admin\SavedFilterController::class, 'destroy'])->name('saved-filters.destroy');
+
         // Order distribution
         Route::get('distribution', [\App\Http\Controllers\Admin\DistributionController::class, 'index'])->name('distribution.index');
         Route::post('distribution', [\App\Http\Controllers\Admin\DistributionController::class, 'update'])->name('distribution.update');

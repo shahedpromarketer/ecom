@@ -114,13 +114,9 @@ class CategoryController extends Controller
             return back()->with('error', 'Cannot delete a category that has sub-categories.');
         }
 
-        if ($category->image) {
-            \Storage::disk('public')->delete($category->image);
-        }
+        $category->delete();   // to the Recycle Bin; the image stays until deleted for good
 
-        $category->delete();
-
-        return back()->with('success', 'Category deleted successfully.');
+        return back()->with('success', 'Category moved to the Recycle Bin.');
     }
 
     public function toggleActive(Category $category)

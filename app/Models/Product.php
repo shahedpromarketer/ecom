@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
 {
-    use \App\Models\Concerns\BelongsToTenant;
+    use \App\Models\Concerns\BelongsToTenant, \App\Models\Concerns\GoesToRecycleBin;
 
     protected $fillable = [
         'wp_product_id', 'name', 'slug', 'description', 'short_description',
@@ -30,6 +30,16 @@ class Product extends Model
     public function images()
     {
         return $this->hasMany(ProductImage::class);
+    }
+
+    protected static function booted(): void
+    {
+        // Image files are only removed when the product is deleted for good from the Recycle Bin.
+        static::forceDeleting(function (Product $product) {
+            foreach ($product->images as $image) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($image->image_path);
+            }
+        });
     }
 
     public function variants()

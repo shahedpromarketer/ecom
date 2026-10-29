@@ -130,6 +130,13 @@
                 <a href="{{ route('admin.customers.show', $order->customer_id) }}#followups" class="text-xs text-primary hover:underline ml-2">Schedule follow-up</a>
                 @endcan
             @endif
+            @can('manage_orders')
+                <form method="POST" action="{{ route('admin.orders.destroy', $order) }}" class="inline ml-3"
+                      onsubmit="return confirm('Move order #{{ $order->order_number }} to the Recycle Bin?')">
+                    @csrf @method('DELETE')
+                    <button class="text-xs text-red-500 hover:underline">Delete order</button>
+                </form>
+            @endcan
         </div>
         <div class="flex items-center gap-1 text-sm">
             <span class="text-gray-500 dark:text-gray-400 text-xs">Completed:</span>

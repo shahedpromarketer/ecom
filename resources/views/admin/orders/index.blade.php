@@ -23,12 +23,14 @@
 @php
     $hasFilters = collect(['search','payment_status','payment_method','source','created_range',
         'courier_range','courier','courier_status','district','category',
-        'order_tag','utm_source','print_status','amount_min','amount_max','cod_changed','duplicates'])
+        'order_tag','utm_source','print_status','amount_min','amount_max','cod_changed','duplicates',
+        'assigned_to','customer_type','customer_success','exclude_status','exclude_source'])
         ->filter(fn($k) => request()->filled($k))->isNotEmpty();
 @endphp
 
 
 {{-- ── Filter Panel ─────────────────────────────────────────────────────────── --}}
+<x-admin.saved-filters page="orders" />
 <div x-data="{ filterOpen: false, loading: false }" class="mb-4">
 
     <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden">
@@ -315,7 +317,66 @@
                     </div>
                 </div>
 
-                {{-- ROW 5: Checkboxes --}}
+                {{-- ROW 5: Staff, customer type / success, exclude --}}
+                @php
+                    $sel = 'w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary';
+                    $exStatus = (array) request('exclude_status', []);
+                    $exSource = (array) request('exclude_source', []);
+                @endphp
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    @can('view_all_orders')
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Assigned To</label>
+                        <select name="assigned_to" onchange="this.form.submit()" class="{{ $sel }}">
+                            <option value="">Anyone</option>
+                            <option value="none" @selected(request('assigned_to') === 'none')>Unassigned (queue)</option>
+                            @foreach($staffList as $s)
+                                <option value="{{ $s->id }}" @selected((string) request('assigned_to') === (string) $s->id)>{{ $s->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    @endcan
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Customer Type</label>
+                        <select name="customer_type" onchange="this.form.submit()" class="{{ $sel }}">
+                            <option value="">All</option>
+                            <option value="new" @selected(request('customer_type') === 'new')>New (first order)</option>
+                            <option value="repeat" @selected(request('customer_type') === 'repeat')>Repeat customer</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Customer Success Rate</label>
+                        <select name="customer_success" onchange="this.form.submit()" class="{{ $sel }}">
+                            <option value="">Any</option>
+                            <option value="high" @selected(request('customer_success') === 'high')>80% or more</option>
+                            <option value="mid" @selected(request('customer_success') === 'mid')>50% – 79%</option>
+                            <option value="low" @selected(request('customer_success') === 'low')>Below 50% (risky)</option>
+                            <option value="none" @selected(request('customer_success') === 'none')>No history yet</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Exclude Source</label>
+                        <select name="exclude_source[]" multiple size="3" onchange="this.form.submit()" class="{{ $sel }}">
+                            @foreach($sources as $src)
+                                <option value="{{ $src }}" @selected(in_array($src, $exSource, true))>{{ ucwords(str_replace('_', ' ', $src)) }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Exclude Status <span class="normal-case font-normal">(show every order except these)</span></label>
+                    <div class="flex flex-wrap gap-2">
+                        @foreach($allStatuses as $st)
+                            <label class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs cursor-pointer
+                                          {{ in_array($st, $exStatus, true) ? 'bg-red-50 border-red-300 text-red-700' : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300' }}">
+                                <input type="checkbox" name="exclude_status[]" value="{{ $st }}" @checked(in_array($st, $exStatus, true)) onchange="this.form.submit()" class="w-3.5 h-3.5">
+                                {{ ucwords(str_replace('_', ' ', $st)) }}
+                            </label>
+                        @endforeach
+                    </div>
+                </div>
+
+                {{-- ROW 6: Checkboxes --}}
                 <div class="flex flex-wrap items-center gap-4">
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" name="cod_changed" value="1"

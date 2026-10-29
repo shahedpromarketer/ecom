@@ -34,6 +34,7 @@ class Permissions
         'admin.profile*'            => null,
         'admin.logout'              => null,
         'admin.sidebar.counts'      => null,
+        'admin.saved-filters.*'     => null,   // the list pages themselves are permission-checked
 
         // Exports
         'admin.orders.exportCsv'    => 'export_orders',

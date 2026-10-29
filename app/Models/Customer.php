@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Customer extends Model
 {
-    use \App\Models\Concerns\BelongsToTenant;
+    use \App\Models\Concerns\BelongsToTenant, \App\Models\Concerns\GoesToRecycleBin;
 
     protected $fillable = [
         'tenant_id', 'phone', 'name', 'alt_phone', 'email', 'address', 'district',

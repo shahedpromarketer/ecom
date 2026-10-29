@@ -70,6 +70,7 @@ class DashboardController extends Controller
         // ── Top products by revenue ────────────────────────────────────────────
         $topQuery = DB::table('order_items')
             ->join('orders', 'order_items.order_id', '=', 'orders.id')
+            ->whereNull('orders.deleted_at')
             ->whereIn('orders.status', ['delivered', 'completed']);
         if ($start && $end) {
             $topQuery->whereBetween('orders.created_at', [$start, $end]);
@@ -103,7 +104,7 @@ class DashboardController extends Controller
         $lowStockCount  = $lowStockQ->count();
         $avgOrderValue  = $totalOrders > 0 ? round($totalRevenue / max($completedOrders, 1), 0) : 0;
 
-        $unitsQuery = DB::table('order_items')->join('orders', 'order_items.order_id', '=', 'orders.id');
+        $unitsQuery = DB::table('order_items')->join('orders', 'order_items.order_id', '=', 'orders.id')->whereNull('orders.deleted_at');
         if ($start && $end) {
             $unitsQuery->whereBetween('orders.created_at', [$start, $end]);
         }

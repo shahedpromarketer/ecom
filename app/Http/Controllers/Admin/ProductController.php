@@ -221,12 +221,9 @@ class ProductController extends Controller
 
     public function destroy(Product $product)
     {
-        foreach ($product->images as $image) {
-            Storage::disk('public')->delete($image->image_path);
-        }
-        $product->delete();
+        $product->delete();   // to the Recycle Bin; images stay until deleted for good
 
-        return back()->with('success', 'Product deleted successfully.');
+        return back()->with('success', 'Product moved to the Recycle Bin.');
     }
 
     public function setPrimaryImage(Request $request, Product $product)
@@ -274,12 +271,9 @@ class ProductController extends Controller
             if (!auth()->user()->is_super_admin) { $delQ->where('tenant_id', auth()->user()->tenant_id); }
             $products = $delQ->get();
             foreach ($products as $p) {
-                foreach ($p->images as $img) {
-                    Storage::disk('public')->delete($img->image_path);
-                }
-                $p->delete();
+                $p->delete();   // to the Recycle Bin
             }
-            return back()->with('success', count($ids) . ' product(s) deleted.');
+            return back()->with('success', count($ids) . ' product(s) moved to the Recycle Bin.');
         }
 
         if (in_array($action, ['active', 'inactive', 'draft'], true)) {

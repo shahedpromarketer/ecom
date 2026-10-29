@@ -37,6 +37,11 @@ class CustomerSync
             'phone'     => $phone,
         ]);
 
+        // A customer in the Recycle Bin who orders again comes back.
+        if ($customer->exists && $customer->trashed()) {
+            $customer->restore();
+        }
+
         // The newest order's contact details win, but an empty value never wipes a saved one.
         if (! $customer->exists || self::isLatestOrder($order, $customer)) {
             foreach ([
@@ -77,6 +82,7 @@ class CustomerSync
 
         $stats = DB::table('orders')
             ->where('customer_id', $customerId)
+            ->whereNull('deleted_at')   // orders in the Recycle Bin do not count
             ->selectRaw('COUNT(*) as total')
             ->selectRaw('SUM(CASE WHEN status IN (' . $in(self::DELIVERED) . ') THEN 1 ELSE 0 END) as delivered')
             ->selectRaw('SUM(CASE WHEN status IN (' . $in(self::CANCELLED) . ') THEN 1 ELSE 0 END) as cancelled')

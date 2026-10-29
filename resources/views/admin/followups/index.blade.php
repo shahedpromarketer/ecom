@@ -43,6 +43,7 @@
 </div>
 
 {{-- Filters --}}
+<x-admin.saved-filters page="followups" />
 <form method="GET" class="mb-4 flex flex-wrap items-center gap-2">
     <input type="hidden" name="tab" value="{{ $tab }}">
     <input type="text" name="search" value="{{ request('search') }}" placeholder="Customer name or phone…" class="{{ $input }} w-56">

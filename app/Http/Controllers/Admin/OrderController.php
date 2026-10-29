@@ -109,6 +109,40 @@ class OrderController extends Controller
         if ($request->filled('amount_min'))      $query->where('total', '>=', $request->amount_min);
         if ($request->filled('amount_max'))      $query->where('total', '<=', $request->amount_max);
 
+        // Responsible staff
+        if ($request->filled('assigned_to')) {
+            $request->assigned_to === 'none'
+                ? $query->whereNull('assigned_to')
+                : $query->where('assigned_to', (int) $request->assigned_to);
+        }
+
+        // Exclude: everything except these statuses / sources
+        $excludeStatus = array_filter((array) $request->input('exclude_status', []));
+        if ($excludeStatus) {
+            $query->whereNotIn('status', $excludeStatus);
+        }
+        $excludeSource = array_filter((array) $request->input('exclude_source', []));
+        if ($excludeSource) {
+            $query->where(fn ($q) => $q->whereNull('source')->orWhereNotIn('source', $excludeSource));
+        }
+
+        // Customer: first-time vs repeat, and their delivery success rate (from the customers table)
+        if ($request->filled('customer_type')) {
+            $query->whereHas('customer', fn ($q) => $request->customer_type === 'repeat'
+                ? $q->where('total_orders', '>=', 2)
+                : $q->where('total_orders', '<=', 1));
+        }
+        if ($request->filled('customer_success')) {
+            $finished = '(delivered_orders + cancelled_orders + returned_orders)';
+            $query->whereHas('customer', fn ($q) => match ($request->customer_success) {
+                'high' => $q->whereRaw("$finished > 0 AND delivered_orders * 100 >= 80 * $finished"),
+                'mid'  => $q->whereRaw("$finished > 0 AND delivered_orders * 100 >= 50 * $finished AND delivered_orders * 100 < 80 * $finished"),
+                'low'  => $q->whereRaw("$finished > 0 AND delivered_orders * 100 < 50 * $finished"),
+                'none' => $q->whereRaw("$finished = 0"),
+                default => $q,
+            });
+        }
+
         // Category filter
         if ($request->filled('category')) {
             $query->whereHas('items.product.categories', fn ($q) => $q->where('categories.id', $request->category));
@@ -189,10 +223,12 @@ class OrderController extends Controller
         $sources        = (clone $baseQuery)->whereNotNull('source')
             ->distinct()->pluck('source')->filter()->sort()->values();
         $activeCouriers = CourierSetting::all();
+        $staffList      = \App\Models\User::inCurrentTenant()->whereIn('role', ['admin', 'staff'])->orderBy('name')->get(['id', 'name']);
+        $allStatuses    = self::ALL_STATUSES;
 
         return view('admin.orders.index', compact(
             'orders', 'categories', 'districts', 'sources', 'perPage', 'activeCouriers',
-            'phoneTotals', 'phoneSuccess', 'phoneFailed'
+            'phoneTotals', 'phoneSuccess', 'phoneFailed', 'staffList', 'allStatuses'
         ));
     }
 
@@ -435,6 +471,15 @@ class OrderController extends Controller
             'order', 'activeCouriers', 'statusSteps', 'currentStep',
             'admins', 'districts'
         ));
+    }
+
+    /** Moves the order to the Recycle Bin (it can be restored from there). */
+    public function destroy(Order $order)
+    {
+        $order->delete();
+        ActivityLog::log('order.deleted', $order, 'Order #' . $order->order_number . ' moved to the Recycle Bin by ' . auth()->user()->name);
+
+        return redirect()->route('admin.orders.index')->with('success', 'Order #' . $order->order_number . ' moved to the Recycle Bin.');
     }
 
     public function updateStatus(Request $request, Order $order)

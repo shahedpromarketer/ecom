@@ -67,6 +67,14 @@ class OrderObserver
         }
     }
 
+    /** Back from the Recycle Bin: count it for the customer again. */
+    public function restored(Order $order): void
+    {
+        if ($order->customer_id) {
+            CustomerSync::recalculateById($order->customer_id);
+        }
+    }
+
     private function deductStock(Order $order): void
     {
         DB::transaction(function () use ($order) {

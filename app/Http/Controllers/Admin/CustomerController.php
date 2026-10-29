@@ -127,6 +127,15 @@ class CustomerController extends Controller
         return back()->with('success', 'Customer updated.');
     }
 
+    /** Moves the customer to the Recycle Bin. Their orders stay; a new order brings them back. */
+    public function destroy(Customer $customer)
+    {
+        $customer->delete();
+        ActivityLog::log('customer.deleted', $customer, 'Customer ' . $customer->phone . ' moved to the Recycle Bin by ' . auth()->user()->name);
+
+        return redirect()->route('admin.customers.index')->with('success', 'Customer moved to the Recycle Bin.');
+    }
+
     public function storeNote(Request $request, Customer $customer)
     {
         $request->validate(['note' => 'required|string|max:2000']);
