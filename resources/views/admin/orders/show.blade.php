@@ -127,6 +127,7 @@
             @if($order->customer_id)
                 @can('view_customers')
                 <a href="{{ route('admin.customers.show', $order->customer_id) }}" class="text-xs text-primary hover:underline ml-2">Customer profile →</a>
+                <a href="{{ route('admin.customers.show', $order->customer_id) }}#followups" class="text-xs text-primary hover:underline ml-2">Schedule follow-up</a>
                 @endcan
             @endif
         </div>

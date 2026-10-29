@@ -11,7 +11,7 @@ class SettingsController extends Controller
 {
     private array $groups = [
         'general'      => ['store_name', 'store_tagline', 'store_phone', 'store_email', 'store_address', 'currency_symbol', 'timezone', 'date_format'],
-        'order_rules'  => ['order_max_amount', 'order_limit_count', 'order_limit_hours', 'min_order_amount', 'free_shipping_above', 'default_shipping_charge', 'order_duplicate_block_minutes', 'cod_cancel_block_count', 'max_qty_per_product', 'auto_cancel_hours'],
+        'order_rules'  => ['order_max_amount', 'order_limit_count', 'order_limit_hours', 'min_order_amount', 'free_shipping_above', 'default_shipping_charge', 'order_duplicate_block_minutes', 'cod_cancel_block_count', 'max_qty_per_product', 'auto_cancel_hours', 'followup_after_delivery_days'],
         'social'       => ['facebook_url', 'instagram_url', 'youtube_url', 'whatsapp_number', 'support_email'],
         'appearance'   => ['site_logo', 'favicon'],
         'notification' => ['notify_admin_new_order', 'notify_customer_order_placed', 'notify_customer_status_change'],

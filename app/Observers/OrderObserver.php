@@ -39,6 +39,10 @@ class OrderObserver
         } elseif (in_array($order->status, self::RESTOCK_STATUSES, true) && $order->stock_deducted) {
             $this->restoreStock($order);
         }
+
+        if (in_array($order->status, ['delivered', 'completed', 'hand_delivery_completed'], true)) {
+            \App\Services\FollowupScheduler::afterDelivery($order);
+        }
     }
 
     public function deleted(Order $order): void

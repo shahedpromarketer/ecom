@@ -333,6 +333,21 @@
             </svg>
             <span class="truncate">Customers</span>
         </a>
+
+        @php
+            $followupsDue = \App\Models\Followup::query()->visibleTo(auth()->user())->open()
+                ->whereDate('scheduled_for', '<=', today())->count();
+        @endphp
+        <a href="{{ route('admin.followups.index') }}"
+           class="flex items-center gap-3 py-3 pr-4 text-sm font-medium transition-colors duration-150 {{ $navItem('admin.followups*') }}">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z"/>
+            </svg>
+            <span class="truncate">Follow-ups</span>
+            @if($followupsDue)
+                <span class="ml-auto px-1.5 py-0.5 text-[10px] font-bold rounded-md bg-amber-400 text-gray-900">{{ $followupsDue }}</span>
+            @endif
+        </a>
         @endcan
         @can('manage_staff')
         {{-- USER MANAGEMENT --}}

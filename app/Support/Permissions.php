@@ -17,7 +17,7 @@ class Permissions
     public const GROUPS = [
         'Orders'    => ['view_orders', 'manage_orders', 'export_orders'],
         'Products'  => ['view_products', 'manage_products'],
-        'Customers' => ['view_customers', 'manage_customers', 'ban_customers'],
+        'Customers' => ['view_customers', 'manage_customers', 'ban_customers', 'view_all_followups'],
         'Marketing' => ['manage_marketing'],
         'Reports'   => ['view_reports', 'export_reports'],
         'Settings'  => ['manage_settings', 'manage_staff'],
@@ -53,6 +53,9 @@ class Permissions
 
         // Customers / fraud
         'admin.customers.*'         => ['view_customers', 'manage_customers'],
+        // Anyone who works with customers can work their own call list;
+        // seeing/moving other people's follow-ups needs view_all_followups (checked in the controller).
+        'admin.followups.*'         => 'view_customers',
         'admin.blacklist.*'         => 'ban_customers',
 
         // Marketing

@@ -78,9 +78,15 @@ class CustomerController extends Controller
     {
         $orders = $customer->orders()->with('items')->latest()->paginate(15);
         $customer->load(['notes.user', 'assignedTo']);
+        $followups = \App\Models\Followup::where('customer_id', $customer->id)
+            ->with(['assignee', 'doneByUser'])
+            ->orderByRaw("status = 'listed' DESC")
+            ->latest('scheduled_for')
+            ->limit(20)
+            ->get();
         $staff = \App\Models\User::inCurrentTenant()->whereIn('role', ['admin', 'staff'])->orderBy('name')->get(['id', 'name']);
 
-        return view('admin.customers.show', compact('customer', 'orders', 'staff'));
+        return view('admin.customers.show', compact('customer', 'orders', 'staff', 'followups'));
     }
 
     public function update(Request $request, Customer $customer)

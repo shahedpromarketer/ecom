@@ -111,6 +111,7 @@ $activeTab = request('tab', 'general');
                         ['name' => 'cod_cancel_block_count',        'label' => 'COD Cancel Block Count',      'default' => '3'],
                         ['name' => 'max_qty_per_product',           'label' => 'Max Qty Per Product',         'default' => '10'],
                         ['name' => 'auto_cancel_hours',             'label' => 'Auto-Cancel Hours',           'default' => '24'],
+                        ['name' => 'followup_after_delivery_days',  'label' => 'Auto follow-up after delivery (days, 0 = off)', 'default' => '7'],
                     ];
                     @endphp
                     @foreach($orderFields as $field)

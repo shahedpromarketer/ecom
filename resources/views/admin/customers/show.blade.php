@@ -161,6 +161,50 @@
             @endif
         </div>
 
+        {{-- Follow-ups --}}
+        <div id="followups" class="rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+            <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                <span class="text-sm font-semibold text-textprimary dark:text-white">Follow-ups</span>
+                <a href="{{ route('admin.followups.index') }}" class="text-xs text-primary hover:underline">Open call list →</a>
+            </div>
+            <form method="POST" action="{{ route('admin.followups.store') }}" class="p-5 border-b border-gray-100 dark:border-gray-700 grid grid-cols-1 md:grid-cols-6 gap-2">
+                @csrf
+                <input type="hidden" name="customer_id" value="{{ $customer->id }}">
+                <input type="date" name="scheduled_for" required min="{{ today()->toDateString() }}" value="{{ today()->addDays(3)->toDateString() }}" class="{{ $input }} md:col-span-1">
+                <select name="tag" class="{{ $input }} md:col-span-1">
+                    @foreach(\App\Models\Followup::TAGS as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach
+                </select>
+                @can('view_all_followups')
+                <select name="assigned_to" class="{{ $input }} md:col-span-1">
+                    <option value="">Me</option>
+                    @foreach($staff as $s)<option value="{{ $s->id }}" @selected($customer->assigned_to === $s->id)>{{ $s->name }}</option>@endforeach
+                </select>
+                @endcan
+                <input name="note" maxlength="2000" placeholder="What to talk about…" class="{{ $input }} md:col-span-2">
+                <button class="px-4 py-2.5 text-sm font-semibold bg-primary text-white rounded-xl hover:bg-primary/90">Schedule</button>
+            </form>
+            <div class="divide-y divide-gray-100 dark:divide-gray-700">
+                @forelse($followups as $f)
+                    <div class="px-5 py-3 flex items-start gap-3 text-sm">
+                        <span class="mt-0.5 px-2 py-0.5 text-[11px] font-semibold rounded-full
+                            {{ $f->status === 'done' ? 'bg-green-100 text-green-700' : ($f->status === 'negative' ? 'bg-red-100 text-red-700' : ($f->is_overdue ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800')) }}">
+                            {{ $f->status === 'listed' ? ($f->is_overdue ? 'Overdue' : 'To call') : \App\Models\Followup::STATUSES[$f->status] }}
+                        </span>
+                        <div class="flex-1">
+                            <p class="text-textprimary dark:text-gray-200">
+                                {{ $f->scheduled_for->format('d M Y') }} · {{ \App\Models\Followup::TAGS[$f->tag] ?? 'Follow-up' }}
+                                <span class="text-xs text-textsecondary">· {{ $f->assignee?->name ?? 'Unassigned' }}</span>
+                            </p>
+                            @if($f->note)<p class="text-xs text-textsecondary mt-0.5">{{ $f->note }}</p>@endif
+                            @if($f->result_note)<p class="text-xs mt-0.5"><strong>Result:</strong> {{ $f->result_note }} <span class="text-textsecondary">— {{ $f->doneByUser?->name }}</span></p>@endif
+                        </div>
+                    </div>
+                @empty
+                    <p class="px-5 py-6 text-sm text-center text-textsecondary">No follow-ups yet.</p>
+                @endforelse
+            </div>
+        </div>
+
         {{-- Notes --}}
         <div class="rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
             <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-700 text-sm font-semibold text-textprimary dark:text-white">Customer notes</div>

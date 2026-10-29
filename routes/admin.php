@@ -100,6 +100,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('customers/{customer}/notes', [CustomerController::class, 'storeNote'])->name('customers.notes.store');
         Route::delete('customers/notes/{note}', [CustomerController::class, 'destroyNote'])->name('customers.notes.destroy');
 
+        // Follow-ups (call list)
+        Route::get('followups', [\App\Http\Controllers\Admin\FollowupController::class, 'index'])->name('followups.index');
+        Route::post('followups', [\App\Http\Controllers\Admin\FollowupController::class, 'store'])->name('followups.store');
+        Route::post('followups/bulk', [\App\Http\Controllers\Admin\FollowupController::class, 'bulk'])->name('followups.bulk');
+        Route::patch('followups/{followup}/complete', [\App\Http\Controllers\Admin\FollowupController::class, 'complete'])->name('followups.complete');
+        Route::patch('followups/{followup}/reopen', [\App\Http\Controllers\Admin\FollowupController::class, 'reopen'])->name('followups.reopen');
+        Route::delete('followups/{followup}', [\App\Http\Controllers\Admin\FollowupController::class, 'destroy'])->name('followups.destroy');
+
         // Payments
         Route::get('payments', [PaymentsController::class, 'index'])->name('payments.index');
         Route::patch('payments/{order}/mark-paid', [PaymentsController::class, 'markPaid'])->name('payments.markPaid');
