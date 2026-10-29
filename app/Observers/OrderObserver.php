@@ -32,6 +32,11 @@ class OrderObserver
                 ->get()
                 ->each(fn ($lead) => $lead->confirmWith($order));
         }
+
+        // Website / API orders arrive without anyone responsible: hand them out.
+        if (! $order->assigned_to) {
+            \App\Services\OrderDistributor::assign($order);
+        }
     }
 
     public function updated(Order $order): void

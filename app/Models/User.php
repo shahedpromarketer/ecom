@@ -15,7 +15,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name', 'email', 'phone', 'password', 'role', 'avatar',
         'role_id', 'is_banned', 'ban_reason', 'last_login_at', 'order_cancel_count',
-        'tenant_id', 'is_super_admin',
+        'tenant_id', 'is_super_admin', 'receives_orders',
     ];
 
     protected $hidden = [
@@ -31,10 +31,17 @@ class User extends Authenticatable
             'is_active'         => 'boolean',
             'is_banned'         => 'boolean',
             'is_super_admin'    => 'boolean',
+            'receives_orders'   => 'boolean',
         ];
     }
 
     public function tenant() { return $this->belongsTo(Tenant::class); }
+
+    /** Orders this person is responsible for (see OrderDistributor). */
+    public function assignedOrders()
+    {
+        return $this->hasMany(Order::class, 'assigned_to');
+    }
 
     public function isSuperAdmin(): bool { return (bool) $this->is_super_admin; }
 

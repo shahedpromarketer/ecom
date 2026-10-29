@@ -18,7 +18,7 @@ class Order extends Model
         'source', 'source_url', 'source_order_id', 'source_website', 'platform',
         'utm_source', 'utm_medium', 'utm_campaign',
         'order_tag', 'customer_tag', 'print_status', 'hold_reason',
-        'assigned_to', 'cod_changed', 'is_duplicate',
+        'assigned_to', 'assigned_at', 'cod_changed', 'is_duplicate',
         'reference_no', 'skip_followup', 'user_ip',
         'tenant_id', 'stock_deducted',
     ];
@@ -46,6 +46,15 @@ class Order extends Model
         static::creating(function ($order) {
             if (empty($order->order_number)) {
                 $order->order_number = static::nextOrderNumber($order->tenant_id);
+            }
+        });
+
+        // Staff without view_all_orders only ever see the orders assigned to them —
+        // in lists, search, exports, dashboards and any /orders/{id} link.
+        static::addGlobalScope('assignee', function (\Illuminate\Database\Eloquent\Builder $query) {
+            $user = auth()->user();
+            if ($user && \App\Support\Tenancy::active() && ! $user->hasFullAccess() && ! $user->hasPermission('view_all_orders')) {
+                $query->where($query->getModel()->qualifyColumn('assigned_to'), $user->id);
             }
         });
     }
@@ -145,4 +154,5 @@ class Order extends Model
     {
         return $query->where('tenant_id', auth()->user()?->tenant_id);
     }
+
 }

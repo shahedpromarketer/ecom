@@ -66,9 +66,16 @@ class StaffPermissionsTest extends TestCase
         }
     }
 
-    public function test_order_executive_can_change_orders(): void
+    public function test_order_executive_can_change_their_own_orders_only(): void
     {
-        $this->actingAs($this->staff('order_executive'));
+        $exec = $this->staff('order_executive');
+
+        // Not theirs yet: executives (no view_all_orders) cannot even open it.
+        $this->actingAs($exec);
+        $this->patch(route('admin.orders.updateStatus', $this->order), ['status' => 'confirmed'])->assertNotFound();
+        $this->assertSame('pending', \App\Models\Order::withoutGlobalScopes()->find($this->order->id)->status);
+
+        \App\Models\Order::withoutGlobalScopes()->whereKey($this->order->id)->update(['assigned_to' => $exec->id]);
 
         $this->patch(route('admin.orders.updateStatus', $this->order), ['status' => 'confirmed'])->assertSessionMissing('permission_error');
         $this->assertSame('confirmed', $this->order->fresh()->status);

@@ -15,7 +15,7 @@ class Permissions
 {
     /** Shown as checkbox groups on the Roles page. */
     public const GROUPS = [
-        'Orders'    => ['view_orders', 'manage_orders', 'export_orders', 'view_all_leads'],
+        'Orders'    => ['view_orders', 'view_all_orders', 'manage_orders', 'export_orders', 'view_all_leads'],
         'Products'  => ['view_products', 'manage_products'],
         'Customers' => ['view_customers', 'manage_customers', 'ban_customers', 'view_all_followups'],
         'Marketing' => ['manage_marketing'],
@@ -71,6 +71,7 @@ class Permissions
 
         // Staff
         'admin.users.*'             => 'manage_staff',
+        'admin.distribution.*'      => 'manage_staff',
         'admin.roles.*'             => 'manage_staff',
 
         // Settings

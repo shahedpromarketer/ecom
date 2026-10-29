@@ -387,6 +387,14 @@
             <span class="truncate">Roles</span>
         </a>
 
+        <a href="{{ route('admin.distribution.index') }}"
+           class="flex items-center gap-3 py-3 pr-4 text-sm font-medium transition-colors duration-150 {{ $navItem('admin.distribution*') }}">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"/>
+            </svg>
+            <span class="truncate">Order Distribution</span>
+        </a>
+
         @endcan
         @can('manage_marketing')
         {{-- MARKETING --}}

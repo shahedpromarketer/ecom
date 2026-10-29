@@ -100,6 +100,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('customers/{customer}/notes', [CustomerController::class, 'storeNote'])->name('customers.notes.store');
         Route::delete('customers/notes/{note}', [CustomerController::class, 'destroyNote'])->name('customers.notes.destroy');
 
+        // Order distribution
+        Route::get('distribution', [\App\Http\Controllers\Admin\DistributionController::class, 'index'])->name('distribution.index');
+        Route::post('distribution', [\App\Http\Controllers\Admin\DistributionController::class, 'update'])->name('distribution.update');
+        Route::post('distribution/run', [\App\Http\Controllers\Admin\DistributionController::class, 'run'])->name('distribution.run');
+
         // Leads / pre-orders
         Route::get('leads', [\App\Http\Controllers\Admin\LeadController::class, 'index'])->name('leads.index');
         Route::post('leads', [\App\Http\Controllers\Admin\LeadController::class, 'store'])->name('leads.store');
