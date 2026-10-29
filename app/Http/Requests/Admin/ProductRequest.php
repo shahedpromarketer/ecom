@@ -43,7 +43,7 @@ class ProductRequest extends FormRequest
             'categories'        => ['nullable', 'array'],
             'categories.*'      => ['exists:categories,id'],
             'images'            => ['nullable', 'array'],
-            'images.*'          => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'images.*'          => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:300'],
             'variants'          => ['nullable', 'array'],
             'variants.*.size'        => ['nullable', 'string', 'max:50'],
             'variants.*.color'       => ['nullable', 'string', 'max:50'],

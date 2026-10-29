@@ -325,7 +325,7 @@ class DemoDataSeeder extends Seeder
                         OrderNote::create([
                             'order_id'             => $order->id,
                             'user_id'              => $admin->id,
-                            'note'                 => $noteText,
+                            'note_text' => $noteText,
                             'is_customer_visible'  => false,
                             'created_at'           => $orderDate->copy()->addMinutes(rand(10, 60)),
                         ]);

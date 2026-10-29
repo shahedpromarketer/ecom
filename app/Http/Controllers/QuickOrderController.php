@@ -63,7 +63,7 @@ class QuickOrderController extends Controller
 
         // Variant info
         $variantInfo = null;
-        if ($validated['variant_id']) {
+        if (!empty($validated['variant_id'])) {
             $variant = ProductVariant::find($validated['variant_id']);
             if ($variant) {
                 $variantInfo = $variant->name ?? $variant->size ?? null;
@@ -81,7 +81,7 @@ class QuickOrderController extends Controller
                 'shipping_charge'  => $shipping,
                 'total'            => $total,
                 'payment_method'   => 'cod',
-                'payment_status'   => 'pending',
+                'payment_status'   => 'unpaid',
                 'status'           => 'pending',
                 'source'           => 'website',
                 'source_url'       => url()->previous(),
@@ -106,6 +106,7 @@ class QuickOrderController extends Controller
             'success'      => true,
             'order_number' => $order->order_number,
             'message'      => 'অর্ডার সফলভাবে সম্পন্ন হয়েছে!',
+            'redirect'     => route('order.thank-you', ['order' => $order->order_number]),
         ]);
     }
 }

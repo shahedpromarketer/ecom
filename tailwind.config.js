@@ -6,7 +6,21 @@ export default {
         'resources/**/*.js',
     ],
     theme: {
+        // Override default screens to match the bootstrap-style grid spec:
+        // mobile <768 (fluid), tablet-portrait 768-991, tablet-landscape 992-1199, desktop ≥1200
+        screens: {
+            'sm':  '768px',   // tablet portrait start
+            'md':  '992px',   // tablet landscape start
+            'lg':  '1200px',  // large desktop start
+            'xl':  '1400px',  // extra-large (optional)
+        },
         extend: {
+            maxWidth: {
+                // Container widths per breakpoint
+                'container-sm': '720px',   // sm: 768+  → 720px
+                'container-md': '960px',   // md: 992+  → 960px
+                'container-lg': '1140px',  // lg: 1200+ → 1140px
+            },
             colors: {
                 primary: '#1B2A4A',
                 secondary: '#2D2D2D',
@@ -30,6 +44,9 @@ export default {
                 h4: '18px',
                 base: '16px',
                 sm: '13px',
+            },
+            gap: {
+                'gutter': '24px',  // standard 24px gutter (1.5rem)
             },
         },
     },

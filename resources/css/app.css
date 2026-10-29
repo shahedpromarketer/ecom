@@ -4,176 +4,178 @@
 @tailwind components;
 @tailwind utilities;
 
+[x-cloak] { display: none !important; }
+
+/* ── Base ─────────────────────────────────────────────────── */
 @layer base {
-    html {
-        scroll-behavior: smooth;
-        @apply font-body;
-    }
-
-    body {
-        @apply text-textprimary antialiased;
-    }
-
-    h1 { @apply font-heading text-h1; }
-    h2 { @apply font-heading text-h2; }
-    h3 { @apply font-heading text-h3; }
-    h4 { @apply font-heading text-h4; }
-
-    * { -webkit-tap-highlight-color: transparent; }
+    html { scroll-behavior: smooth; }
+    body { @apply font-body text-textprimary antialiased; -webkit-tap-highlight-color: transparent; }
+    h1 { @apply font-heading font-bold; }
+    h2 { @apply font-heading font-bold; }
+    h3 { @apply font-heading font-semibold; }
+    * { box-sizing: border-box; }
 }
 
+/* ── Components ───────────────────────────────────────────── */
 @layer components {
     .btn-primary {
-        @apply inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-white
-               font-semibold rounded-xl hover:bg-opacity-90 active:scale-95
-               transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary/30;
+        @apply inline-flex items-center justify-center gap-2 px-6 py-3
+               bg-primary text-white font-semibold rounded-xl
+               hover:bg-opacity-90 active:scale-95
+               transition-all duration-150
+               focus:outline-none focus:ring-2 focus:ring-primary/30;
     }
-
     .btn-accent {
-        @apply inline-flex items-center justify-center gap-2 px-6 py-3 bg-accent text-white
-               font-semibold rounded-xl hover:bg-yellow-500 active:scale-95
-               transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-accent/30;
+        @apply inline-flex items-center justify-center gap-2 px-6 py-3
+               bg-accent text-white font-semibold rounded-xl
+               hover:bg-yellow-500 active:scale-95
+               transition-all duration-150
+               focus:outline-none focus:ring-2 focus:ring-accent/30;
     }
-
     .btn-outline {
-        @apply inline-flex items-center justify-center gap-2 px-6 py-3 bg-transparent
-               text-primary font-semibold rounded-xl border-2 border-primary
+        @apply inline-flex items-center justify-center gap-2 px-6 py-3
+               bg-transparent text-primary font-semibold rounded-xl
+               border-2 border-primary
                hover:bg-primary hover:text-white active:scale-95
-               transition-all duration-200 focus:outline-none;
+               transition-all duration-200;
     }
-
-    .btn-danger {
-        @apply inline-flex items-center justify-center gap-2 px-6 py-3 bg-danger text-white
-               font-semibold rounded-xl hover:bg-opacity-90 active:scale-95
-               transition-all duration-150 focus:outline-none;
-    }
-
     .input-field {
-        @apply block w-full px-4 py-3 text-textprimary bg-white border border-gray-200
-               rounded-xl shadow-sm placeholder-textsecondary
-               focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary
-               transition-all duration-150 text-sm;
+        @apply block w-full px-4 py-3 text-sm text-textprimary bg-white
+               border border-gray-200 rounded-xl
+               placeholder-textsecondary
+               focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary
+               transition-all duration-150;
     }
+    .card          { @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-6; }
 
-    .card {
-        @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-6;
+    /* Bootstrap-style responsive container:
+       mobile: 100% fluid, px-4
+       sm(≥768): max 720px, px-4
+       md(≥992): max 960px, px-6
+       lg(≥1200): max 1140px, px-6 */
+    .container-main {
+        @apply w-full mx-auto px-4 sm:px-4 md:px-6;
+        max-width: 100%;
     }
+    @media (min-width: 768px)  { .container-main { max-width: 720px; } }
+    @media (min-width: 992px)  { .container-main { max-width: 960px; } }
+    @media (min-width: 1200px) { .container-main { max-width: 1140px; } }
 
-    .product-card {
-        @apply bg-white rounded-2xl overflow-hidden shadow-sm
-               hover:shadow-lg transition-all duration-300;
-    }
+    .section-padding { @apply py-10 md:py-14 lg:py-16; }
 
-    .badge {
-        @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
-    }
-
+    /* badges */
+    .badge         { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold; }
     .badge-success { @apply badge bg-success/10 text-success; }
     .badge-danger  { @apply badge bg-danger/10 text-danger; }
     .badge-warning { @apply badge bg-accent/10 text-accent; }
     .badge-primary { @apply badge bg-primary/10 text-primary; }
-
-    .container-main {
-        @apply max-w-7xl mx-auto px-4 sm:px-6;
-    }
-
-    .section-padding {
-        @apply py-12 md:py-16;
-    }
 }
 
-/* ── Marquee Animation ── */
+/* ── Marquee ──────────────────────────────────────────────── */
 @keyframes marquee {
     0%   { transform: translateX(0); }
     100% { transform: translateX(-50%); }
 }
-
 .animate-marquee {
-    animation: marquee 25s linear infinite;
+    animation: marquee 28s linear infinite;
     display: inline-block;
+    white-space: nowrap;
     width: max-content;
 }
 
-/* ── Product Image Zoom ── */
-.product-image-wrap {
-    overflow: hidden;
-}
+/* ── Product image zoom ───────────────────────────────────── */
+.product-image-wrap { overflow: hidden; }
+.product-image-wrap img { transition: transform 0.55s cubic-bezier(.25,.46,.45,.94); }
+.product-image-wrap:hover img { transform: scale(1.08); }
 
-.product-image-wrap img {
-    transition: transform 0.5s ease;
-}
+/* ── Sticky header scrolled ───────────────────────────────── */
+#main-header { transition: box-shadow 0.3s ease, padding 0.3s ease; }
+#main-header.header-scrolled { @apply shadow-lg; }
+#main-header.header-scrolled #header-inner { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
 
-.product-image-wrap:hover img {
-    transform: scale(1.1);
-}
+/* ── Hero slider ──────────────────────────────────────────── */
+[data-slide] { will-change: opacity; }
 
-/* ── Skeleton Loading ── */
-.skeleton {
-    @apply animate-pulse bg-gray-200 rounded-xl;
-}
+/* ── Skeleton ─────────────────────────────────────────────── */
+.skeleton { @apply animate-pulse bg-gray-200 rounded-xl; }
 
-/* ── Sticky Header Scrolled ── */
-.header-scrolled #header-inner {
-    @apply py-2 !important;
-}
-
-/* ── Hero Slider ── */
-.hero-slide {
-    transition: opacity 0.6s ease, transform 0.6s ease;
-}
-
-/* ── Page Entrance ── */
-.page-enter {
-    opacity: 0;
-    transform: translateY(12px);
-}
-
-.page-enter-active {
-    opacity: 1;
-    transform: translateY(0);
-    transition: all 0.35s ease;
-}
-
-/* ── Custom Scrollbar ── */
-::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
-}
-::-webkit-scrollbar-track { background: #F8F8F8; }
+/* ── Custom scrollbar ─────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
 
-/* ── Mobile Bottom Nav Safe Area ── */
-@supports (padding-bottom: env(safe-area-inset-bottom)) {
-    .safe-area-inset-bottom {
-        padding-bottom: env(safe-area-inset-bottom);
-    }
-}
+/* ── Line clamp ───────────────────────────────────────────── */
+.line-clamp-1 { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
+.line-clamp-2 { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 
-/* ── Line Clamp ── */
-.line-clamp-1 {
-    display: -webkit-box;
-    -webkit-line-clamp: 1;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.line-clamp-2 {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-/* ── Toast Animation ── */
+/* ── Toast ────────────────────────────────────────────────── */
 @keyframes slideUp {
-    from { opacity: 0; transform: translateY(20px); }
+    from { opacity: 0; transform: translateY(16px); }
     to   { opacity: 1; transform: translateY(0); }
 }
+.toast-item { animation: slideUp 0.3s ease forwards; }
 
-.toast-item {
-    animation: slideUp 0.3s ease forwards;
+/* ── Safe area (mobile notch) ─────────────────────────────── */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+    .safe-area-inset-bottom { padding-bottom: env(safe-area-inset-bottom); }
 }
 
-/* ── Admin (existing) ── */
-.badge { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium; }
+/* ── Scroll-reveal animation ──────────────────────────────── */
+[data-animate] {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+[data-animate].in-view {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ── Product card ─────────────────────────────────────────── */
+.product-card {
+    @apply bg-white rounded-2xl overflow-hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+.product-card:hover {
+    box-shadow: 0 10px 25px rgba(0,0,0,.1), 0 4px 10px rgba(0,0,0,.06);
+    transform: translateY(-3px);
+}
+
+/* ── Trust badge hover ────────────────────────────────────── */
+.trust-badge {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.trust-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(27,42,74,.1);
+}
+
+/* ── Category card ────────────────────────────────────────── */
+.category-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.category-card:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 12px 28px rgba(0,0,0,.15);
+}
+
+/* ── Section divider ──────────────────────────────────────── */
+.section-divider {
+    height: 4px;
+    background: linear-gradient(90deg, #1B2A4A 0%, #F59E0B 50%, #1B2A4A 100%);
+    border-radius: 99px;
+    width: 48px;
+    margin-bottom: 1rem;
+}
+
+/* ── Hide scrollbar (horizontal scroll rows) ──────────────── */
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
+/* ── Product card overlay button ─────────────────────────── */
+.product-card .group:hover .overlay-order { transform: translateY(0); }
+
+/* ── Snap scroll (mobile category rows) ──────────────────── */
+.snap-x { scroll-snap-type: x mandatory; }
+.snap-start { scroll-snap-align: start; }

@@ -59,12 +59,68 @@
 <body class="font-body text-textprimary antialiased bg-[#F8F8F8]"
     x-data="{
         cartOpen: false,
+        cart: [],
+        cartCount: 0,
         quickOrderOpen: false,
         quickOrderProduct: null,
         mobileMenuOpen: false,
         searchOpen: false,
-        cartCount: 0,
         announcementVisible: true,
+
+        init() {
+            try { this.cart = JSON.parse(localStorage.getItem('ecom_cart') || '[]'); } catch(e) { this.cart = []; }
+            this._syncCount();
+        },
+
+        addToCart(product) {
+            const variantId = product.selectedVariant?.id ?? null;
+            const key = 'p' + product.id + (variantId ? '-v' + variantId : '');
+            const idx = this.cart.findIndex(i => i.key === key);
+            if (idx >= 0) {
+                this.cart[idx].qty += (product.qty || 1);
+            } else {
+                this.cart.push({
+                    key,
+                    id: product.id,
+                    name: product.name,
+                    image: product.image || '',
+                    price: product.sale_price ?? product.price,
+                    variant_id: variantId,
+                    variant_name: product.selectedVariant?.size ?? null,
+                    qty: product.qty || 1,
+                });
+            }
+            this._saveCart();
+            this.cartOpen = true;
+            document.body.style.overflow = 'hidden';
+        },
+
+        removeFromCart(key) {
+            this.cart = this.cart.filter(i => i.key !== key);
+            this._saveCart();
+            if (this.cart.length === 0) { this.cartOpen = false; document.body.style.overflow = ''; }
+        },
+
+        updateCartItemQty(key, qty) {
+            if (qty < 1) { this.removeFromCart(key); return; }
+            const item = this.cart.find(i => i.key === key);
+            if (item) item.qty = Math.min(20, qty);
+            this._saveCart();
+        },
+
+        get cartSubtotal() {
+            return this.cart.reduce((s, i) => s + i.price * i.qty, 0);
+        },
+
+        _saveCart() {
+            localStorage.setItem('ecom_cart', JSON.stringify(this.cart));
+            this._syncCount();
+        },
+
+        _syncCount() {
+            this.cartCount = this.cart.reduce((s, i) => s + i.qty, 0);
+        },
+
         openQuickOrder(product) {
             this.quickOrderProduct = product;
             this.quickOrderOpen = true;
@@ -74,7 +130,11 @@
             this.quickOrderOpen = false;
             document.body.style.overflow = '';
         }
-    }">
+    }"
+    @close-quick-order.window="closeQuickOrder()"
+    @quick-order-open.window="openQuickOrder($event.detail)"
+    @add-to-cart.window="addToCart($event.detail)"
+    @cart-close.window="cartOpen = false; document.body.style.overflow = ''">
 
     {{-- Announcement Bar --}}
     @include('layouts.partials.announcement-bar', ['settings' => $globalSettings])
@@ -92,6 +152,9 @@
 
     {{-- Mobile Bottom Nav --}}
     @include('layouts.partials.mobile-nav')
+
+    {{-- Cart Drawer --}}
+    @include('layouts.partials.cart-drawer', ['settings' => $globalSettings])
 
     {{-- Quick Order Modal --}}
     @include('layouts.partials.quick-order-modal', ['settings' => $globalSettings])
@@ -114,6 +177,9 @@
 
     {{-- Toast Container --}}
     <div id="toast-container" class="fixed bottom-20 md:bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    {{-- Page-specific scripts --}}
+    @stack('scripts')
 
 </body>
 </html>

@@ -17,12 +17,17 @@ class HomeController extends Controller
             ->orderBy('sort_order')
             ->get();
 
+        // Parent categories — count includes products from sub-categories too
         $featuredCategories = Category::where('is_active', true)
             ->whereNull('parent_id')
+            ->with(['children' => fn($q) => $q->withCount(['products' => fn($q) => $q->where('status', 'active')])])
             ->withCount(['products' => fn($q) => $q->where('status', 'active')])
             ->orderBy('sort_order')
             ->take(6)
-            ->get();
+            ->get()
+            ->each(function ($cat) {
+                $cat->products_count += $cat->children->sum('products_count');
+            });
 
         $newArrivals = Product::where('status', 'active')
             ->with([
@@ -53,17 +58,25 @@ class HomeController extends Controller
             ->take(8)
             ->get();
 
+        // Top categories — count + products include sub-categories
         $topCategories = Category::where('is_active', true)
             ->whereNull('parent_id')
+            ->with(['children' => fn($q) => $q->withCount(['products' => fn($q) => $q->where('status', 'active')])])
             ->withCount(['products' => fn($q) => $q->where('status', 'active')])
-            ->orderByDesc('products_count')
+            ->get()
+            ->each(function ($cat) {
+                $cat->products_count += $cat->children->sum('products_count');
+            })
+            ->sortByDesc('products_count')
             ->take(3)
-            ->get();
+            ->values();
 
-        // Eagerly load products for top categories
+        // Load products for top categories — include sub-category products
         foreach ($topCategories as $cat) {
-            $cat->setRelation('topProducts', $cat->products()
-                ->where('status', 'active')
+            $categoryIds = $cat->children->pluck('id')->push($cat->id)->toArray();
+
+            $cat->setRelation('topProducts', Product::where('status', 'active')
+                ->whereHas('categories', fn($q) => $q->whereIn('categories.id', $categoryIds))
                 ->with(['images' => fn($q) => $q->where('is_primary', true)->orWhere('sort_order', 1), 'variants'])
                 ->latest()
                 ->take(4)

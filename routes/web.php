@@ -3,6 +3,9 @@
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QuickOrderController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ShopController;
+use App\Http\Controllers\ThankYouController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\SuperAdmin\SuperAdminController;
 use Illuminate\Support\Facades\Route;
@@ -10,16 +13,9 @@ use Illuminate\Support\Facades\Route;
 // ── Frontend Public Routes ────────────────────────────────
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/search', [HomeController::class, 'search'])->name('search');
+Route::get('/shop', [ShopController::class, 'index'])->name('shop');
 
-// Shop / Product (stubs — built in next phases)
-Route::get('/shop', function () {
-    return redirect()->route('home');
-})->name('shop');
-
-Route::get('/product/{slug}', function ($slug) {
-    \App\Models\Product::where('slug', $slug)->where('status', 'active')->firstOrFail();
-    return redirect()->route('home');
-})->name('product.show');
+Route::get('/product/{slug}', [ProductController::class, 'show'])->name('product.show');
 
 Route::get('/wishlist', function () {
     return redirect()->route('home');
@@ -31,6 +27,8 @@ Route::get('/orders', function () {
 
 // ── Quick Order (AJAX) ────────────────────────────────────
 Route::post('/order/quick', [QuickOrderController::class, 'store'])->name('order.quick');
+Route::post('/cart/checkout', [App\Http\Controllers\CartController::class, 'checkout'])->name('cart.checkout');
+Route::get('/order/thank-you', [ThankYouController::class, 'index'])->name('order.thank-you');
 
 // ── Dashboard redirect ────────────────────────────────────
 Route::get('/dashboard', function () {

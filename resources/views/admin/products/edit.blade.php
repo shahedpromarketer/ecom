@@ -13,9 +13,27 @@
 @section('content')
 
 <form method="POST" action="{{ route('admin.products.update', $product) }}" enctype="multipart/form-data"
-      x-data="productForm()" @submit="syncFileInput">
+      x-data="productForm()" @submit="handleSubmit($event)">
     @csrf
     @method('PUT')
+
+    @if($errors->any())
+    <div class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+        <div class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <div>
+                <p class="text-sm font-semibold text-red-700 dark:text-red-400 mb-1">Please fix the following errors:</p>
+                <ul class="text-sm text-red-600 dark:text-red-400 list-disc list-inside space-y-0.5">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        </div>
+    </div>
+    @endif
 
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
@@ -152,7 +170,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
                             </svg>
                             <p class="text-sm text-textprimary dark:text-gray-200">Drop images here or click to browse</p>
-                            <p class="text-xs text-textsecondary dark:text-gray-500 mt-0.5">JPEG, PNG, WebP · Max 2 MB</p>
+                            <p class="text-xs text-textsecondary dark:text-gray-500 mt-0.5">JPEG, PNG, WebP · Max 300 KB</p>
                         </div>
 
                         <div x-show="images.length > 0" x-cloak class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 mt-4">
@@ -219,7 +237,12 @@
                         </div>
                     </template>
                     <template x-if="salePriceError">
-                        <p class="text-xs text-danger dark:text-red-400" x-text="salePriceError"></p>
+                        <div class="flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                            <svg class="w-4 h-4 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <p class="text-sm text-red-600 dark:text-red-400 font-medium" x-text="salePriceError"></p>
+                        </div>
                     </template>
 
                 </div>
@@ -538,6 +561,15 @@ function productForm() {
 
         removeNewImage(idx) {
             this.images.splice(idx, 1);
+            this.syncFileInput();
+        },
+
+        handleSubmit(event) {
+            if (this.salePriceError) {
+                event.preventDefault();
+                document.querySelector('[name="sale_price"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
             this.syncFileInput();
         },
 

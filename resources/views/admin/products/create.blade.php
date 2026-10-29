@@ -13,8 +13,26 @@
 @section('content')
 
 <form method="POST" action="{{ route('admin.products.store') }}" enctype="multipart/form-data"
-      x-data="productForm()" @submit="syncFileInput">
+      x-data="productForm()" @submit="handleSubmit($event)">
     @csrf
+
+    @if($errors->any())
+    <div class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+        <div class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <div>
+                <p class="text-sm font-semibold text-red-700 dark:text-red-400 mb-1">Please fix the following errors:</p>
+                <ul class="text-sm text-red-600 dark:text-red-400 list-disc list-inside space-y-0.5">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        </div>
+    </div>
+    @endif
 
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
@@ -95,7 +113,7 @@
             <x-admin.card>
                 <x-slot:header>
                     <h3 class="font-heading font-semibold text-textprimary dark:text-gray-100">Product Images</h3>
-                    <span class="text-xs text-textsecondary dark:text-gray-500">First image = primary. Max 2 MB each.</span>
+                    <span class="text-xs text-textsecondary dark:text-gray-500">First image = primary. Max 300 KB each.</span>
                 </x-slot:header>
                 <div class="p-6">
 
@@ -113,7 +131,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
                         </svg>
                         <p class="text-sm font-medium text-textprimary dark:text-gray-200">Drop images here or click to browse</p>
-                        <p class="text-xs text-textsecondary dark:text-gray-500 mt-1">JPEG, PNG, WebP · Up to 2 MB each</p>
+                        <p class="text-xs text-textsecondary dark:text-gray-500 mt-1">JPEG, PNG, WebP · Max 300 KB</p>
                     </div>
 
                     @error('images.*')<p class="mt-2 text-xs text-danger dark:text-red-400">{{ $message }}</p>@enderror
@@ -193,7 +211,12 @@
                         </div>
                     </template>
                     <template x-if="salePriceError">
-                        <p class="text-xs text-danger dark:text-red-400" x-text="salePriceError"></p>
+                        <div class="flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                            <svg class="w-4 h-4 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <p class="text-sm text-red-600 dark:text-red-400 font-medium" x-text="salePriceError"></p>
+                        </div>
                     </template>
 
                 </div>
@@ -314,8 +337,8 @@
                                 class="w-full px-4 py-2.5 text-sm rounded-xl border border-border dark:border-gray-600
                                        bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100
                                        focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary dark:focus:border-primary transition-all duration-200">
-                            <option value="draft"    {{ old('status', 'draft') === 'draft'    ? 'selected' : '' }}>Draft</option>
-                            <option value="active"   {{ old('status') === 'active'   ? 'selected' : '' }}>Active</option>
+                            <option value="active"   {{ old('status', 'active') === 'active'   ? 'selected' : '' }}>Active</option>
+                            <option value="draft"    {{ old('status') === 'draft'    ? 'selected' : '' }}>Draft</option>
                             <option value="inactive" {{ old('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
                         </select>
                         @error('status')<p class="mt-1.5 text-xs text-danger dark:text-red-400">{{ $message }}</p>@enderror
@@ -501,6 +524,16 @@ function productForm() {
 
         setPrimaryNew(idx) {
             this.images.forEach((img, i) => img.primary = i === idx);
+        },
+
+        handleSubmit(event) {
+            if (this.salePriceError) {
+                event.preventDefault();
+                // scroll to sale price area
+                document.querySelector('[name="sale_price"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+            this.syncFileInput();
         },
 
         syncFileInput() {
