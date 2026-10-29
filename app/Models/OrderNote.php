@@ -3,6 +3,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 
 class OrderNote extends Model {
+    use \App\Models\Concerns\BelongsToTenant;
+
     protected $fillable = ['order_id', 'user_id', 'note_text', 'is_customer_visible', 'type'];
     protected $casts = ['is_customer_visible' => 'boolean'];
     public function order() { return $this->belongsTo(Order::class); }

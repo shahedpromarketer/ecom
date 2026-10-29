@@ -6,6 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class StockLog extends Model
 {
+    use \App\Models\Concerns\BelongsToTenantThroughParent;
+
+    public function tenantParentRelation(): string
+    {
+        return 'variant';
+    }
+
     protected $fillable = [
         'variant_id', 'user_id', 'order_id',
         'qty_before', 'change', 'qty_after',

@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Category extends Model
 {
+    use \App\Models\Concerns\BelongsToTenant;
+
     protected $fillable = [
         'name', 'slug', 'parent_id', 'image', 'description', 'is_active', 'sort_order',
         'tenant_id',

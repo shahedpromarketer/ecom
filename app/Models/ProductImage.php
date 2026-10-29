@@ -6,6 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class ProductImage extends Model
 {
+    use \App\Models\Concerns\BelongsToTenantThroughParent;
+
+    public function tenantParentRelation(): string
+    {
+        return 'product';
+    }
+
     protected $fillable = [
         'product_id', 'image_path', 'is_primary', 'sort_order',
     ];

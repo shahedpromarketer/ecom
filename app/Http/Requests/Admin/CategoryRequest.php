@@ -18,8 +18,9 @@ class CategoryRequest extends FormRequest
 
         return [
             'name'        => ['required', 'string', 'max:255'],
-            'slug'        => ['required', 'string', 'max:255', Rule::unique('categories', 'slug')->ignore($categoryId)],
-            'parent_id'   => ['nullable', 'exists:categories,id'],
+            'slug'        => ['required', 'string', 'max:255', Rule::unique('categories', 'slug')->ignore($categoryId)
+                ->where(fn ($q) => \App\Support\Tenancy::active() ? $q->where('tenant_id', \App\Support\Tenancy::id()) : $q)],
+            'parent_id'   => ['nullable', \App\Support\Tenancy::exists('categories')],
             'description' => ['nullable', 'string', 'max:1000'],
             'image'       => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'],
             'sort_order'  => ['nullable', 'integer', 'min:0'],

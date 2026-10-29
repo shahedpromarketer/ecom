@@ -41,7 +41,7 @@ class ProductRequest extends FormRequest
             'meta_title'        => ['nullable', 'string', 'max:255'],
             'meta_description'  => ['nullable', 'string'],
             'categories'        => ['nullable', 'array'],
-            'categories.*'      => ['exists:categories,id'],
+            'categories.*'      => [\App\Support\Tenancy::exists('categories')],
             'images'            => ['nullable', 'array'],
             'images.*'          => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:300'],
             'variants'          => ['nullable', 'array'],

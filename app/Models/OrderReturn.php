@@ -3,6 +3,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 
 class OrderReturn extends Model {
+    use \App\Models\Concerns\BelongsToTenant;
+
     protected $table = 'order_returns';
     protected $fillable = [
         'order_id', 'reason', 'status', 'refund_amount', 'refund_method',

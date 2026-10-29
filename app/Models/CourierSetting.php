@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class CourierSetting extends Model
 {
+    use \App\Models\Concerns\BelongsToTenant;
+
     protected $fillable = [
         'courier', 'api_key', 'api_secret', 'base_url',
         'webhook_url', 'extra_config', 'is_active', 'tenant_id',

@@ -34,7 +34,7 @@ class ActivityLogController extends Controller
         }
 
         $logs  = $query->paginate(50)->withQueryString();
-        $adminsQ = User::where('role', 'admin');
+        $adminsQ = User::inCurrentTenant()->where('role', 'admin');
         if (!auth()->user()->is_super_admin) { $adminsQ->where('tenant_id', auth()->user()->tenant_id); }
         $admins = $adminsQ->get();
 

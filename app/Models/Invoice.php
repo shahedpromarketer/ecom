@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Invoice extends Model
 {
+    use \App\Models\Concerns\BelongsToTenant;
+
     protected $fillable = [
         'order_id', 'invoice_number', 'subtotal', 'discount',
         'shipping', 'total', 'status', 'notes',

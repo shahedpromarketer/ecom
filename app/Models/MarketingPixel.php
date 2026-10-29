@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class MarketingPixel extends Model
 {
+    use \App\Models\Concerns\BelongsToTenant;
+
     protected $fillable = [
         'platform', 'pixel_id', 'api_secret', 'test_code',
         'head_code', 'body_code', 'is_active', 'tenant_id',

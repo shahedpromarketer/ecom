@@ -6,6 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class Role extends Model
 {
+    use \App\Models\Concerns\BelongsToTenant;
+
+    public function includesSharedTenantRows(): bool
+    {
+        return true; // NULL tenant_id = shared by every shop
+    }
+
     protected $fillable = ['name', 'display_name', 'permissions', 'is_system'];
 
     protected $casts = [

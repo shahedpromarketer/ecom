@@ -233,7 +233,7 @@ class OrderController extends Controller
 
     public function create()
     {
-        $admins    = \App\Models\User::orderBy('name')->get();
+        $admins    = \App\Models\User::inCurrentTenant()->orderBy('name')->get();
         $districts = [
             'Bagerhat','Bandarban','Barguna','Barishal','Bhola','Bogura','Brahmanbaria',
             'Chandpur','Chapai Nawabganj','Chattogram','Chuadanga','Cox\'s Bazar','Cumilla',
@@ -265,7 +265,7 @@ class OrderController extends Controller
             'shipping_phone'     => 'required|string|max:20',
             'payment_method'     => 'required|in:cod,bkash,nagad,rocket,card',
             'items'              => 'required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.product_id' => ['required', \App\Support\Tenancy::exists('products')],
             'items.*.quantity'   => 'nullable|integer|min:1',
             'items.*.qty'        => 'nullable|integer|min:1',
             'items.*.unit_price' => 'required|numeric|min:0',
@@ -401,7 +401,7 @@ class OrderController extends Controller
         $currentStep    = array_search($order->status, $statusSteps);
         if ($currentStep === false) $currentStep = -1;
 
-        $admins    = \App\Models\User::orderBy('name')->get();
+        $admins    = \App\Models\User::inCurrentTenant()->orderBy('name')->get();
         $districts = [
             'Bagerhat','Bandarban','Barguna','Barishal','Bhola','Bogura','Brahmanbaria',
             'Chandpur','Chapai Nawabganj','Chattogram','Chuadanga','Cox\'s Bazar','Cumilla',
@@ -459,7 +459,7 @@ class OrderController extends Controller
     public function addItem(Request $request, Order $order)
     {
         $request->validate([
-            'product_id'   => 'required|exists:products,id',
+            'product_id'   => ['required', \App\Support\Tenancy::exists('products')],
             'product_name' => 'required|string|max:255',
             'qty'          => 'required|integer|min:1',
             'unit_price'   => 'required|numeric|min:0',
@@ -513,7 +513,7 @@ class OrderController extends Controller
             'packing_note'      => 'nullable|string|max:500',
             'order_tag'         => 'nullable|string|max:50',
             'customer_tag'      => 'nullable|string|max:50',
-            'assigned_to'       => 'nullable|exists:users,id',
+            'assigned_to'       => ['nullable', \App\Support\Tenancy::exists('users')],
             'reference_no'      => 'nullable|string|max:100',
             'source_website'    => 'nullable|string|max:255',
             'skip_followup'     => 'nullable|boolean',
@@ -853,7 +853,7 @@ class OrderController extends Controller
         $customerTotal     = $baseQ->count();
         $customerCompleted = (clone $baseQ)->whereIn('status', ['delivered', 'completed'])->count();
 
-        $admins = \App\Models\User::orderBy('name')->get(['id', 'name']);
+        $admins = \App\Models\User::inCurrentTenant()->orderBy('name')->get(['id', 'name']);
 
         $allNotes = $order->orderNotes->sortByDesc('created_at');
 

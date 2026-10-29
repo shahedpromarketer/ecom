@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class SyncLog extends Model
 {
+    use \App\Models\Concerns\BelongsToTenant;
+
     protected $fillable = [
         'site_id', 'order_id', 'source_order_id', 'status', 'payload', 'message',
     ];

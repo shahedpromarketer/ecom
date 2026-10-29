@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class ApiToken extends Model
 {
+    use \App\Models\Concerns\BelongsToTenant;
+
     protected $fillable = [
         'name', 'token', 'abilities', 'last_used_at', 'expires_at', 'is_active', 'created_by',
     ];

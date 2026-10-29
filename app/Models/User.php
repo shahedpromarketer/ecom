@@ -38,6 +38,19 @@ class User extends Authenticatable
 
     public function isSuperAdmin(): bool { return (bool) $this->is_super_admin; }
 
+    /**
+     * Staff of the current shop only. Users are not globally scoped (auth itself
+     * loads users), so use this wherever a list of users is shown.
+     */
+    public function scopeInCurrentTenant($query)
+    {
+        if (\App\Support\Tenancy::active()) {
+            $query->where('tenant_id', \App\Support\Tenancy::id());
+        }
+
+        return $query;
+    }
+
     public function orders()
     {
         return $this->hasMany(Order::class);

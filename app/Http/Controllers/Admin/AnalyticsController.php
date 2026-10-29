@@ -32,7 +32,7 @@ class AnalyticsController extends Controller
         $totalRevenue   = $orderBase()->where('status', 'delivered')->whereBetween('created_at', [$from, $to])->sum('total');
         $totalOrders    = $orderBase()->whereBetween('created_at', [$from, $to])->count();
         $avgOrderValue  = $totalOrders > 0 ? round($totalRevenue / max($totalOrders, 1), 2) : 0;
-        $custQ = User::where('role', 'customer')->whereBetween('created_at', [$from, $to]);
+        $custQ = User::inCurrentTenant()->where('role', 'customer')->whereBetween('created_at', [$from, $to]);
         if (!$isSA) { $custQ->where('tenant_id', $tenantId); }
         $totalCustomers = $custQ->count();
         $repeatCustomers = $orderBase()->whereBetween('created_at', [$from, $to])

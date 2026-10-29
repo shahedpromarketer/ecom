@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Order extends Model
 {
+    use \App\Models\Concerns\BelongsToTenant;
+
     protected $fillable = [
         'user_id', 'order_number', 'status', 'subtotal', 'discount', 'discount_type',
         'shipping_charge', 'courier_charge', 'total', 'paid_amount',

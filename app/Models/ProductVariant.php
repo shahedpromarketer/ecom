@@ -6,6 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class ProductVariant extends Model
 {
+    use \App\Models\Concerns\BelongsToTenantThroughParent;
+
+    public function tenantParentRelation(): string
+    {
+        return 'product';
+    }
+
     protected $fillable = [
         'product_id', 'size', 'color', 'color_hex', 'stock', 'sku', 'extra_price', 'is_active',
     ];

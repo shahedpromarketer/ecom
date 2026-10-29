@@ -4,6 +4,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class ActivityLog extends Model
 {
+    use \App\Models\Concerns\BelongsToTenant;
+
     protected $fillable = [
         'user_id', 'action', 'action_performed', 'subject_type', 'subject_id',
         'description', 'properties', 'old_data', 'updated_data',

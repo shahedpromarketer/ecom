@@ -6,6 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class IpBlocklist extends Model
 {
+    use \App\Models\Concerns\BelongsToTenant;
+
+    public function includesSharedTenantRows(): bool
+    {
+        return true; // NULL tenant_id = shared by every shop
+    }
+
     protected $table = 'ip_blocklist';
 
     protected $fillable = ['ip_address', 'reason', 'blocked_by', 'tenant_id'];

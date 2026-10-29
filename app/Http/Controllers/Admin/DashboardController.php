@@ -92,7 +92,7 @@ class DashboardController extends Controller
         $recentOrders = $dateFilter($orderBase()->with('user'))->latest()->take(10)->get();
 
         // ── Quick stats ────────────────────────────────────────────────────────
-        $custCountQ = User::where('role', 'customer');
+        $custCountQ = User::inCurrentTenant()->where('role', 'customer');
         if (!$isSA) { $custCountQ->where('tenant_id', $tenantId); }
         $totalCustomers = $custCountQ->count();
         $prodCountQ = Product::where('status', 'active');

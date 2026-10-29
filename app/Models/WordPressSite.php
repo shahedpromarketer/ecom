@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Storage;
 
 class WordPressSite extends Model
 {
+    use \App\Models\Concerns\BelongsToTenant;
+
     protected $table = 'wordpress_sites';
 
     protected $fillable = [

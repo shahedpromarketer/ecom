@@ -6,6 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class OrderItem extends Model
 {
+    use \App\Models\Concerns\BelongsToTenantThroughParent;
+
+    public function tenantParentRelation(): string
+    {
+        return 'order';
+    }
+
     protected $fillable = [
         'order_id', 'product_id', 'variant_id', 'product_name',
         'variant_info', 'qty', 'unit_price', 'discount', 'total',

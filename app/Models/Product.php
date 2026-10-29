@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
 {
+    use \App\Models\Concerns\BelongsToTenant;
+
     protected $fillable = [
         'wp_product_id', 'name', 'slug', 'description', 'short_description',
         'price', 'regular_price', 'sale_price',

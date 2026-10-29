@@ -47,7 +47,7 @@ class ReportController extends Controller
 
     public function userReport(Request $request)
     {
-        $userReportQ = User::where('role', 'customer');
+        $userReportQ = User::inCurrentTenant()->where('role', 'customer');
         if (!auth()->user()->is_super_admin) { $userReportQ->where('tenant_id', auth()->user()->tenant_id); }
         $data = $userReportQ->withCount('orders')
             ->withSum('orders', 'total')
