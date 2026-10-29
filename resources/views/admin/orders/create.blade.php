@@ -47,6 +47,7 @@
         <div class="sm:col-span-1">
             <label class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Mobile Number*</label>
             <input type="text" name="primary_mobile" id="mobileInput" required maxlength="11"
+                value="{{ old('primary_mobile', request('phone')) }}"
                 oninput="if(this.value.length===11) lookupCustomer(this.value)"
                 placeholder="01XXXXXXXXX"
                 class="w-full rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]">
@@ -385,6 +386,12 @@ function orderCalc() {
         }
     };
 }
+
+// Opened from a customer profile (?phone=…): fill name/address straight away.
+document.addEventListener('DOMContentLoaded', () => {
+    const m = document.getElementById('mobileInput');
+    if (m && m.value.length === 11) lookupCustomer(m.value);
+});
 
 // ─── Customer Lookup ──────────────────────────────────────────────────────────
 function lookupCustomer(phone) {

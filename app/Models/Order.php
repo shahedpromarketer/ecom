@@ -9,7 +9,7 @@ class Order extends Model
     use \App\Models\Concerns\BelongsToTenant;
 
     protected $fillable = [
-        'user_id', 'order_number', 'status', 'subtotal', 'discount', 'discount_type',
+        'user_id', 'customer_id', 'order_number', 'status', 'subtotal', 'discount', 'discount_type',
         'shipping_charge', 'courier_charge', 'total', 'paid_amount',
         'payment_method', 'payment_status',
         'coupon_id', 'shipping_name', 'shipping_phone', 'alt_phone', 'email',
@@ -77,6 +77,11 @@ class Order extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class);
     }
 
     public function coupon()

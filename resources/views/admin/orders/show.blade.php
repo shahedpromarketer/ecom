@@ -124,6 +124,11 @@
             <span class="text-gray-500 dark:text-gray-400 text-xs">Total Orders:</span>
             <span class="font-bold text-[#1B2A4A] dark:text-white">{{ $phoneOrderCount }}</span>
             <a href="{{ route('admin.orders.index', ['search' => $order->shipping_phone]) }}" class="text-xs text-[#F59E0B] hover:underline ml-1" target="_blank">View All ↗</a>
+            @if($order->customer_id)
+                @can('view_customers')
+                <a href="{{ route('admin.customers.show', $order->customer_id) }}" class="text-xs text-primary hover:underline ml-2">Customer profile →</a>
+                @endcan
+            @endif
         </div>
         <div class="flex items-center gap-1 text-sm">
             <span class="text-gray-500 dark:text-gray-400 text-xs">Completed:</span>

@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Models\Order;
 use App\Models\ProductVariant;
 use App\Models\StockLog;
+use App\Services\CustomerSync;
 use Illuminate\Support\Facades\DB;
 
 class OrderObserver
@@ -15,8 +16,20 @@ class OrderObserver
     /** Stock comes back when the order is cancelled or the parcel is returned. */
     private const RESTOCK_STATUSES = ['cancelled', 'returned'];
 
+    /** Order fields that change a customer's profile or counters. */
+    private const CUSTOMER_FIELDS = ['shipping_phone', 'status', 'total', 'shipping_name', 'shipping_address', 'shipping_district', 'email', 'alt_phone', 'tenant_id'];
+
+    public function created(Order $order): void
+    {
+        CustomerSync::forOrder($order);
+    }
+
     public function updated(Order $order): void
     {
+        if ($order->wasChanged(self::CUSTOMER_FIELDS)) {
+            CustomerSync::forOrder($order);
+        }
+
         if (! $order->wasChanged('status')) {
             return;
         }
@@ -25,6 +38,13 @@ class OrderObserver
             $this->deductStock($order);
         } elseif (in_array($order->status, self::RESTOCK_STATUSES, true) && $order->stock_deducted) {
             $this->restoreStock($order);
+        }
+    }
+
+    public function deleted(Order $order): void
+    {
+        if ($order->customer_id) {
+            CustomerSync::recalculateById($order->customer_id);
         }
     }
 

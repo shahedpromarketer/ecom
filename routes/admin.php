@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\BlacklistController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CourierController;
 use App\Http\Controllers\Admin\CouponController;
+use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\IntegrationController;
 use App\Http\Controllers\Admin\InventoryController;
@@ -91,6 +92,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('orders/{id}/customer-notes', [OrderNoteController::class, 'storeCustomer'])->name('orders.customerNotes.store');
         Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
+
+        // Customers
+        Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
+        Route::get('customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
+        Route::patch('customers/{customer}', [CustomerController::class, 'update'])->name('customers.update');
+        Route::post('customers/{customer}/notes', [CustomerController::class, 'storeNote'])->name('customers.notes.store');
+        Route::delete('customers/notes/{note}', [CustomerController::class, 'destroyNote'])->name('customers.notes.destroy');
 
         // Payments
         Route::get('payments', [PaymentsController::class, 'index'])->name('payments.index');

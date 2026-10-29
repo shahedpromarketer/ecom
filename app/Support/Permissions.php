@@ -52,6 +52,7 @@ class Permissions
         'admin.inventory.*'         => ['view_products', 'manage_products'],
 
         // Customers / fraud
+        'admin.customers.*'         => ['view_customers', 'manage_customers'],
         'admin.blacklist.*'         => 'ban_customers',
 
         // Marketing
