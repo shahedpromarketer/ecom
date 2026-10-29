@@ -14,7 +14,7 @@ class ProductVariant extends Model
     }
 
     protected $fillable = [
-        'product_id', 'size', 'color', 'color_hex', 'stock', 'sku', 'extra_price', 'is_active',
+        'product_id', 'size', 'color', 'color_hex', 'stock', 'sku', 'extra_price', 'is_active', 'wp_variation_id',
     ];
 
     protected $casts = [

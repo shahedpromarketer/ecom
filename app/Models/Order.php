@@ -15,7 +15,7 @@ class Order extends Model
         'coupon_id', 'shipping_name', 'shipping_phone', 'alt_phone', 'email',
         'shipping_division', 'shipping_district', 'shipping_area', 'shipping_address',
         'notes', 'courier_note', 'packing_note',
-        'source', 'source_url', 'source_order_id', 'source_website', 'platform',
+        'source', 'source_url', 'source_order_id', 'source_website', 'wordpress_site_id', 'platform',
         'utm_source', 'utm_medium', 'utm_campaign',
         'order_tag', 'customer_tag', 'print_status', 'hold_reason',
         'assigned_to', 'assigned_at', 'cod_changed', 'is_duplicate',

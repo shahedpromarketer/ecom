@@ -28,6 +28,13 @@ Route::post('/plugin/disconnect',    [PluginConnectController::class, 'disconnec
 Route::get('/plugin/ping',           [PluginConnectController::class, 'ping'])->name('api.plugin.ping');
 Route::post('/plugin/validate-order',[PluginValidateController::class, 'validate'])->name('api.plugin.validate');
 
+// Ecom Pilot plugin v2 — every request HMAC-signed with the store key (see App\Support\PluginSignature)
+Route::prefix('v1/store')->middleware(['plugin.signed', 'throttle:600,1'])->name('api.store.')->group(function () {
+    Route::post('/connect',  [\App\Http\Controllers\Api\StorePluginController::class, 'connect'])->name('connect');
+    Route::post('/orders',   [\App\Http\Controllers\Api\StorePluginController::class, 'order'])->name('orders');
+    Route::post('/validate', [\App\Http\Controllers\Api\StorePluginController::class, 'validateCheckout'])->name('validate');
+});
+
 // Legacy webhook route (site api_key auth)
 Route::post('/wordpress/sync', [WordPressSyncController::class, 'receiveOrder'])
     ->name('api.wordpress.sync');

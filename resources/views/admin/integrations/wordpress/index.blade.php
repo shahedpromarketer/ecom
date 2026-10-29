@@ -101,17 +101,13 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/>
     </svg>
     <div class="flex-1 min-w-0">
-        <p class="text-sm font-semibold text-blue-800 dark:text-blue-300">Orders sync automatically via webhook. Use <em>Sync Now</em> for manual sync.</p>
-        <div x-data="{ copied: false }" class="flex items-center gap-2 mt-2 flex-wrap">
-            <span class="text-xs text-blue-600 dark:text-blue-400 font-medium">Webhook URL:</span>
-            <code class="text-xs bg-white dark:bg-gray-800 border border-blue-200 dark:border-blue-700 px-2 py-1 rounded-lg text-blue-700 dark:text-blue-300 select-all break-all">{{ $webhookUrl }}</code>
-            <button type="button"
-                @click="navigator.clipboard.writeText('{{ $webhookUrl }}'); copied = true; setTimeout(()=>copied=false,2000)"
-                class="text-xs px-2 py-1 rounded-lg bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300 hover:bg-blue-200 transition font-medium flex-shrink-0">
-                <span x-show="!copied">Copy</span>
-                <span x-show="copied" x-cloak class="text-green-600">Copied!</span>
-            </button>
-        </div>
+        <p class="text-sm font-semibold text-blue-800 dark:text-blue-300">Connect a WooCommerce store in 3 steps</p>
+        <ol class="mt-2 text-sm text-blue-800 dark:text-blue-300 list-decimal list-inside space-y-1">
+            <li>Add the store below (its WordPress address, e.g. <code>https://shop.example.com</code>).</li>
+            <li><a href="{{ asset('downloads/ecom-pilot-connector.zip') }}" class="font-semibold underline">Download the Ecom Pilot Connector plugin</a> and install it in WordPress (Plugins → Add New → Upload).</li>
+            <li>In WordPress open <strong>WooCommerce → Ecom Pilot</strong>, paste the store's <strong>connection key</strong> (button "Copy connection key" below) and click Save.</li>
+        </ol>
+        <p class="mt-2 text-xs text-blue-600 dark:text-blue-400">New orders then arrive here within seconds, from any checkout (classic, block or headless). Status changes made here are sent back to WooCommerce. No WooCommerce API keys or webhooks needed.</p>
     </div>
 </div>
 
@@ -204,16 +200,20 @@
                                     Plugin Not Connected
                                 </span>
                                 @endif
-                                {{-- API Key copy --}}
+                                {{-- Connection key for the plugin: "{site id}.{secret}" --}}
+                                @php $connKey = \App\Support\PluginSignature::connectionKey($site->id, (string) $site->api_key); @endphp
                                 <div x-data="{ copied: false }" class="mt-1 flex items-center gap-1">
-                                    <span class="text-[10px] text-gray-400 font-mono truncate max-w-[100px]">{{ substr($site->api_key, 0, 16) }}…</span>
-                                    <button @click="navigator.clipboard.writeText('{{ $site->api_key }}'); copied = true; setTimeout(() => copied = false, 2000)"
+                                    <span class="text-[10px] text-gray-400 font-mono truncate max-w-[100px]">{{ substr($connKey, 0, 12) }}…</span>
+                                    <button @click="navigator.clipboard.writeText('{{ $connKey }}'); copied = true; setTimeout(() => copied = false, 2000)"
                                         class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-primary/10 hover:text-primary transition"
-                                        :title="copied ? 'Copied!' : 'Copy API Key'">
-                                        <span x-show="!copied">Copy API Key</span>
+                                        :title="copied ? 'Copied!' : 'Copy connection key for the plugin'">
+                                        <span x-show="!copied">Copy connection key</span>
                                         <span x-show="copied" x-cloak class="text-green-600">Copied!</span>
                                     </button>
                                 </div>
+                                @if($site->last_seen_at)
+                                    <div class="mt-0.5 text-[10px] text-gray-400">Plugin last heard {{ $site->last_seen_at->diffForHumans() }}</div>
+                                @endif
                             </div>
                         </div>
                     </td>

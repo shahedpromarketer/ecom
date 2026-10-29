@@ -58,6 +58,9 @@ class OrderObserver
         if (in_array($order->status, ['delivered', 'completed', 'hand_delivery_completed'], true)) {
             \App\Services\FollowupScheduler::afterDelivery($order);
         }
+
+        // Orders from a WooCommerce store: tell the store (after the response).
+        \App\Services\StoreStatusPusher::queue($order);
     }
 
     public function deleted(Order $order): void

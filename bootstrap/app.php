@@ -22,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant'      => \App\Http\Middleware\TenantMiddleware::class,
             'super_admin' => \App\Http\Middleware\SuperAdminMiddleware::class,
             'permission'  => \App\Http\Middleware\CheckPermission::class,
+            'plugin.signed' => \App\Http\Middleware\VerifyPluginSignature::class,
         ]);
 
         // Guests hitting a protected page go to the CRM login.
