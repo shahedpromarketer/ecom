@@ -55,19 +55,36 @@ class StoreStatusPusher
         }
 
         $site = WordPressSite::withoutGlobalScopes()->find($order->wordpress_site_id);
-        $wooStatus = $site ? self::wooStatusFor($site, $order->status) : null;
-        if (! $site || ! $site->is_active || ! $site->plugin_connected || ! $wooStatus) {
+        if (! $site || ! $site->is_active) {
             return false;
         }
 
-        $base = rtrim($site->rest_url ?: rtrim($site->site_url, '/') . '/wp-json', '/');
-        $body = json_encode([
-            'order_id'   => (int) $order->source_order_id,
-            'status'     => $wooStatus,
-            'crm_status' => $order->status,
-            'note'       => 'Ecom Pilot: ' . ucwords(str_replace('_', ' ', $order->status)),
-            'tracking'   => $order->shipment?->tracking_code,
-        ]);
+        if ($site->type === 'custom' || $site->type === 'landing_page') {
+            // Custom websites: a signed JSON webhook to the URL they gave us (optional).
+            if (! $site->webhook_url) {
+                return false;
+            }
+            $url = $site->webhook_url;
+            $statusLabel = $order->status;
+            $body = json_encode([
+                'event' => 'order.status_changed',
+                'order' => \App\Http\Controllers\Api\PublicStoreApiController::orderView($order)['order'],
+            ]);
+        } else {
+            $wooStatus = self::wooStatusFor($site, $order->status);
+            if (! $site->plugin_connected || ! $wooStatus) {
+                return false;
+            }
+            $url = rtrim($site->rest_url ?: rtrim($site->site_url, '/') . '/wp-json', '/') . '/ecom-pilot/v1/order-status';
+            $statusLabel = $wooStatus;
+            $body = json_encode([
+                'order_id'   => (int) $order->source_order_id,
+                'status'     => $wooStatus,
+                'crm_status' => $order->status,
+                'note'       => 'Ecom Pilot: ' . ucwords(str_replace('_', ' ', $order->status)),
+                'tracking'   => $order->shipment?->tracking_code,
+            ]);
+        }
         $sig = PluginSignature::sign((string) $site->api_key, $body);
 
         try {
@@ -80,10 +97,10 @@ class StoreStatusPusher
                     'X-EP-Signature'  => $sig['signature'],
                 ])
                 ->withBody($body, 'application/json')
-                ->post($base . '/ecom-pilot/v1/order-status');
+                ->post($url);
 
             $ok = $response->successful();
-            $message = $ok ? "Status sent: {$order->status} → {$wooStatus}" : 'Status push failed: HTTP ' . $response->status() . ' ' . mb_substr($response->body(), 0, 200);
+            $message = $ok ? "Status sent: {$order->status} → {$statusLabel}" : 'Status push failed: HTTP ' . $response->status() . ' ' . mb_substr($response->body(), 0, 200);
         } catch (\Throwable $e) {
             $ok = false;
             $message = 'Status push failed: ' . mb_substr($e->getMessage(), 0, 200);

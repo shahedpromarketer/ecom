@@ -46,6 +46,7 @@ class Permissions
         'admin.payments.*'          => ['view_orders', 'manage_orders'],
         // Leads: importing / moving between staff also needs view_all_leads (checked in the controller).
         'admin.leads.*'             => ['view_orders', 'manage_orders'],
+        'admin.failed-orders.*'     => ['view_orders', 'manage_orders'],
         'admin.returns.*'           => ['view_orders', 'manage_orders'],
         'admin.invoices.*'          => ['view_orders', 'manage_orders'],
 
@@ -78,7 +79,7 @@ class Permissions
         // Settings
         'admin.settings.*'          => 'manage_settings',
         'admin.courier.*'           => 'manage_settings',
-        'admin.integrations.*'      => 'manage_settings',
+        'admin.integrations.*'      => 'manage_settings',   // incl. api-docs and sheet setup
         'admin.wordpress'           => 'manage_settings',
         'admin.invoice-setup.*'     => 'manage_settings',
         'admin.invoice-templates.*' => 'manage_settings',

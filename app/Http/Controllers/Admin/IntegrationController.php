@@ -33,18 +33,25 @@ class IntegrationController extends Controller
         return view('admin.integrations.wordpress.index', compact('sites', 'logs', 'webhookUrl'));
     }
 
+    /** Developer docs for a custom website store (key, endpoints, examples). */
+    public function apiDocs(WordPressSite $site)
+    {
+        return view('admin.integrations.api-docs', compact('site'));
+    }
+
     public function wordpressStore(Request $request)
     {
         $request->validate([
             'site_name'       => 'required|string|max:255',
             'site_url'        => 'required|url|max:255',
-            'type'            => 'required|in:wordpress,woocommerce,cartflow,landing_page',
+            'type'            => 'required|in:' . implode(',', array_keys(WordPressSite::TYPES)),
             'consumer_key'    => 'nullable|string|max:255',
             'consumer_secret' => 'nullable|string|max:255',
             'mobile_number'   => 'nullable|string|max:20',
             'invoice_title'   => 'nullable|string|max:255',
             'invoice_address' => 'nullable|string|max:1000',
             'logo'            => 'nullable|image|max:1024',
+            'webhook_url'     => 'nullable|url|starts_with:https://|max:255',
         ]);
 
         $logoPath = null;
@@ -62,6 +69,7 @@ class IntegrationController extends Controller
             'invoice_title'   => $request->invoice_title,
             'invoice_address' => $request->invoice_address,
             'logo'            => $logoPath,
+            'webhook_url'     => $request->webhook_url,
             'api_key'         => WordPressSite::generateApiKey(),
             'tenant_id'       => auth()->user()->tenant_id,
         ]);
@@ -74,16 +82,18 @@ class IntegrationController extends Controller
         $request->validate([
             'site_name'       => 'required|string|max:255',
             'site_url'        => 'required|url|max:255',
-            'type'            => 'required|in:wordpress,woocommerce,cartflow,landing_page',
+            'type'            => 'required|in:' . implode(',', array_keys(WordPressSite::TYPES)),
             'consumer_key'    => 'nullable|string|max:255',
             'consumer_secret' => 'nullable|string|max:255',
             'mobile_number'   => 'nullable|string|max:20',
             'invoice_title'   => 'nullable|string|max:255',
             'invoice_address' => 'nullable|string|max:1000',
             'logo'            => 'nullable|image|max:1024',
+            'webhook_url'     => 'nullable|url|starts_with:https://|max:255',
         ]);
 
         $data = [
+            'webhook_url'     => $request->webhook_url,
             'name'            => $request->site_name,
             'site_url'        => rtrim($request->site_url, '/'),
             'type'            => $request->type,

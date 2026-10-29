@@ -93,6 +93,14 @@ class StorePluginController extends Controller
         return response()->json(['ok' => true, 'result' => $result, 'product_id' => $product->id]);
     }
 
+    /** The visitor typed their phone at checkout but has not ordered (yet). */
+    public function incomplete(Request $request)
+    {
+        $row = \App\Services\IncompleteCheckoutRecorder::record($this->store($request), $request->json()->all());
+
+        return response()->json(['ok' => true, 'recorded' => (bool) $row]);
+    }
+
     /** Stock of a product/variation changed in WooCommerce (sale, refund, manual edit). */
     public function stock(Request $request)
     {

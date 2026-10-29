@@ -33,6 +33,9 @@ class OrderObserver
                 ->each(fn ($lead) => $lead->confirmWith($order));
         }
 
+        // Abandoned checkouts by the same number are now recovered.
+        \App\Services\IncompleteCheckoutRecorder::markRecovered($order);
+
         // Website / API orders arrive without anyone responsible: hand them out.
         if (! $order->assigned_to) {
             \App\Services\OrderDistributor::assign($order);

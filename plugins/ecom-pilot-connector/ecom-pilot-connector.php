@@ -2,8 +2,8 @@
 /**
  * Plugin Name:       Ecom Pilot Connector
  * Plugin URI:        https://crm.netpilotdigital.com
- * Description:       Sends every WooCommerce order to your Ecom Pilot CRM, checks blacklisted / duplicate orders at checkout, and receives status updates from the CRM.
- * Version:           2.1.1
+ * Description:       Sends every WooCommerce order to your Ecom Pilot CRM, saves unfinished checkouts, checks blacklisted / duplicate orders at checkout, and receives status updates from the CRM.
+ * Version:           2.2.0
  * Requires PHP:      7.4
  * Requires Plugins:  woocommerce
  * Author:            Ecom Pilot
@@ -15,7 +15,7 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
-define('EP_VERSION', '2.1.1');
+define('EP_VERSION', '2.2.0');
 define('EP_OPTION', 'ecom_pilot_settings');
 define('EP_RETRY_OPTION', 'ecom_pilot_retry_queue');
 
@@ -35,7 +35,8 @@ function ep_settings(): array
     return wp_parse_args(is_array($s) ? $s : [], [
         'crm_url'        => 'https://crm.netpilotdigital.com',
         'connection_key' => '',
-        'checkout_check' => 1,
+        'checkout_check'     => 1,
+        'capture_incomplete' => 1,
     ]);
 }
 
@@ -399,6 +400,116 @@ add_action('shutdown', function () {
     }
 }, 25);
 
+/* ───────────────────────── Unfinished checkouts ("failed orders") ───────────────────────── */
+
+// A tiny script on the checkout page: once a full phone number is typed, tell our own server
+// (which signs and forwards it to the CRM — the key never reaches the browser).
+add_action('wp_enqueue_scripts', function () {
+    if (! function_exists('is_checkout') || ! is_checkout() || is_order_received_page() || ! ep_credentials()) {
+        return;
+    }
+    if (empty(ep_settings()['capture_incomplete'])) {
+        return;
+    }
+
+    wp_register_script('ecom-pilot-capture', '', [], EP_VERSION, true);
+    wp_enqueue_script('ecom-pilot-capture');
+    wp_add_inline_script('ecom-pilot-capture', 'window.EcomPilotCapture=' . wp_json_encode([
+        'url'   => admin_url('admin-ajax.php'),
+        'nonce' => wp_create_nonce('ep_incomplete'),
+    ]) . ';' . <<<'JS'
+(function () {
+  var cfg = window.EcomPilotCapture, timer = null, lastSent = '';
+  var pick = function (sel) {
+    var el = document.querySelector(sel);
+    return el && el.value ? String(el.value).trim() : '';
+  };
+  var collect = function () {
+    var phone = pick('#billing_phone, #billing-phone, #shipping-phone, input[name="billing_phone"]');
+    var first = pick('#billing_first_name, #billing-first_name, #shipping-first_name');
+    var last  = pick('#billing_last_name, #billing-last_name, #shipping-last_name');
+    return {
+      phone: phone,
+      name: (first + ' ' + last).trim(),
+      address: [pick('#billing_address_1, #billing-address_1, #shipping-address_1'), pick('#billing_address_2, #billing-address_2, #shipping-address_2'), pick('#billing_city, #billing-city, #shipping-city')].filter(Boolean).join(', '),
+      email: pick('#billing_email, #email')
+    };
+  };
+  var send = function () {
+    var d = collect();
+    if (d.phone.replace(/\D/g, '').length < 11) return;
+    var key = JSON.stringify(d);
+    if (key === lastSent) return;
+    lastSent = key;
+    var body = new URLSearchParams({ action: 'ep_incomplete', nonce: cfg.nonce, phone: d.phone, name: d.name, address: d.address, email: d.email, page_url: location.href });
+    if (navigator.sendBeacon) { navigator.sendBeacon(cfg.url, body); }
+    else { fetch(cfg.url, { method: 'POST', body: body, credentials: 'same-origin', keepalive: true }); }
+  };
+  var watch = function (e) {
+    if (!e.target || !e.target.matches || !e.target.matches('input, textarea, select')) return;
+    clearTimeout(timer);
+    timer = setTimeout(send, 1500);
+  };
+  document.addEventListener('input', watch, true);
+  document.addEventListener('change', watch, true);
+  window.addEventListener('pagehide', send);
+})();
+JS
+    );
+});
+
+function ep_capture_incomplete()
+{
+    check_ajax_referer('ep_incomplete', 'nonce');
+
+    $session = (function_exists('WC') && WC()->session) ? (string) WC()->session->get_customer_id() : '';
+    $session = $session ?: 'ip:' . WC_Geolocation::get_ip_address();
+
+    // At most one send every 10 seconds per visitor.
+    $throttle = 'ep_inc_' . md5($session);
+    if (get_transient($throttle)) {
+        wp_send_json(['ok' => true, 'throttled' => true]);
+    }
+    set_transient($throttle, 1, 10);
+
+    $items = [];
+    if (function_exists('WC') && WC()->cart) {
+        foreach (WC()->cart->get_cart() as $line) {
+            $product = $line['data'] ?? null;
+            if (! $product instanceof WC_Product) {
+                continue;
+            }
+            $variant = [];
+            foreach ((array) ($line['variation'] ?? []) as $attr => $value) {
+                $variant[] = wc_attribute_label(str_replace('attribute_', '', $attr), $product) . ': ' . $value;
+            }
+            $items[] = [
+                'name'    => $product->get_name(),
+                'qty'     => (int) $line['quantity'],
+                'price'   => (float) wc_get_price_to_display($product),
+                'variant' => implode(', ', $variant),
+            ];
+        }
+    }
+
+    $res = ep_post('incomplete', [
+        'session_id' => $session,
+        'phone'      => sanitize_text_field(wp_unslash($_POST['phone'] ?? '')),
+        'name'       => sanitize_text_field(wp_unslash($_POST['name'] ?? '')),
+        'email'      => sanitize_email(wp_unslash($_POST['email'] ?? '')),
+        'address'    => sanitize_text_field(wp_unslash($_POST['address'] ?? '')),
+        'page_url'   => esc_url_raw(wp_unslash($_POST['page_url'] ?? '')),
+        'items'      => $items,
+        'total'      => (function_exists('WC') && WC()->cart) ? (float) WC()->cart->get_total('edit') : 0,
+        'ip'         => WC_Geolocation::get_ip_address(),
+        'user_agent' => substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 500),
+    ], 4);
+
+    wp_send_json(['ok' => $res['ok']]);
+}
+add_action('wp_ajax_ep_incomplete', 'ep_capture_incomplete');
+add_action('wp_ajax_nopriv_ep_incomplete', 'ep_capture_incomplete');
+
 /* ───────────────────────── Checkout check ───────────────────────── */
 
 /**
@@ -556,7 +667,8 @@ function ep_settings_page()
         update_option(EP_OPTION, [
             'crm_url'        => $crmUrl ?: 'https://crm.netpilotdigital.com',
             'connection_key' => sanitize_text_field(wp_unslash($_POST['connection_key'] ?? '')),
-            'checkout_check' => empty($_POST['checkout_check']) ? 0 : 1,
+            'checkout_check'     => empty($_POST['checkout_check']) ? 0 : 1,
+            'capture_incomplete' => empty($_POST['capture_incomplete']) ? 0 : 1,
         ], false);
         if (! wp_next_scheduled('ep_retry_cron')) {
             wp_schedule_event(time() + 300, 'ep_five_minutes', 'ep_retry_cron');
@@ -604,6 +716,13 @@ function ep_settings_page()
                     <td>
                         <label><input type="checkbox" name="checkout_check" value="1" <?php checked($s['checkout_check']); ?>>
                             Refuse orders from blacklisted numbers / IPs and too many repeat orders (rules are set in Ecom Pilot)</label>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">Unfinished checkouts</th>
+                    <td>
+                        <label><input type="checkbox" name="capture_incomplete" value="1" <?php checked($s['capture_incomplete']); ?>>
+                            When a visitor types their phone number at checkout but does not order, save them under "Failed Orders" in Ecom Pilot so your team can call</label>
                     </td>
                 </tr>
             </table>

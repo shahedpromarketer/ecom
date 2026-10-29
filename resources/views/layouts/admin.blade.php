@@ -310,6 +310,19 @@
             </div>
         </div>
 
+        {{-- Failed orders (unfinished checkouts) --}}
+        @php $failedPending = \App\Models\IncompleteOrder::where('status', 'pending')->count(); @endphp
+        <a href="{{ route('admin.failed-orders.index') }}"
+           class="flex items-center gap-3 py-3 pr-4 text-sm font-medium transition-colors duration-150 {{ $navItem('admin.failed-orders*') }}">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"/>
+            </svg>
+            <span class="truncate">Failed Orders</span>
+            @if($failedPending)
+                <span class="ml-auto px-1.5 py-0.5 text-[10px] font-bold rounded-md bg-red-400 text-gray-900">{{ $failedPending }}</span>
+            @endif
+        </a>
+
         {{-- Leads / pre-orders --}}
         @php
             $leadsNew = \App\Models\Lead::query()->visibleTo(auth()->user())

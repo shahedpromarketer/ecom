@@ -35,6 +35,15 @@ Route::prefix('v1/store')->middleware(['plugin.signed', 'throttle:600,1'])->name
     Route::post('/validate', [\App\Http\Controllers\Api\StorePluginController::class, 'validateCheckout'])->name('validate');
     Route::post('/products', [\App\Http\Controllers\Api\StorePluginController::class, 'product'])->name('products');
     Route::post('/stock',    [\App\Http\Controllers\Api\StorePluginController::class, 'stock'])->name('stock');
+    Route::post('/incomplete', [\App\Http\Controllers\Api\StorePluginController::class, 'incomplete'])->name('incomplete');
+});
+
+// Public REST API for custom websites — Authorization: Bearer {connection key}. Docs: Integrations → API docs.
+Route::prefix('v1')->middleware(['store.key', 'throttle:300,1'])->name('api.v1.')->group(function () {
+    Route::post('/orders',                [\App\Http\Controllers\Api\PublicStoreApiController::class, 'storeOrder'])->name('orders.store');
+    Route::get('/orders/{externalId}',    [\App\Http\Controllers\Api\PublicStoreApiController::class, 'showOrder'])->name('orders.show');
+    Route::post('/checkout/check',        [\App\Http\Controllers\Api\PublicStoreApiController::class, 'check'])->name('checkout.check');
+    Route::post('/incomplete',            [\App\Http\Controllers\Api\PublicStoreApiController::class, 'incomplete'])->name('incomplete');
 });
 
 // Legacy webhook route (site api_key auth)

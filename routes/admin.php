@@ -116,6 +116,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('distribution', [\App\Http\Controllers\Admin\DistributionController::class, 'update'])->name('distribution.update');
         Route::post('distribution/run', [\App\Http\Controllers\Admin\DistributionController::class, 'run'])->name('distribution.run');
 
+        // Failed orders (unfinished checkouts)
+        Route::get('failed-orders', [\App\Http\Controllers\Admin\FailedOrderController::class, 'index'])->name('failed-orders.index');
+        Route::post('failed-orders/bulk', [\App\Http\Controllers\Admin\FailedOrderController::class, 'bulk'])->name('failed-orders.bulk');
+        Route::patch('failed-orders/{failed}', [\App\Http\Controllers\Admin\FailedOrderController::class, 'update'])->name('failed-orders.update');
+
         // Leads / pre-orders
         Route::get('leads', [\App\Http\Controllers\Admin\LeadController::class, 'index'])->name('leads.index');
         Route::post('leads', [\App\Http\Controllers\Admin\LeadController::class, 'store'])->name('leads.store');
@@ -226,6 +231,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // WordPress redirect shortcut
         Route::redirect('wordpress', '/admin/integrations/wordpress')->name('wordpress');
+
+        // Integrations: developer docs (custom websites) and Google Sheet setup
+        Route::get('integrations/{site}/api-docs', [IntegrationController::class, 'apiDocs'])->name('integrations.api-docs');
+        Route::get('integrations/{site}/sheet', [\App\Http\Controllers\Admin\GoogleSheetController::class, 'edit'])->name('integrations.sheet.edit');
+        Route::post('integrations/{site}/sheet/columns', [\App\Http\Controllers\Admin\GoogleSheetController::class, 'columns'])->name('integrations.sheet.columns');
+        Route::post('integrations/{site}/sheet', [\App\Http\Controllers\Admin\GoogleSheetController::class, 'update'])->name('integrations.sheet.update');
+        Route::post('integrations/{site}/sheet/import', [\App\Http\Controllers\Admin\GoogleSheetController::class, 'import'])->name('integrations.sheet.import');
 
         // Integrations
         Route::prefix('integrations/wordpress')->name('integrations.wordpress.')->group(function () {

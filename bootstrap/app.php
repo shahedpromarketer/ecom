@@ -23,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'super_admin' => \App\Http\Middleware\SuperAdminMiddleware::class,
             'permission'  => \App\Http\Middleware\CheckPermission::class,
             'plugin.signed' => \App\Http\Middleware\VerifyPluginSignature::class,
+            'store.key'     => \App\Http\Middleware\AuthenticateStoreKey::class,
         ]);
 
         // Guests hitting a protected page go to the CRM login.

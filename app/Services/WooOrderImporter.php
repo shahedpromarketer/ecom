@@ -38,18 +38,26 @@ class WooOrderImporter
         }
 
         return DB::transaction(function () use ($site, $p, $wooId) {
-            $existing = Order::withoutGlobalScope('assignee')
+            $existing = Order::withoutGlobalScope('assignee')->withTrashed()
                 ->where('wordpress_site_id', $site->id)
                 ->where('source_order_id', $wooId)
                 ->lockForUpdate()
-                ->first()
-                // Orders imported before plugin v2 were matched by Woo id + source only.
-                ?? Order::withoutGlobalScope('assignee')
+                ->first();
+
+            // Orders imported before plugin v2 were matched by Woo id + website only.
+            if (! $existing && in_array($site->type, ['woocommerce', 'wordpress'], true)) {
+                $existing = Order::withoutGlobalScope('assignee')
                     ->whereNull('wordpress_site_id')
                     ->where('source_order_id', $wooId)
                     ->whereIn('source', ['woocommerce', 'wordpress'])
                     ->where('source_website', 'like', '%' . parse_url($site->site_url, PHP_URL_HOST) . '%')
                     ->first();
+            }
+
+            // Deleted in the CRM on purpose: a re-send must not bring it back.
+            if ($existing?->trashed()) {
+                return [$existing, 'skipped'];
+            }
 
             return $existing
                 ? [self::update($existing, $site, $p), 'updated']
@@ -70,7 +78,7 @@ class WooOrderImporter
 
         self::replaceItems($order, $p);
 
-        ActivityLog::log('order.imported', $order, 'Imported from ' . $site->name . ' (WooCommerce #' . ($p['number'] ?? $p['id']) . ')');
+        ActivityLog::log('order.imported', $order, 'Imported from ' . $site->name . ' (#' . ($p['number'] ?? $p['id']) . ')');
 
         return $order;
     }
@@ -124,7 +132,7 @@ class WooOrderImporter
 
         return [
             'wordpress_site_id' => $site->id,
-            'source'            => 'woocommerce',
+            'source'            => $site->orderSource(),
             'source_order_id'   => (string) $p['id'],
             'source_website'    => $site->site_url,
             'reference_no'      => (string) ($p['number'] ?? $p['id']),

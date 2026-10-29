@@ -19,17 +19,17 @@
     showSecret: false,
     logoPreview: null,
     form: {
-        site_name: '', site_url: '', type: 'wordpress',
+        site_name: '', site_url: '', type: 'woocommerce',
         consumer_key: '', consumer_secret: '',
         mobile_number: '', invoice_title: '', invoice_address: '',
-        logo: null
+        webhook_url: '', logo: null
     },
     openAdd() {
         this.editMode  = false;
         this.editId    = null;
         this.showSecret = false;
         this.logoPreview = null;
-        this.form = { site_name:'', site_url:'', type:'wordpress', consumer_key:'', consumer_secret:'', mobile_number:'', invoice_title:'', invoice_address:'', logo:null };
+        this.form = { site_name:'', site_url:'', type:'woocommerce', consumer_key:'', consumer_secret:'', mobile_number:'', invoice_title:'', invoice_address:'', webhook_url:'', logo:null };
         this.showModal = true;
     },
     openEdit(site) {
@@ -41,7 +41,7 @@
             site_name: site.name, site_url: site.site_url, type: site.type || 'wordpress',
             consumer_key: site.consumer_key || '', consumer_secret: site.consumer_secret || '',
             mobile_number: site.mobile_number || '', invoice_title: site.invoice_title || '',
-            invoice_address: site.invoice_address || '', logo: null
+            invoice_address: site.invoice_address || '', webhook_url: site.webhook_url || '', logo: null
         };
         this.showModal = true;
     },
@@ -153,14 +153,11 @@
                         'woocommerce' => 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
                         'cartflow'    => 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400',
                         'landing_page'=> 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+                        'custom'      => 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+                        'google_sheet'=> 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
                         default       => 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
                     };
-                    $typeLabel = match($site->type ?? 'wordpress') {
-                        'woocommerce'  => 'WooCommerce',
-                        'cartflow'     => 'CartFlow',
-                        'landing_page' => 'Landing Page',
-                        default        => 'WordPress',
-                    };
+                    $typeLabel = \App\Models\WordPressSite::TYPES[$site->type ?? 'wordpress'] ?? 'WordPress';
                     $siteJson = json_encode([
                         'id'              => $site->id,
                         'name'            => $site->name,
@@ -171,6 +168,7 @@
                         'mobile_number'   => $site->mobile_number,
                         'invoice_title'   => $site->invoice_title,
                         'invoice_address' => $site->invoice_address,
+                        'webhook_url'     => $site->webhook_url,
                         'logo_url'        => $site->logo_url,
                     ]);
                 @endphp
@@ -221,6 +219,11 @@
                     {{-- Type --}}
                     <td class="px-4 py-3">
                         <span class="px-2.5 py-1 rounded-lg text-xs font-semibold {{ $typeBadge }}">{{ $typeLabel }}</span>
+                        @if(in_array($site->type, ['custom', 'landing_page'], true))
+                            <a href="{{ route('admin.integrations.api-docs', $site) }}" class="block mt-1.5 text-xs font-semibold text-primary hover:underline">API docs →</a>
+                        @elseif($site->type === 'google_sheet')
+                            <a href="{{ route('admin.integrations.sheet.edit', $site) }}" class="block mt-1.5 text-xs font-semibold text-primary hover:underline">Set up sheet →</a>
+                        @endif
                     </td>
 
                     {{-- Last Order Sync --}}
@@ -460,11 +463,20 @@
                     class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
                            bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white
                            focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition">
-                    <option value="wordpress">WordPress</option>
-                    <option value="woocommerce">WooCommerce</option>
-                    <option value="cartflow">CartFlow</option>
-                    <option value="landing_page">Landing Page</option>
+                    @foreach(\App\Models\WordPressSite::TYPES as $typeKey => $typeLabel)
+                        <option value="{{ $typeKey }}">{{ $typeLabel }}</option>
+                    @endforeach
                 </select>
+                <p x-show="form.type === 'custom'" class="text-xs text-gray-500">Your developer sends orders with the REST API. After saving, open <strong>API docs</strong> on the store row.</p>
+                <p x-show="form.type === 'google_sheet'" class="text-xs text-gray-500">After saving, click <strong>Set up sheet</strong> on the store row to link the sheet and map its columns.</p>
+            </div>
+
+            {{-- Webhook (custom websites) --}}
+            <div class="space-y-1.5" x-show="form.type === 'custom' || form.type === 'landing_page'">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status webhook URL (optional)</label>
+                <input type="url" x-model="form.webhook_url" placeholder="https://yoursite.com/ecom-pilot/webhook"
+                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition">
+                <p class="text-xs text-gray-400">We POST here whenever an order's status changes in the CRM (signed, see API docs).</p>
             </div>
 
             {{-- Consumer Key + Secret --}}

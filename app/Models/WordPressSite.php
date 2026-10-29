@@ -18,15 +18,36 @@ class WordPressSite extends Model
         'last_sync_at', 'last_product_sync_at', 'last_order_sync_at',
         'total_synced', 'total_products_synced', 'tenant_id',
         'plugin_connected', 'plugin_connected_at', 'plugin_version',
-        'status_map', 'rest_url', 'last_seen_at',
+        'status_map', 'rest_url', 'last_seen_at', 'webhook_url', 'settings',
     ];
 
     protected $hidden = ['api_key', 'consumer_key', 'consumer_secret'];
+
+    /** Store types. "custom" = any website using the REST API; "google_sheet" = rows from a sheet. */
+    public const TYPES = [
+        'woocommerce'  => 'WooCommerce (plugin)',
+        'wordpress'    => 'WordPress',
+        'custom'       => 'Custom website / API',
+        'google_sheet' => 'Google Sheet',
+        'landing_page' => 'Landing page',
+        'cartflow'     => 'CartFlow',
+    ];
+
+    /** What new orders from this store are labelled with (orders.source). */
+    public function orderSource(): string
+    {
+        return match ($this->type) {
+            'custom', 'landing_page' => 'website',
+            'google_sheet'           => 'google_sheet',
+            default                  => 'woocommerce',
+        };
+    }
 
     protected $casts = [
         'is_active'            => 'boolean',
         'plugin_connected'     => 'boolean',
         'status_map'           => 'array',
+        'settings'             => 'array',
         'last_seen_at'         => 'datetime',
         'last_sync_at'         => 'datetime',
         'last_product_sync_at' => 'datetime',
