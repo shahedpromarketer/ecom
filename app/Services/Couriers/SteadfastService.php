@@ -2,85 +2,95 @@
 
 namespace App\Services\Couriers;
 
-use App\Models\CourierSetting;
+use App\Models\CourierShipment;
 use App\Models\Order;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 
+/** Steadfast (portal.packzy.com). Keys: Api-Key + Secret-Key from the Steadfast panel → API. */
 class SteadfastService extends BaseCourierService
 {
-    private const BASE_URL = 'https://portal.packzy.com/api/v1';
+    private const BASE = 'https://portal.packzy.com/api/v1';
 
-    private string $apiKey;
-    private string $secretKey;
-
-    public function __construct()
+    private function api()
     {
-        $config          = CourierSetting::forCourier('steadfast');
-        $this->apiKey    = $config?->api_key ?? '';
-        $this->secretKey = $config?->api_secret ?? '';
+        return $this->http()->withHeaders([
+            'Api-Key'    => (string) $this->account->api_key,
+            'Secret-Key' => (string) $this->account->api_secret,
+        ]);
     }
 
     public function createShipment(Order $order): array
     {
-        $setting = CourierSetting::where('courier', 'steadfast')
-            ->where('is_active', true)
-            ->first();
-
-        if (! $setting) {
-            throw new \Exception('Steadfast is not configured or not active.');
-        }
-
-        $response = Http::withHeaders([
-            'Api-Key'      => $setting->api_key,
-            'Secret-Key'   => $setting->api_secret,
-            'Content-Type' => 'application/json',
-        ])->post(self::BASE_URL . '/create_order', [
-            'invoice'           => $order->order_number,
+        $res = $this->api()->post(self::BASE . '/create_order', array_filter([
+            'invoice'           => $order->courierReference(),
             'recipient_name'    => $order->shipping_name,
             'recipient_phone'   => $order->shipping_phone,
-            'recipient_address' => $order->shipping_district . ', ' . $order->shipping_area . ', ' . $order->shipping_address,
-            'cod_amount'        => $order->total,
-            'note'              => '',
-        ]);
+            'alternative_phone' => $order->alt_phone ?: null,
+            'recipient_address' => mb_substr($this->address($order), 0, 250),
+            'cod_amount'        => $this->cod($order),
+            'note'              => mb_substr((string) $order->courier_note, 0, 200) ?: null,
+            'item_description'  => $this->itemsSummary($order) ?: null,
+        ], fn ($v) => $v !== null));
 
-        if ($response->failed()) {
-            throw new \Exception('Steadfast API error: ' . $response->body());
-        }
-
-        $data = $response->json();
-
-        Log::info('Steadfast raw response', $data);
-
-        if (! isset($data['consignment'])) {
-            throw new \Exception('Steadfast response invalid: ' . json_encode($data));
+        $c = $res->json('consignment');
+        if (! $res->successful() || empty($c['consignment_id'])) {
+            $this->fail('booking', $res);
         }
 
         return [
-            'tracking_code'  => $data['consignment']['tracking_code'] ?? null,
-            'consignment_id' => $data['consignment']['consignment_id'] ?? $data['consignment']['id'] ?? null,
-            'tracking_link'  => $data['consignment']['tracking_link'] ?? null,
-            'status'         => 'submitted',
+            'consignment_id' => (string) $c['consignment_id'],
+            'tracking_code'  => (string) ($c['tracking_code'] ?? $c['consignment_id']),
+            'tracking_link'  => ! empty($c['tracking_code']) ? 'https://steadfast.com.bd/t/' . $c['tracking_code'] : null,
         ];
     }
 
-    public function trackShipment(string $trackingCode): array
+    public function track(CourierShipment $s): ?array
     {
-        $response = Http::withHeaders([
-            'Api-Key'    => $this->apiKey,
-            'Secret-Key' => $this->secretKey,
-        ])->get(self::BASE_URL . '/status_by_trackingcode/' . $trackingCode);
+        $res = $this->api()->get(self::BASE . '/status_by_cid/' . urlencode((string) $s->consignment_id));
+        $status = $res->json('delivery_status');
 
-        return $response->json();
+        return $res->successful() && $status ? ['courier_status' => $status] : null;
     }
 
-    public function cancelShipment(string $consignmentId): array
+    public function testConnection(): string
     {
-        return ['message' => 'Cancellation not supported via API. Contact Steadfast support.'];
+        $res = $this->api()->get(self::BASE . '/get_balance');
+        if (! $res->successful() || $res->json('current_balance') === null) {
+            $this->fail('login', $res);
+        }
+
+        return 'Connected. Balance: ৳' . number_format((float) $res->json('current_balance'));
     }
 
-    public function calculateDeliveryFee(string $district): float
+    public static function normalize(string $s): string
     {
-        return 130.0;
+        return match (strtolower(trim($s))) {
+            'delivered', 'delivered_approval_pending'                 => 'delivered',
+            'partial_delivered', 'partial_delivered_approval_pending' => 'partial',
+            'cancelled', 'cancelled_approval_pending'                 => 'returning',   // comes back to the shop
+            'hold'                                                    => 'hold',
+            'in_review', 'pending'                                    => 'in_transit',
+            default                                                   => 'unknown',
+        };
+    }
+
+    public static function parseWebhook(array $p): ?array
+    {
+        if (empty($p['consignment_id']) && empty($p['invoice'])) {
+            return null;
+        }
+        $status = $p['status'] ?? $p['delivery_status'] ?? null;
+        if (! $status && ($p['notification_type'] ?? '') === 'tracking_update') {
+            $status = 'pending';   // a tracking note only
+        }
+
+        return [
+            'consignment_id' => isset($p['consignment_id']) ? (string) $p['consignment_id'] : null,
+            'invoice'        => $p['invoice'] ?? null,
+            'courier_status' => (string) ($status ?? 'unknown'),
+            'message'        => $p['tracking_message'] ?? null,
+            'collected'      => self::num($p['cod_amount'] ?? null),
+            'charge'         => self::num($p['delivery_charge'] ?? null),
+            'at'             => $p['updated_at'] ?? null,
+        ];
     }
 }

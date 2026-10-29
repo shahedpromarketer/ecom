@@ -22,6 +22,7 @@ td { padding: 3px 4px; border-bottom: 1px solid #eee; font-size:9px; }
 @media print { @page { size: 80mm auto; margin: 0; } html { display:flex; justify-content:center; } body { width:80mm; margin:0 auto; } .no-print { display:none !important; } }
 @media screen { html { background:#f0f2f5; min-height:100vh; } body { width:80mm; margin:64px auto 20px; background:white; box-shadow:0 4px 24px rgba(0,0,0,.15); border-radius:4px; } }
 </style>
+<style>.ep-barcode{max-width:100%;height:auto}</style>
 </head>
 <body>
 <div class="header">
@@ -66,7 +67,7 @@ td { padding: 3px 4px; border-bottom: 1px solid #eee; font-size:9px; }
     <div class="row" style="color:red;"><span class="label">Due:</span><span>৳{{ number_format($order->total - $order->paid_amount, 0) }}</span></div>
     @endif
 </div>
-<div class="barcode-area">|||| {{ $order->order_number }} ||||</div>
+<div class="ep-barcode-wrap" style="text-align:center;margin:4px 0;line-height:0">{!! \App\Support\Barcode::svg((string) $order->order_number, 34, 1.3) !!}</div>
 <div class="footer">{{ $settings['store_name'] ?? 'Ecom Pilot' }} &bull; ধন্যবাদ!</div>
 
 @if(!empty($preview))

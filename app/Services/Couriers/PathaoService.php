@@ -2,121 +2,140 @@
 
 namespace App\Services\Couriers;
 
-use App\Models\CourierSetting;
+use App\Models\CourierShipment;
 use App\Models\Order;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 
+/**
+ * Pathao (merchant.pathao.com → Developer API). City / zone are optional:
+ * Pathao reads them from the address itself.
+ */
 class PathaoService extends BaseCourierService
 {
-    private const BASE_URL = 'https://hermes-api.pathao.com';
-
-    private string $clientId;
-    private string $clientSecret;
-    private string $username;
-    private string $password;
-    private string $storeId;
-
-    public function __construct()
+    private function base(): string
     {
-        $config              = CourierSetting::forCourier('pathao');
-        $extra               = $config?->extra_config ?? [];
-        $this->clientId      = $config?->api_key ?? '';
-        $this->clientSecret  = $config?->api_secret ?? '';
-        $this->username      = $extra['username'] ?? '';
-        $this->password      = $extra['password'] ?? '';
-        $this->storeId       = $extra['store_id'] ?? '';
+        return $this->account->sandbox ? 'https://courier-api-sandbox.pathao.com' : 'https://api-hermes.pathao.com';
+    }
+
+    private function token(): string
+    {
+        $key = 'pathao_token_' . $this->account->id . '_' . md5((string) $this->account->api_key . $this->account->extra('username'));
+        if ($t = Cache::get($key)) {
+            return $t;
+        }
+
+        $res = $this->http()->post($this->base() . '/aladdin/api/v1/issue-token', [
+            'client_id'     => (string) $this->account->api_key,
+            'client_secret' => (string) $this->account->api_secret,
+            'username'      => (string) $this->account->extra('username'),
+            'password'      => (string) $this->account->extra('password'),
+            'grant_type'    => 'password',
+        ]);
+        if (! $res->successful() || ! $res->json('access_token')) {
+            $this->fail('login', $res);
+        }
+        Cache::put($key, $res->json('access_token'), max(60, (int) ($res->json('expires_in') ?: 3600) - 300));
+
+        return $res->json('access_token');
+    }
+
+    private function api()
+    {
+        return $this->http()->withToken($this->token());
     }
 
     public function createShipment(Order $order): array
     {
-        $token   = $this->getAuthToken();
-        $address = collect([
-            $order->shipping_district,
-            $order->shipping_area,
-            $order->shipping_address,
-        ])->filter()->implode(', ');
+        $address = $this->address($order);
+        if (mb_strlen($address) < 10) {
+            throw new \RuntimeException('Pathao needs a full address (at least 10 letters).');
+        }
 
-        $response = Http::withToken($token)
-            ->post(self::BASE_URL . '/aladdin/api/v1/orders/', [
-                'store_id'            => $this->storeId,
-                'merchant_order_id'   => $order->order_number,
-                'recipient_name'      => $order->shipping_name,
-                'recipient_phone'     => $order->shipping_phone,
-                'recipient_address'   => $address,
-                'recipient_city'      => 1,
-                'recipient_zone'      => 1,
-                'delivery_type'       => 48,
-                'item_type'           => 2,
-                'special_instruction' => '',
-                'item_quantity'       => 1,
-                'item_weight'         => 0.5,
-                'amount_to_collect'   => $order->total,
-                'item_description'    => '',
-            ]);
+        $res = $this->api()->post($this->base() . '/aladdin/api/v1/orders', array_filter([
+            'store_id'                  => (int) $this->account->extra('store_id'),
+            'merchant_order_id'         => $order->courierReference(),
+            'recipient_name'            => $order->shipping_name,
+            'recipient_phone'           => $order->shipping_phone,
+            'recipient_secondary_phone' => $order->alt_phone ?: null,
+            'recipient_address'         => mb_substr($address, 0, 220),
+            'delivery_type'             => 48,   // normal delivery
+            'item_type'                 => 2,    // parcel
+            'special_instruction'       => mb_substr((string) $order->courier_note, 0, 200) ?: null,
+            'item_quantity'             => $this->itemCount($order),
+            'item_weight'               => $this->weightKg($order),
+            'item_description'          => $this->itemsSummary($order) ?: null,
+            'amount_to_collect'         => (int) round($this->cod($order)),
+        ], fn ($v) => $v !== null));
 
-        $data = $response->json();
-
-        if (empty($data['data']['consignment_id'])) {
-            throw new \Exception('Pathao API error: ' . ($data['message'] ?? json_encode($data)));
+        $d = $res->json('data');
+        if (! $res->successful() || empty($d['consignment_id'])) {
+            $this->fail('booking', $res);
         }
 
         return [
-            'tracking_code'  => $data['data']['consignment_id'],
-            'consignment_id' => $data['data']['consignment_id'],
-            'status'         => 'submitted',
+            'consignment_id' => (string) $d['consignment_id'],
+            'tracking_code'  => (string) $d['consignment_id'],
+            'tracking_link'  => 'https://merchant.pathao.com/tracking?consignment_id=' . $d['consignment_id'] . '&phone=' . $order->shipping_phone,
+            'courier_charge' => self::num($d['delivery_fee'] ?? null),
         ];
     }
 
-    public function trackShipment(string $trackingCode): array
+    public function track(CourierShipment $s): ?array
     {
-        $token    = $this->getAuthToken();
-        $response = Http::withToken($token)
-            ->get(self::BASE_URL . '/aladdin/api/v1/orders/' . $trackingCode . '/info');
+        $res = $this->api()->get($this->base() . '/aladdin/api/v1/orders/' . urlencode((string) $s->consignment_id) . '/info');
+        $d = $res->json('data');
+        $status = $d['order_status_slug'] ?? $d['order_status'] ?? null;
 
-        return $response->json();
+        return $res->successful() && $status ? ['courier_status' => (string) $status] : null;
     }
 
-    public function cancelShipment(string $consignmentId): array
+    public function testConnection(): string
     {
-        $token    = $this->getAuthToken();
-        $response = Http::withToken($token)
-            ->post(self::BASE_URL . '/aladdin/api/v1/orders/cancel', [
-                'consignment_id' => $consignmentId,
-            ]);
+        $res = $this->api()->get($this->base() . '/aladdin/api/v1/stores');
+        if (! $res->successful()) {
+            $this->fail('login', $res);
+        }
+        $stores = collect($res->json('data.data') ?? []);
+        $mine = $stores->firstWhere('store_id', (int) $this->account->extra('store_id'));
 
-        return $response->json();
+        return $mine
+            ? 'Connected. Store: ' . $mine['store_name']
+            : 'Connected, but Store ID "' . $this->account->extra('store_id') . '" was not found. Your stores: '
+                . $stores->map(fn ($s) => $s['store_id'] . ' (' . $s['store_name'] . ')')->implode(', ');
     }
 
-    public function calculateDeliveryFee(string $district): float
+    public static function normalize(string $s): string
     {
-        return 60.0;
+        $s = str_replace(['order.', '-', ' '], ['', '_', '_'], strtolower(trim($s)));
+
+        return match ($s) {
+            'pending', 'created', 'updated', 'pickup_requested', 'assigned_for_pickup' => 'submitted',
+            'picked'                                                                   => 'picked',
+            'at_the_sorting_hub', 'in_transit', 'received_at_last_mile_hub'            => 'in_transit',
+            'assigned_for_delivery'                                                    => 'out_for_delivery',
+            'delivered', 'paid', 'payment_invoice', 'exchange', 'exchanged'            => 'delivered',
+            'partial_delivery', 'partial_delivered'                                    => 'partial',
+            'delivery_failed', 'on_hold', 'pickup_failed'                              => 'hold',
+            'return', 'returned', 'paid_return'                                        => 'returning',
+            'pickup_cancelled', 'pickup_cancel'                                        => 'cancelled',
+            default                                                                    => 'unknown',
+        };
     }
 
-    public function getAuthToken(): string
+    public static function parseWebhook(array $p): ?array
     {
-        $cacheKey = 'pathao_token_' . md5($this->clientId);
-
-        if (Cache::has($cacheKey)) {
-            return Cache::get($cacheKey);
+        if (($p['event'] ?? '') === 'webhook_integration' || empty($p['consignment_id'])) {
+            return null;
         }
 
-        $response = Http::post(self::BASE_URL . '/aladdin/api/v1/issue-token', [
-            'client_id'     => $this->clientId,
-            'client_secret' => $this->clientSecret,
-            'username'      => $this->username,
-            'password'      => $this->password,
-            'grant_type'    => 'password',
-        ]);
-
-        $data      = $response->json();
-        $token     = $data['access_token'] ?? '';
-        $expiresIn = $data['expires_in'] ?? 3600;
-
-        if ($token) {
-            Cache::put($cacheKey, $token, max(60, $expiresIn - 60));
-        }
-
-        return $token;
+        return [
+            'consignment_id' => (string) $p['consignment_id'],
+            'invoice'        => $p['merchant_order_id'] ?? null,
+            'courier_status' => (string) ($p['order_status_slug'] ?? $p['order_status'] ?? $p['event'] ?? 'unknown'),
+            'message'        => $p['reason'] ?? null,
+            'collected'      => self::num($p['collected_amount'] ?? null),
+            'charge'         => self::num($p['delivery_fee'] ?? null),
+            'at'             => $p['updated_at'] ?? $p['timestamp'] ?? null,
+        ];
     }
 }

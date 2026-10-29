@@ -323,6 +323,31 @@
             @endif
         </a>
 
+        @can('manage_orders')
+        {{-- Packing, hand-over, returns (scanning) --}}
+        @php $returnsWaiting = \App\Models\Order::whereIn('status', ['pending_return', 'return_collection'])->count(); @endphp
+        <a href="{{ route('admin.dispatch.index') }}"
+           class="flex items-center gap-3 py-3 pr-4 text-sm font-medium transition-colors duration-150 {{ $navItem('admin.dispatch*') }}">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 13.5 9.375v-4.5Z M13.5 14.25h.75v.75h-.75v-.75Zm3 0h.75v.75h-.75v-.75Zm-3 3h.75v.75h-.75v-.75Zm3 3h.75v.75h-.75v-.75Zm3-3h.75v.75h-.75v-.75Z"/>
+            </svg>
+            <span class="truncate">Packing & Dispatch</span>
+            @if($returnsWaiting)
+                <span class="ml-auto px-1.5 py-0.5 text-[10px] font-bold rounded-md bg-amber-300 text-gray-900" title="Returns to receive">{{ $returnsWaiting }}</span>
+            @endif
+        </a>
+        @endcan
+
+        @can('view_reports')
+        <a href="{{ route('admin.courier-payments.index') }}"
+           class="flex items-center gap-3 py-3 pr-4 text-sm font-medium transition-colors duration-150 {{ $navItem('admin.courier-payments*') }}">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z"/>
+            </svg>
+            <span class="truncate">Courier Payments</span>
+        </a>
+        @endcan
+
         {{-- Leads / pre-orders --}}
         @php
             $leadsNew = \App\Models\Lead::query()->visibleTo(auth()->user())

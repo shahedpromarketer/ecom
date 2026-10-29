@@ -23,6 +23,7 @@ td { font-size: 8.5px; padding: 2px 3px; border-bottom: 1px solid #f0f0f0; }
 @media print { @page { size: 76mm 102mm; margin: 0; } html { display:flex; justify-content:center; } body { width:76mm; height:102mm; margin:0 auto; overflow:hidden; } .no-print { display:none !important; } }
 @media screen { html { background:#f0f2f5; min-height:100vh; } body { width:76mm; height:102mm; margin:64px auto 20px; background:white; box-shadow:0 4px 24px rgba(0,0,0,.15); border-radius:4px; } }
 </style>
+<style>.ep-barcode{max-width:100%;height:auto}</style>
 </head>
 <body>
 <div class="wrap">
@@ -33,6 +34,7 @@ td { font-size: 8.5px; padding: 2px 3px; border-bottom: 1px solid #f0f0f0; }
 </div>
 <div class="body">
 <div class="row"><span class="label">Invoice #</span><span><strong>{{ $order->order_number }}</strong></span></div>
+<div class="ep-barcode-wrap" style="text-align:center;margin:4px 0;line-height:0">{!! \App\Support\Barcode::svg((string) $order->order_number, 34, 1.3) !!}</div>
 <div class="row"><span class="label">Date</span><span>{{ $order->created_at->format('d/m/Y g:ia') }}</span></div>
 <div class="divider"></div>
 <div class="row"><span class="label">Customer</span><span><strong>{{ $order->shipping_name }}</strong></span></div>

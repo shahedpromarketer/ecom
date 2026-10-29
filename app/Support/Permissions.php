@@ -48,6 +48,8 @@ class Permissions
         'admin.leads.*'             => ['view_orders', 'manage_orders'],
         'admin.failed-orders.*'     => ['view_orders', 'manage_orders'],
         'admin.returns.*'           => ['view_orders', 'manage_orders'],
+        'admin.dispatch.*'          => ['view_orders', 'manage_orders'],   // scanning: lookups are POSTs, so packers need manage_orders
+        'admin.courier-payments.*'  => ['view_reports', 'manage_orders'],
         'admin.invoices.*'          => ['view_orders', 'manage_orders'],
 
         // Catalog

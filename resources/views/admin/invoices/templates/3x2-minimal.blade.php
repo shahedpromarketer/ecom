@@ -21,6 +21,7 @@ td { font-size: 7px; padding: 1px 2px; border-bottom: 1px solid #f0f0f0; }
 @media print { @page { size: 76mm 51mm; margin: 0; } html { display:flex; justify-content:center; } body { width:76mm; height:51mm; margin:0 auto; overflow:hidden; } .no-print { display:none !important; } }
 @media screen { html { background:#f0f2f5; min-height:100vh; } body { width:76mm; height:51mm; margin:64px auto 20px; background:white; box-shadow:0 4px 24px rgba(0,0,0,.15); border-radius:4px; } }
 </style>
+<style>.ep-barcode{max-width:100%;height:auto}</style>
 </head>
 <body>
 <div class="wrap">
@@ -31,6 +32,7 @@ td { font-size: 7px; padding: 1px 2px; border-bottom: 1px solid #f0f0f0; }
 <div class="info">
     <div class="info-col">
         <div class="row"><span class="label">Inv:</span><span>#{{ $order->order_number }}</span></div>
+        <div class="ep-barcode-wrap" style="text-align:center;margin:4px 0;line-height:0">{!! \App\Support\Barcode::svg((string) $order->order_number, 34, 1.3) !!}</div>
         <div class="row"><span class="label">Date:</span><span>{{ $order->created_at->format('d/m/y') }}</span></div>
     </div>
     <div class="info-col">

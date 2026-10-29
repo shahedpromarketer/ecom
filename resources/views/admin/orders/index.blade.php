@@ -199,7 +199,7 @@
                             <option value="">All</option>
                             <option value="pathao"     {{ request('courier')==='pathao'?'selected':'' }}>Pathao</option>
                             <option value="steadfast"  {{ request('courier')==='steadfast'?'selected':'' }}>Steadfast</option>
-                            <option value="carrybe"    {{ request('courier')==='carrybe'?'selected':'' }}>CarryBe</option>
+                            <option value="carrybee"   {{ request('courier')==='carrybee'?'selected':'' }}>CarryBee</option>
                             <option value="redx"       {{ request('courier')==='redx'?'selected':'' }}>REDx</option>
                             <option value="paperfly"   {{ request('courier')==='paperfly'?'selected':'' }}>Paperfly</option>
                             <option value="manual"     {{ request('courier')==='manual'?'selected':'' }}>Manual</option>
@@ -1490,7 +1490,7 @@
             <div>
                 <label class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2 block">Courier নির্বাচন করুন <span class="text-red-500">*</span></label>
                 <div class="grid grid-cols-3 gap-2" id="bulkCourierBtnGroup">
-                    @foreach(['pathao'=>'Pathao','steadfast'=>'Steadfast','carrybe'=>'CarryBe','redx'=>'RedX','paperfly'=>'Paperfly','manual'=>'Manual'] as $key => $label)
+                    @foreach(\App\Models\CourierSetting::where('is_active', true)->orderBy('courier')->orderByDesc('is_default')->get()->mapWithKeys(fn ($a) => ['a' . $a->id => $a->label()])->put('manual', 'Manual') as $key => $label)
                     <button type="button"
                         onclick="selectBulkCourier('{{ $key }}')"
                         data-bulk-courier="{{ $key }}"

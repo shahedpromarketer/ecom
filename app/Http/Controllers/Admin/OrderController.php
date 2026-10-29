@@ -427,7 +427,8 @@ class OrderController extends Controller
             'assignedEmployee',
         ]);
 
-        $allCourierKeys  = ['pathao', 'steadfast', 'carrybe', 'redx', 'paperfly'];
+        $courierAccounts = CourierSetting::orderByDesc('is_active')->orderBy('courier')->orderByDesc('is_default')->get();
+        $allCourierKeys  = array_keys(CourierSetting::COURIERS);
         $courierSettings = CourierSetting::whereIn('courier', $allCourierKeys)->get()->keyBy('courier');
         $activeCouriers  = collect($allCourierKeys)->map(fn($key) => (object)[
             'courier'   => $key,
@@ -468,7 +469,7 @@ class OrderController extends Controller
         }
 
         return view('admin.orders.show', compact(
-            'order', 'activeCouriers', 'statusSteps', 'currentStep',
+            'order', 'activeCouriers', 'courierAccounts', 'statusSteps', 'currentStep',
             'admins', 'districts'
         ));
     }
@@ -659,18 +660,29 @@ class OrderController extends Controller
         return back()->with('success', 'Order updated successfully.');
     }
 
+    /** "a12" = courier account 12; a plain courier name = that courier's default account. */
+    private function courierAccount(string $value): ?CourierSetting
+    {
+        if (preg_match('/^a(\d+)$/', $value, $m)) {
+            return CourierSetting::where('is_active', true)->find((int) $m[1]);
+        }
+
+        return CourierSetting::defaultFor($value);
+    }
+
     public function submitCourier(Request $request, Order $order)
     {
         $request->validate([
-            'courier'      => 'required|in:pathao,steadfast,carrybe,redx,paperfly,manual',
+            'courier'      => 'required|string|max:30',
             'delivery_fee' => 'nullable|numeric|min:0',
-            'notes'        => 'nullable|string',
+            'notes'        => 'nullable|string|max:500',
         ]);
 
         if ($request->courier === 'manual') {
             $order->shipment()->updateOrCreate(
                 ['order_id' => $order->id],
                 [
+                    'courier_account_id' => null,
                     'courier_name'   => 'manual',
                     'tracking_code'  => $request->tracking_code,
                     'consignment_id' => $request->consignment_id,
@@ -684,103 +696,51 @@ class OrderController extends Controller
             return back()->with('success', 'Courier assigned manually.');
         }
 
+        $account = $this->courierAccount($request->courier);
+        if (! $account) {
+            return back()->with('error', 'This courier account is not set up or is turned off (Settings → Courier).');
+        }
+
         try {
-            $result = CourierFactory::forOrder($order, $request->courier, fn ($service) => $service->createShipment($order));
+            $s = \App\Services\Couriers\CourierTracker::book($order, $account, $request->filled('delivery_fee') ? (float) $request->delivery_fee : null, $request->notes);
 
-            $order->shipment()->updateOrCreate(
-                ['order_id' => $order->id],
-                [
-                    'courier_name'   => $request->courier,
-                    'consignment_id' => $result['consignment_id'] ?? null,
-                    'tracking_code'  => $result['tracking_code'] ?? $result['tracking_id'] ?? $request->tracking_code ?? null,
-                    'tracking_link'  => $result['tracking_link'] ?? null,
-                    'delivery_fee'   => $request->delivery_fee ?? 0,
-                    'status'         => 'submitted',
-                    'notes'          => $request->notes,
-                ]
-            );
-
-            $order->update(['status' => 'shipped']);
-            ActivityLog::log('order.courier_submitted', $order,
-                ucfirst($request->courier) . ' shipment created. Tracking: ' . ($result['tracking_code'] ?? 'N/A'),
-                $result
-            );
-
-            return back()->with('success', 'Shipment created on ' . ucfirst($request->courier) . '.');
-        } catch (\Exception $e) {
-            return back()->with('error', 'Courier API error: ' . $e->getMessage());
+            return back()->with('success', 'Booked with ' . $account->label() . '. Tracking: ' . $s->tracking_code);
+        } catch (\Throwable $e) {
+            return back()->with('error', $e->getMessage());
         }
     }
 
     public function trackCourier(Order $order)
     {
         $shipment = $order->shipment;
-        if (!$shipment || !$shipment->tracking_code) {
-            return response()->json(['error' => 'No tracking code found.'], 404);
+        if (! $shipment || ! $shipment->consignment_id) {
+            return response()->json(['error' => 'This order has no courier booking.'], 404);
         }
 
-        try {
-            $raw      = CourierFactory::forOrder($order, $shipment->courier_name,
-                fn ($service) => $service->trackShipment($shipment->tracking_code));
-            $events   = $this->normalizeTrackingEvents($shipment->courier_name, $raw);
-
-            return response()->json([
-                'courier'        => ucfirst($shipment->courier_name),
-                'tracking_code'  => $shipment->tracking_code,
-                'consignment_id' => $shipment->consignment_id,
-                'events'         => $events,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 422);
+        // Ask the courier now (quietly keep what we have if it does not answer).
+        if ($shipment->account && $shipment->account->is_active && ! $shipment->isFinal()) {
+            try {
+                if ($u = \App\Services\Couriers\CourierFactory::for($shipment->account)->track($shipment)) {
+                    \App\Services\Couriers\CourierTracker::apply($shipment, $u, 'sync');
+                    $shipment->refresh();
+                }
+            } catch (\Throwable $e) {
+                // shown from our own history below
+            }
         }
+
+        return response()->json([
+            'courier'        => $shipment->account?->label() ?? ucfirst($shipment->courier_name),
+            'tracking_code'  => $shipment->tracking_code,
+            'consignment_id' => $shipment->consignment_id,
+            'status'         => $shipment->statusLabel(),
+            'events'         => $shipment->events()->get()->map(fn ($e) => [
+                'date'         => $e->happened_at?->format('d M Y, h:i A'),
+                'note'         => trim((\App\Models\CourierShipment::STATUSES[$e->status] ?? $e->status) . ($e->message ? ' — ' . $e->message : '') . ($e->courier_status && $e->courier_status !== $e->status ? " ({$e->courier_status})" : '')),
+                'delivery_man' => $e->source,
+            ])->all(),
+        ]);
     }
-
-    private function normalizeTrackingEvents(string $courier, array $raw): array
-    {
-        $events = [];
-
-        if ($courier === 'steadfast') {
-            $list = $raw['tracking'] ?? $raw['data'] ?? [];
-            foreach ($list as $item) {
-                $events[] = [
-                    'date'          => $item['created_at'] ?? $item['date'] ?? '',
-                    'note'          => $item['description'] ?? $item['note'] ?? $item['message'] ?? '',
-                    'delivery_man'  => $item['courier'] ?? $item['delivery_man'] ?? 'n/a',
-                ];
-            }
-        } elseif ($courier === 'pathao') {
-            $list = $raw['data']['order_status'] ?? $raw['data'] ?? [];
-            if (!isset($list[0])) $list = [$list];
-            foreach ($list as $item) {
-                $events[] = [
-                    'date'         => $item['updated_at'] ?? $item['created_at'] ?? '',
-                    'note'         => $item['order_status'] ?? $item['status'] ?? '',
-                    'delivery_man' => $item['delivery_man'] ?? 'n/a',
-                ];
-            }
-        } elseif ($courier === 'redx') {
-            $list = $raw['trackings'] ?? $raw['data'] ?? [];
-            foreach ($list as $item) {
-                $events[] = [
-                    'date'         => $item['date'] ?? $item['created_at'] ?? '',
-                    'note'         => $item['message'] ?? $item['status'] ?? '',
-                    'delivery_man' => $item['delivery_man'] ?? 'n/a',
-                ];
-            }
-        } else {
-            // Generic fallback
-            foreach (($raw['data'] ?? $raw['trackings'] ?? $raw['events'] ?? []) as $item) {
-                $events[] = [
-                    'date'         => $item['date'] ?? $item['created_at'] ?? '',
-                    'note'         => $item['message'] ?? $item['note'] ?? $item['status'] ?? '',
-                    'delivery_man' => $item['delivery_man'] ?? 'n/a',
-                ];
-            }
-        }
-
-        return array_reverse($events);
-    }
-
     public function updateTracking(Request $request, Order $order)
     {
         $request->validate([
@@ -1078,56 +1038,37 @@ class OrderController extends Controller
 
     public function bulkCourier(Request $request)
     {
-        $request->validate(['ids' => 'required|array', 'courier' => 'required|string']);
+        $request->validate(['ids' => 'required|array|max:200', 'courier' => 'required|string|max:30']);
+
+        $account = $request->courier === 'manual' ? null : $this->courierAccount($request->courier);
+        if ($request->courier !== 'manual' && ! $account) {
+            return response()->json(['success' => false, 'errors' => ['This courier account is not set up or is turned off.']], 422);
+        }
 
         $errors = [];
-
-        foreach ($request->ids as $id) {
-            $order = Order::find($id);
-            if (!$order) continue;
-
-            if ($request->courier === 'manual') {
-                CourierShipment::updateOrCreate(
-                    ['order_id' => $order->id],
-                    [
-                        'courier_name' => 'manual',
-                        'delivery_fee' => $order->shipping_charge ?? 0,
-                        'status'       => 'assigned',
-                    ]
-                );
+        $booked = 0;
+        foreach (Order::whereIn('id', $request->ids)->get() as $order) {
+            if (! $account) {
+                CourierShipment::updateOrCreate(['order_id' => $order->id], [
+                    'courier_account_id' => null, 'courier_name' => 'manual',
+                    'delivery_fee' => $order->shipping_charge ?? 0, 'status' => 'assigned',
+                ]);
                 $order->update(['status' => 'shipped']);
+                $booked++;
                 continue;
             }
 
             try {
-                $result = CourierFactory::forOrder($order, $request->courier, fn ($service) => $service->createShipment($order));
-
-                CourierShipment::updateOrCreate(
-                    ['order_id' => $order->id],
-                    [
-                        'courier_name'   => $request->courier,
-                        'consignment_id' => $result['consignment_id'] ?? null,
-                        'tracking_code'  => $result['tracking_code'] ?? null,
-                        'tracking_link'  => $result['tracking_link'] ?? null,
-                        'delivery_fee'   => $order->shipping_charge ?? 0,
-                        'status'         => 'submitted',
-                    ]
-                );
-                $order->update(['status' => 'shipped']);
-
-            } catch (\Exception $e) {
-                // The parcel was NOT booked, so leave the order as it is (marking it shipped
-                // would also deduct stock). Staff see the reason and can retry.
+                \App\Services\Couriers\CourierTracker::book($order, $account);
+                $booked++;
+            } catch (\Throwable $e) {
+                // Not booked: the order stays as it was (marking it shipped would also take stock).
                 $errors[] = 'Order #' . $order->order_number . ': ' . $e->getMessage();
             }
         }
 
-        return response()->json([
-            'success' => true,
-            'errors'  => $errors,
-        ]);
+        return response()->json(['success' => true, 'booked' => $booked, 'errors' => $errors]);
     }
-
     public function bulkTag(Request $request)
     {
         $request->validate(['ids' => 'required|array', 'tag' => 'required|string']);

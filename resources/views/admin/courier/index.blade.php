@@ -1,162 +1,157 @@
 @extends('layouts.admin')
 
-@section('title', 'Courier Integration Setup')
-@section('page-title', 'Courier Integration Setup')
+@section('title', 'Courier accounts')
+@section('page-title', 'Courier accounts')
 
 @section('breadcrumb')
     <span class="text-textsecondary">/</span>
-    <span class="text-textprimary font-medium">Courier Setup</span>
+    <span class="text-textprimary font-medium">Courier</span>
 @endsection
 
-@section('content')
-
-@if(session('success'))
-    <div class="mb-5 flex items-center gap-3 p-3.5 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-        <svg class="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"/></svg>
-        <p class="text-sm text-green-700 dark:text-green-400">{{ session('success') }}</p>
-    </div>
-@endif
-
 @php
-$courierMeta = [
-    'pathao' => [
-        'name'  => 'Pathao',
-        'color' => 'bg-red-500',
-        'fields' => [
-            ['key' => 'api_key',    'label' => 'Client ID'],
-            ['key' => 'api_secret', 'label' => 'Client Secret'],
-            ['key' => 'username',   'label' => 'Username (Email)', 'source' => 'extra'],
-            ['key' => 'password',   'label' => 'Password',         'source' => 'extra', 'type' => 'password'],
-            ['key' => 'store_id',   'label' => 'Store ID',         'source' => 'extra'],
-        ],
-    ],
-    'steadfast' => [
-        'name'  => 'Steadfast',
-        'color' => 'bg-green-600',
-        'fields' => [
-            ['key' => 'api_key',    'label' => 'API Key'],
-            ['key' => 'api_secret', 'label' => 'Secret Key'],
-        ],
-    ],
-    'carrybe' => [
-        'name'  => 'CarryBe',
-        'color' => 'bg-blue-600',
-        'fields' => [
-            ['key' => 'api_key',    'label' => 'API Key'],
-            ['key' => 'api_secret', 'label' => 'API Secret'],
-        ],
-    ],
-    'redx' => [
-        'name'  => 'REDx',
-        'color' => 'bg-red-700',
-        'fields' => [
-            ['key' => 'api_key', 'label' => 'API Key (Bearer Token)'],
-        ],
-    ],
-    'paperfly' => [
-        'name'  => 'Paperfly',
-        'color' => 'bg-yellow-500',
-        'fields' => [
-            ['key' => 'api_key',    'label' => 'API Key'],
-            ['key' => 'api_secret', 'label' => 'API Secret'],
-        ],
-    ],
-];
+    $card  = 'bg-white dark:bg-gray-800 rounded-2xl border border-border dark:border-gray-700 shadow-sm';
+    $input = 'w-full px-3 py-2 text-sm rounded-xl border border-border dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30';
+    $hooks = [
+        'steadfast' => 'Steadfast panel → API → Webhook: paste the URL, and the secret as "Auth Token (Bearer)".',
+        'pathao'    => 'Pathao merchant → Developer API → Webhook: paste the URL, and the secret as the webhook secret.',
+        'redx'      => 'Send the URL to your RedX account manager (or add it in the RedX panel) as the parcel status callback.',
+        'carrybee'  => 'CarryBee panel → Developers → Webhook: paste the URL.',
+        'paperfly'  => 'Paperfly dashboard → Webhook: paste the URL, and the secret as the webhook secret.',
+    ];
+    $editData = $accounts->mapWithKeys(fn ($a) => [$a->id => [
+        'id' => $a->id, 'courier' => $a->courier, 'name' => $a->name, 'is_active' => $a->is_active, 'sandbox' => $a->sandbox,
+        'weight' => $a->extra('weight_kg', 0.5),
+        'values' => collect(array_keys($couriers[$a->courier]['fields'] ?? []))
+            ->reject(fn ($f) => in_array($f, \App\Models\CourierSetting::SECRET_FIELDS, true))
+            ->mapWithKeys(fn ($f) => [$f => str_starts_with($f, 'extra.') ? (string) $a->extra(substr($f, 6), '') : (string) $a->{$f}])->all(),
+        'secrets' => collect(\App\Models\CourierSetting::SECRET_FIELDS)
+            ->filter(fn ($f) => isset($couriers[$a->courier]['fields'][$f]))
+            ->mapWithKeys(fn ($f) => [$f => str_starts_with($f, 'extra.') ? filled($a->extra(substr($f, 6))) : filled($a->{$f})])->all(),
+        'action' => route('admin.courier.update', $a),
+    ]]);
 @endphp
 
-<div class="space-y-4" x-data="{ open: null }">
-    @foreach($courierMeta as $courier => $meta)
-    @php $setting = $settings[$courier] ?? null; @endphp
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-border dark:border-gray-700 shadow-sm overflow-hidden">
+@section('content')
+<div class="max-w-5xl space-y-5" x-data="courierAccounts(@js($couriers), @js($editData))">
 
-        <button @click="open = (open === '{{ $courier }}') ? null : '{{ $courier }}'"
-                class="w-full flex items-center gap-4 px-6 py-4 text-left hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors">
-            <div class="w-10 h-10 {{ $meta['color'] }} rounded-2xl flex items-center justify-center flex-shrink-0">
-                <span class="text-white text-xs font-bold">{{ substr($meta['name'], 0, 2) }}</span>
-            </div>
-            <div class="flex-1">
-                <h3 class="font-heading font-semibold text-textprimary dark:text-gray-100">{{ $meta['name'] }}</h3>
-                <div class="flex items-center gap-2 mt-0.5">
-                    <span class="flex items-center gap-1 text-xs {{ $setting?->is_active ? 'text-green-600 dark:text-green-400' : 'text-textsecondary dark:text-gray-400' }}">
-                        <span class="w-1.5 h-1.5 rounded-full {{ $setting?->is_active ? 'bg-green-500' : 'bg-gray-400 dark:bg-gray-500' }}"></span>
-                        {{ $setting?->is_active ? 'Active' : 'Inactive' }}
-                    </span>
-                    @if($setting?->api_key)
-                        <span class="text-xs text-green-600 dark:text-green-400">• Credentials set</span>
-                    @else
-                        <span class="text-xs text-textsecondary dark:text-gray-400">• No credentials</span>
-                    @endif
-                </div>
-            </div>
-            <svg class="w-5 h-5 text-textsecondary dark:text-gray-400 flex-shrink-0 transition-transform duration-200"
-                 :class="{ 'rotate-180': open === '{{ $courier }}' }"
-                 fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
-            </svg>
-        </button>
-
-        <div x-show="open === '{{ $courier }}'" x-cloak
-             x-transition:enter="transition ease-out duration-150"
-             x-transition:enter-start="opacity-0 -translate-y-2"
-             x-transition:enter-end="opacity-100 translate-y-0">
-            <form method="POST" action="{{ route('admin.courier.update') }}"
-                  class="px-6 pb-6 border-t border-border dark:border-gray-700 space-y-4">
-                @csrf
-                <input type="hidden" name="courier" value="{{ $courier }}">
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-5">
-                    @foreach($meta['fields'] as $field)
-                    @php
-                        $isExtra    = ($field['source'] ?? 'main') === 'extra';
-                        $fieldName  = $isExtra ? "extra_config[{$field['key']}]" : $field['key'];
-                        $fieldValue = $isExtra
-                            ? ($setting?->extra_config[$field['key']] ?? '')
-                            : ($setting?->{$field['key']} ?? '');
-                        $inputType  = $field['type'] ?? 'text';
-                    @endphp
-                    <div>
-                        <label class="block text-xs font-medium text-textsecondary dark:text-gray-400 mb-1.5">{{ $field['label'] }}</label>
-                        <input type="{{ $inputType }}" name="{{ $fieldName }}" value="{{ $inputType === 'password' ? '' : $fieldValue }}"
-                               placeholder="{{ $field['label'] }}"
-                               class="w-full px-4 py-2.5 text-sm rounded-xl border border-border dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 placeholder-textsecondary dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary dark:focus:border-primary transition-all duration-200">
-                        @if($inputType === 'password' && $fieldValue)
-                            <p class="mt-1 text-[10px] text-green-600 dark:text-green-400">Password saved — leave blank to keep unchanged</p>
-                        @endif
-                    </div>
-                    @endforeach
-
-                    <div>
-                        <label class="block text-xs font-medium text-textsecondary dark:text-gray-400 mb-1.5">Webhook URL (auto)</label>
-                        <input type="text" value="{{ url('/webhook/' . $courier) }}" readonly
-                               class="w-full px-4 py-2.5 text-sm rounded-xl border border-border dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-textsecondary dark:text-gray-400 cursor-not-allowed">
-                    </div>
-                </div>
-
-                <div class="flex items-center justify-between pt-2">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="hidden" name="is_active" value="0">
-                        <input type="checkbox" name="is_active" value="1" {{ $setting?->is_active ? 'checked' : '' }}
-                               class="w-4 h-4 rounded border-border dark:border-gray-600 text-accent focus:ring-primary/30">
-                        <span class="text-sm font-medium text-textprimary dark:text-gray-100">Enable {{ $meta['name'] }}</span>
-                    </label>
-
-                    <div class="flex items-center gap-3">
-                        <button type="button"
-                                @click="fetch('{{ route('admin.courier.test') }}', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }, body: JSON.stringify({ courier: '{{ $courier }}' }) }).then(r => r.json()).then(d => alert(d.message))"
-                                class="px-3 py-2.5 text-xs font-medium border border-border dark:border-gray-600 text-textsecondary dark:text-gray-400 hover:text-textprimary dark:hover:text-gray-200 rounded-xl transition-colors">
-                            Test Connection
-                        </button>
-                        <button type="submit"
-                                class="px-4 py-2.5 text-xs font-semibold bg-accent hover:bg-yellow-500 text-black rounded-xl transition-colors">
-                            Save Settings
-                        </button>
-                    </div>
-                </div>
-            </form>
-        </div>
-
-    </div>
+    @foreach (['success' => 'green', 'error' => 'red'] as $k => $c)
+        @if (session($k))
+            <div class="p-3 rounded-xl bg-{{ $c }}-50 text-{{ $c }}-800 border border-{{ $c }}-200 text-sm">{{ session($k) }}</div>
+        @endif
     @endforeach
+
+    <div class="{{ $card }} p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="text-sm text-textsecondary">
+            <p class="font-semibold text-textprimary dark:text-white">Your courier accounts</p>
+            <p>Add one or more accounts per courier (e.g. two Pathao stores). The <b>default</b> account is used when staff don't pick one.
+               Parcel status updates come in by themselves through each account's webhook, and are also checked every few hours.</p>
+        </div>
+        <button @click="openAdd()" class="px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold whitespace-nowrap">+ Add account</button>
+    </div>
+
+    @forelse ($accounts->groupBy('courier') as $courier => $list)
+        <div class="space-y-3">
+            <h3 class="text-sm font-bold text-textprimary dark:text-white flex items-center gap-2">
+                <span class="w-6 h-6 rounded-lg {{ $couriers[$courier]['color'] ?? 'bg-gray-500' }} text-white text-[10px] font-bold flex items-center justify-center">{{ substr($couriers[$courier]['label'] ?? $courier, 0, 2) }}</span>
+                {{ $couriers[$courier]['label'] ?? ucfirst($courier) }}
+            </h3>
+            @foreach ($list as $a)
+                <div class="{{ $card }} p-4 space-y-3" x-data="{ hook: false, test: null, testing: false }">
+                    <div class="flex flex-wrap items-center gap-2 justify-between">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="font-semibold text-textprimary dark:text-white">{{ $a->name }}</span>
+                            <span class="text-xs px-2 py-0.5 rounded-full {{ $a->is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600' }}">{{ $a->is_active ? 'On' : 'Off' }}</span>
+                            @if ($a->is_default)<span class="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">Default</span>@endif
+                            @if ($a->sandbox)<span class="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Test mode</span>@endif
+                            <span class="text-xs text-textsecondary">{{ $counts[$a->id] ?? 0 }} parcels
+                                · last update {{ $a->last_webhook_at ? $a->last_webhook_at->diffForHumans() : 'never' }}</span>
+                        </div>
+                        <div class="flex flex-wrap gap-2 text-xs">
+                            <button class="px-3 py-1.5 rounded-lg border border-border dark:border-gray-600" :disabled="testing"
+                                    @click="testing = true; test = null; fetch('{{ route('admin.courier.test', $a) }}', {method: 'POST', headers: {'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content}}).then(r => r.json()).then(d => test = d).catch(() => test = {success: false, message: 'Could not reach the server.'}).finally(() => testing = false)">
+                                <span x-text="testing ? 'Testing…' : 'Test'"></span></button>
+                            <button class="px-3 py-1.5 rounded-lg border border-border dark:border-gray-600" @click="hook = !hook">Webhook</button>
+                            <button class="px-3 py-1.5 rounded-lg border border-border dark:border-gray-600" @click="openEdit({{ $a->id }})">Edit</button>
+                            @unless ($a->is_default)
+                                <form method="POST" action="{{ route('admin.courier.default', $a) }}">@csrf
+                                    <button class="px-3 py-1.5 rounded-lg border border-border dark:border-gray-600">Make default</button></form>
+                            @endunless
+                            <form method="POST" action="{{ route('admin.courier.destroy', $a) }}" onsubmit="return confirm('Delete {{ addslashes($a->label()) }}?')">@csrf @method('DELETE')
+                                <button class="px-3 py-1.5 rounded-lg border border-red-200 text-red-600">Delete</button></form>
+                        </div>
+                    </div>
+                    <p x-show="test" x-cloak class="text-sm" :class="test?.success ? 'text-green-700' : 'text-red-600'" x-text="test?.message"></p>
+                    <div x-show="hook" x-cloak class="text-xs space-y-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-900">
+                        <p class="text-textsecondary">{{ $hooks[$courier] ?? 'Give this URL to the courier as the status webhook.' }}</p>
+                        <div class="flex gap-2 items-center"><span class="w-16 shrink-0 font-medium">URL</span>
+                            <code class="flex-1 break-all">{{ $a->webhookUrl() }}</code>
+                            <button class="px-2 py-1 rounded border" @click="navigator.clipboard.writeText(@js($a->webhookUrl())); $el.textContent = 'Copied'">Copy</button></div>
+                        <div class="flex gap-2 items-center"><span class="w-16 shrink-0 font-medium">Secret</span>
+                            <code class="flex-1 break-all">{{ $a->webhook_token }}</code>
+                            <button class="px-2 py-1 rounded border" @click="navigator.clipboard.writeText(@js($a->webhook_token)); $el.textContent = 'Copied'">Copy</button></div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    @empty
+        <div class="{{ $card }} p-8 text-center text-sm text-textsecondary">No courier account yet. Press <b>+ Add account</b>.</div>
+    @endforelse
+
+    {{-- Add / edit form --}}
+    <div x-show="form" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" @keydown.escape.window="form = null">
+        <form method="POST" :action="form?.action" class="{{ $card }} w-full max-w-lg p-5 space-y-4 max-h-[90vh] overflow-y-auto" @click.outside="form = null">
+            @csrf
+            <template x-if="form?.id"><input type="hidden" name="_method" value="PUT"></template>
+            <h3 class="font-bold text-textprimary dark:text-white" x-text="form?.id ? 'Edit account' : 'Add courier account'"></h3>
+
+            <label class="block" x-show="!form?.id">
+                <span class="text-xs text-textsecondary">Courier</span>
+                <select name="courier" x-model="form.courier" class="{{ $input }}">
+                    <template x-for="(c, key) in couriers" :key="key"><option :value="key" x-text="c.label"></option></template>
+                </select>
+            </label>
+            <label class="block">
+                <span class="text-xs text-textsecondary">Account name (e.g. "Dhaka store")</span>
+                <input name="name" x-model="form.name" maxlength="100" class="{{ $input }}">
+            </label>
+
+            <template x-for="(label, field) in (couriers[form?.courier]?.fields || {})" :key="form?.courier + field">
+                <label class="block">
+                    <span class="text-xs text-textsecondary" x-text="label"></span>
+                    <input :name="fieldName(field)" :type="isSecret(field) ? 'password' : 'text'" autocomplete="off"
+                           :value="form.values?.[field] ?? ''" class="{{ $input }}"
+                           :placeholder="isSecret(field) && form.secrets?.[field] ? 'Saved — leave empty to keep' : ''">
+                </label>
+            </template>
+
+            <label class="block">
+                <span class="text-xs text-textsecondary">Default parcel weight (kg)</span>
+                <input type="number" step="0.1" min="0.1" name="extra[weight_kg]" x-model="form.weight" class="{{ $input }}">
+            </label>
+            <div class="flex flex-wrap gap-4 text-sm">
+                <label class="flex items-center gap-2"><input type="hidden" name="is_active" value="0">
+                    <input type="checkbox" name="is_active" value="1" x-model="form.is_active" class="rounded"> Turned on</label>
+                <label class="flex items-center gap-2"><input type="hidden" name="sandbox" value="0">
+                    <input type="checkbox" name="sandbox" value="1" x-model="form.sandbox" class="rounded"> Test mode (courier sandbox)</label>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button type="button" @click="form = null" class="px-4 py-2 rounded-xl border border-border text-sm">Close</button>
+                <button class="px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold">Save</button>
+            </div>
+        </form>
+    </div>
 </div>
 
+<script>
+function courierAccounts(couriers, accounts) {
+    const secrets = @js(\App\Models\CourierSetting::SECRET_FIELDS);
+    return {
+        couriers, accounts, form: null,
+        openAdd() { this.form = { courier: 'steadfast', name: '', is_active: true, sandbox: false, weight: 0.5, values: {}, secrets: {}, action: @js(route('admin.courier.store')) }; },
+        openEdit(id) { this.form = JSON.parse(JSON.stringify(this.accounts[id])); },
+        isSecret(f) { return secrets.includes(f); },
+        fieldName(f) { return f.startsWith('extra.') ? 'extra[' + f.slice(6) + ']' : f; },
+    };
+}
+</script>
 @endsection

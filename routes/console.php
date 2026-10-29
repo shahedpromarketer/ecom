@@ -12,3 +12,4 @@ Schedule::command('logs:cleanup')->daily();
 Schedule::command('orders:pull-new')->everyMinute()->withoutOverlapping();
 Schedule::command('orders:distribute')->everyMinute()->withoutOverlapping();
 Schedule::command('sheets:import')->everyFiveMinutes()->withoutOverlapping();
+Schedule::command('couriers:sync')->everyThirtyMinutes()->withoutOverlapping();

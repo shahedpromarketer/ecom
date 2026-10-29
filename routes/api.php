@@ -46,6 +46,10 @@ Route::prefix('v1')->middleware(['store.key', 'throttle:300,1'])->name('api.v1.'
     Route::post('/incomplete',            [\App\Http\Controllers\Api\PublicStoreApiController::class, 'incomplete'])->name('incomplete');
 });
 
+// Parcel status updates from couriers (the token identifies the shop's courier account)
+Route::match(['get', 'post'], '/courier-webhook/{token}', \App\Http\Controllers\Api\CourierWebhookController::class)
+    ->middleware('throttle:600,1')->name('api.courier.webhook');
+
 // Legacy webhook route (site api_key auth)
 Route::post('/wordpress/sync', [WordPressSyncController::class, 'receiveOrder'])
     ->name('api.wordpress.sync');

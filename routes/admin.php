@@ -169,8 +169,23 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Courier
         Route::get('courier', [CourierController::class, 'index'])->name('courier.index');
-        Route::post('courier', [CourierController::class, 'update'])->name('courier.update');
-        Route::post('courier/test', [CourierController::class, 'testConnection'])->name('courier.test');
+        Route::post('courier', [CourierController::class, 'store'])->name('courier.store');
+        Route::put('courier/{account}', [CourierController::class, 'update'])->name('courier.update');
+        Route::delete('courier/{account}', [CourierController::class, 'destroy'])->name('courier.destroy');
+        Route::post('courier/{account}/default', [CourierController::class, 'makeDefault'])->name('courier.default');
+        Route::post('courier/{account}/test', [CourierController::class, 'test'])->name('courier.test');
+
+        // Packing, hand-over and returns (scanning)
+        Route::get('dispatch', [\App\Http\Controllers\Admin\DispatchController::class, 'index'])->name('dispatch.index');
+        Route::post('dispatch/lookup', [\App\Http\Controllers\Admin\DispatchController::class, 'lookup'])->name('dispatch.lookup');
+        Route::post('dispatch/pack', [\App\Http\Controllers\Admin\DispatchController::class, 'pack'])->name('dispatch.pack');
+        Route::post('dispatch/handover', [\App\Http\Controllers\Admin\DispatchController::class, 'handover'])->name('dispatch.handover');
+        Route::post('dispatch/receive', [\App\Http\Controllers\Admin\DispatchController::class, 'receive'])->name('dispatch.receive');
+
+        // Courier payment matching
+        Route::get('courier-payments', [\App\Http\Controllers\Admin\CourierPaymentController::class, 'index'])->name('courier-payments.index');
+        Route::post('courier-payments', [\App\Http\Controllers\Admin\CourierPaymentController::class, 'store'])->name('courier-payments.store');
+        Route::get('courier-payments/{payment}', [\App\Http\Controllers\Admin\CourierPaymentController::class, 'show'])->name('courier-payments.show');
 
         // Analytics
         Route::get('analytics', [AnalyticsController::class, 'index'])->name('analytics.index');

@@ -581,7 +581,7 @@
                        ($order->shipment->status === 'delivered' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
                        ($order->shipment->status === 'returned' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
                        'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300')) }}">
-                    {{ ucfirst($order->shipment->status) }}
+                    {{ $order->shipment->statusLabel() }}
                 </span>
                 @else
                 <span class="text-gray-400">N/A</span>
@@ -598,7 +598,7 @@
                         'pathao'   => 'https://pathao.com/parcel/' . $tc,
                         'redx'     => 'https://redx.com.bd/track-parcel/?trackingId=' . $tc,
                         'paperfly' => 'https://paperfly.com.bd/tracking/' . $tc,
-                        'carrybe'  => 'https://carrybe.com/track?tracking=' . $tc,
+                        'carrybee' => null,
                         default    => null,
                     } : null);
                 @endphp
@@ -898,7 +898,7 @@
             <div class="flex items-center gap-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl px-4 py-3">
                 <svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 <div class="flex-1 min-w-0">
-                    <p class="text-xs font-semibold text-green-700 dark:text-green-400 capitalize">{{ $order->shipment->courier_name }} — {{ ucfirst($order->shipment->status) }}</p>
+                    <p class="text-xs font-semibold text-green-700 dark:text-green-400 capitalize">{{ $order->shipment->courier_name }} — {{ $order->shipment->statusLabel() }}</p>
                     @if($order->shipment->tracking_code)
                     <p class="text-xs text-green-600 dark:text-green-500 truncate">Tracking: {{ $order->shipment->tracking_code }}</p>
                     @endif
@@ -915,17 +915,17 @@
         <div class="px-5 py-4">
             <label class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2 block">Courier নির্বাচন করুন <span class="text-red-500">*</span></label>
             <div class="grid grid-cols-3 gap-2" id="courierBtnGroup">
-                @foreach($activeCouriers as $ac)
-                @php $isSelected = $order->shipment && $order->shipment->courier_name === $ac->courier; @endphp
+                @foreach($courierAccounts as $ac)
+                @php $isSelected = $order->shipment && $order->shipment->courier_account_id === $ac->id; @endphp
                 <button type="button"
-                    onclick="selectCourier('{{ $ac->courier }}')"
-                    data-courier="{{ $ac->courier }}"
-                    title="{{ $ac->is_active ? ucfirst($ac->courier) : ucfirst($ac->courier).' (Not configured)' }}"
+                    onclick="selectCourier('a{{ $ac->id }}')"
+                    data-courier="a{{ $ac->id }}"
+                    title="{{ $ac->label() }}"
                     class="courier-btn relative flex flex-col items-center justify-center gap-1 px-2 py-3 rounded-xl border-2 transition-all text-xs font-semibold
                         {{ $isSelected ? 'border-purple-500 bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-purple-400 hover:text-purple-600' }}
                         {{ !$ac->is_active ? 'opacity-50' : '' }}">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
-                    {{ ucfirst($ac->courier) }}
+                    <span class="text-center leading-tight">{{ $ac->label() }}</span>
                     @if(!$ac->is_active)
                     <span class="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-red-400"></span>
                     @else
@@ -944,7 +944,7 @@
                     Manual
                 </button>
             </div>
-            <input type="hidden" name="courier" id="selectedCourierInput" value="{{ $order->shipment?->courier_name ?? '' }}">
+            <input type="hidden" name="courier" id="selectedCourierInput" value="{{ $order->shipment?->courier_account_id ? 'a' . $order->shipment->courier_account_id : '' }}">
         </div>
         {{-- Footer --}}
         <div class="flex items-center justify-end gap-2 px-5 py-3 border-t border-gray-100 dark:border-gray-800">

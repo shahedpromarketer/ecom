@@ -30,6 +30,7 @@ tbody tr:nth-child(even) { background:#fafafa; }
 @media print { @page { size: A5; margin: 6mm; } .no-print { display:none !important; } }
 @media screen { html { background:#f0f2f5; min-height:100vh; padding:64px 20px 20px; } body { max-width:148mm; margin:0 auto; background:white; padding:14mm; box-shadow:0 4px 24px rgba(0,0,0,.15); border-radius:6px; } }
 </style>
+<style>.ep-barcode{max-width:100%;height:auto}</style>
 </head>
 <body>
 <div class="header">
@@ -41,6 +42,7 @@ tbody tr:nth-child(even) { background:#fafafa; }
     <div class="invoice-meta">
         <div class="inv-label">Invoice</div>
         <div class="inv-num">#{{ $order->order_number }}</div>
+        <div class="ep-barcode-wrap" style="text-align:center;margin:4px 0;line-height:0">{!! \App\Support\Barcode::svg((string) $order->order_number, 34, 1.3) !!}</div>
         <div class="inv-date">{{ $order->created_at->format('d M Y') }}</div>
     </div>
 </div>

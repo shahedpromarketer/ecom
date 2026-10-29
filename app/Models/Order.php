@@ -20,7 +20,7 @@ class Order extends Model
         'order_tag', 'customer_tag', 'print_status', 'hold_reason',
         'assigned_to', 'assigned_at', 'cod_changed', 'is_duplicate',
         'reference_no', 'skip_followup', 'user_ip',
-        'tenant_id', 'stock_deducted',
+        'tenant_id', 'stock_deducted', 'packed_at', 'packed_by',
     ];
 
     protected $casts = [
@@ -36,6 +36,7 @@ class Order extends Model
         'is_duplicate'    => 'boolean',
         'skip_followup'   => 'boolean',
         'stock_deducted'  => 'boolean',
+        'packed_at'       => 'datetime',
     ];
 
     protected static function boot()
@@ -101,6 +102,24 @@ class Order extends Model
     public function items()
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    /**
+     * The id couriers know this order by. Booking again after a cancelled parcel needs a new one,
+     * because couriers refuse a reference they have seen before.
+     */
+    public function courierReference(): string
+    {
+        $old = $this->shipment;
+
+        return $old && $old->consignment_id && $old->status === 'cancelled'
+            ? $this->order_number . '-R' . now()->format('dHi')
+            : (string) $this->order_number;
+    }
+
+    public function packer()
+    {
+        return $this->belongsTo(User::class, 'packed_by');
     }
 
     public function shipment()
