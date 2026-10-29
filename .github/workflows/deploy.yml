@@ -36,7 +36,12 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+          # The server sometimes answers slowly; retry instead of failing the deploy.
+          for i in 1 2 3 4 5; do
+            ssh-keyscan -T 15 -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null && [ -s ~/.ssh/known_hosts ] && break
+            echo "ssh-keyscan attempt $i failed, retrying…"; sleep 10
+          done
+          [ -s ~/.ssh/known_hosts ] || { echo "Could not reach $SSH_HOST"; exit 1; }
 
       - name: Upload code
         # Server-only files (.env, storage, vendor, uploaded files, SSL challenge) are never touched.
