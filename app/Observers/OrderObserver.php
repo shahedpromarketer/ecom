@@ -93,6 +93,12 @@ class OrderObserver
                     continue;
                 }
 
+                // Products synced from a WooCommerce store: WooCommerce already reduced its stock
+                // when the order was placed and the plugin reports every change, so don't count it twice.
+                if ($variant->product?->wp_product_id) {
+                    continue;
+                }
+
                 $variant = ProductVariant::whereKey($variant->id)->lockForUpdate()->first();
 
                 $qty    = (int) $item->qty;

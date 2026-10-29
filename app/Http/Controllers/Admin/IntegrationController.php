@@ -300,6 +300,17 @@ class IntegrationController extends Controller
             ], 403);
         }
 
+        // Ecom Pilot Connector v2+: pull through the plugin (no WooCommerce API keys needed).
+        if ($site->rest_url) {
+            $r = \App\Services\StoreProductSync::pull($site);
+
+            return response()->json([
+                'success' => $r['error'] === null,
+                'synced'  => $r['created'] + $r['updated'],
+                'message' => $r['error'] ?? "{$r['created']} new, {$r['updated']} updated" . ($r['failed'] ? ", {$r['failed']} failed" : ''),
+            ], $r['error'] ? 422 : 200);
+        }
+
         try {
             $credentials = base64_encode($site->consumer_key . ':' . $site->consumer_secret);
             $page    = 1;

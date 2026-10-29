@@ -80,6 +80,28 @@ class StorePluginController extends Controller
         ], $result === 'created' ? 201 : 200);
     }
 
+    /** One product (with variations), sent when it is saved in WooCommerce. */
+    public function product(Request $request)
+    {
+        $payload = $request->json()->all();
+        if (empty($payload['id'])) {
+            return response()->json(['ok' => false, 'error' => 'missing_id'], 422);
+        }
+
+        [$product, $result] = \App\Services\WooProductImporter::upsert($this->store($request), $payload);
+
+        return response()->json(['ok' => true, 'result' => $result, 'product_id' => $product->id]);
+    }
+
+    /** Stock of a product/variation changed in WooCommerce (sale, refund, manual edit). */
+    public function stock(Request $request)
+    {
+        $updated = \App\Services\WooProductImporter::updateStock($request->json()->all());
+
+        // Unknown product: the CRM has not imported it yet — not an error for the plugin.
+        return response()->json(['ok' => true, 'updated' => $updated]);
+    }
+
     /**
      * Checkout check before an order is accepted (blacklist, blocked IP, repeat orders).
      * The plugin fails open: if the CRM cannot be reached, the order goes through.

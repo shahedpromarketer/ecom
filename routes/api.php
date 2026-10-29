@@ -33,6 +33,8 @@ Route::prefix('v1/store')->middleware(['plugin.signed', 'throttle:600,1'])->name
     Route::post('/connect',  [\App\Http\Controllers\Api\StorePluginController::class, 'connect'])->name('connect');
     Route::post('/orders',   [\App\Http\Controllers\Api\StorePluginController::class, 'order'])->name('orders');
     Route::post('/validate', [\App\Http\Controllers\Api\StorePluginController::class, 'validateCheckout'])->name('validate');
+    Route::post('/products', [\App\Http\Controllers\Api\StorePluginController::class, 'product'])->name('products');
+    Route::post('/stock',    [\App\Http\Controllers\Api\StorePluginController::class, 'stock'])->name('stock');
 });
 
 // Legacy webhook route (site api_key auth)

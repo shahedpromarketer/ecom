@@ -3,7 +3,7 @@
  * Plugin Name:       Ecom Pilot Connector
  * Plugin URI:        https://crm.netpilotdigital.com
  * Description:       Sends every WooCommerce order to your Ecom Pilot CRM, checks blacklisted / duplicate orders at checkout, and receives status updates from the CRM.
- * Version:           2.0.0
+ * Version:           2.1.0
  * Requires PHP:      7.4
  * Requires Plugins:  woocommerce
  * Author:            Ecom Pilot
@@ -15,7 +15,7 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
-define('EP_VERSION', '2.0.0');
+define('EP_VERSION', '2.1.0');
 define('EP_OPTION', 'ecom_pilot_settings');
 define('EP_RETRY_OPTION', 'ecom_pilot_retry_queue');
 
@@ -276,6 +276,122 @@ register_deactivation_hook(__FILE__, function () {
     wp_clear_scheduled_hook('ep_retry_cron');
 });
 
+/* ───────────────────────── Products & stock → CRM ───────────────────────── */
+
+function ep_product_payload(WC_Product $product): array
+{
+    $images = [];
+    foreach (array_merge([$product->get_image_id()], $product->get_gallery_image_ids()) as $imageId) {
+        $url = $imageId ? wp_get_attachment_image_url($imageId, 'large') : '';
+        if ($url) {
+            $images[] = $url;
+        }
+    }
+
+    $data = [
+        'id'                => $product->get_id(),
+        'name'              => $product->get_name(),
+        'slug'              => $product->get_slug(),
+        'type'              => $product->get_type(),
+        'status'            => $product->get_status(),
+        'sku'               => (string) $product->get_sku(),
+        'regular_price'     => (string) $product->get_regular_price(),
+        'sale_price'        => (string) $product->get_sale_price(),
+        'manage_stock'      => (bool) $product->get_manage_stock(),
+        'stock_quantity'    => $product->get_stock_quantity(),
+        'stock_status'      => $product->get_stock_status(),
+        'short_description' => (string) $product->get_short_description(),
+        'categories'        => wp_get_post_terms($product->get_id(), 'product_cat', ['fields' => 'names']),
+        'images'            => array_values(array_unique($images)),
+        'variations'        => [],
+    ];
+
+    if ($product->is_type('variable')) {
+        foreach ($product->get_children() as $childId) {
+            $v = wc_get_product($childId);
+            if (! $v) {
+                continue;
+            }
+            $attributes = [];
+            foreach ($v->get_variation_attributes(false) as $name => $value) {
+                $attributes[wc_attribute_label($name, $product)] = $value;
+            }
+            $data['variations'][] = [
+                'id'             => $v->get_id(),
+                'sku'            => (string) $v->get_sku(),
+                'status'         => $v->get_status(),
+                'regular_price'  => (string) $v->get_regular_price(),
+                'sale_price'     => (string) $v->get_sale_price(),
+                'manage_stock'   => $v->get_manage_stock() === true,   // 'parent' means the product manages it
+                'stock_quantity' => $v->get_stock_quantity(),
+                'stock_status'   => $v->get_stock_status(),
+                'attributes'     => $attributes,
+            ];
+        }
+    }
+
+    return $data;
+}
+
+$GLOBALS['ep_pending_products'] = [];
+$GLOBALS['ep_pending_stock'] = [];
+
+function ep_queue_product($product_id)
+{
+    if (! empty($GLOBALS['ep_from_crm']) || ! ep_credentials()) {
+        return;
+    }
+    $product = wc_get_product($product_id);
+    if ($product && $product->is_type('variation')) {
+        $product_id = $product->get_parent_id();
+    }
+    $GLOBALS['ep_pending_products'][(int) $product_id] = true;
+}
+add_action('woocommerce_new_product', 'ep_queue_product', 20);
+add_action('woocommerce_update_product', 'ep_queue_product', 20);
+add_action('woocommerce_update_product_variation', 'ep_queue_product', 20);
+
+function ep_queue_stock($product)
+{
+    if (! ep_credentials() || ! $product instanceof WC_Product) {
+        return;
+    }
+    $isVariation = $product->is_type('variation');
+    $GLOBALS['ep_pending_stock'][$product->get_id()] = [
+        'product_id'     => $isVariation ? $product->get_parent_id() : $product->get_id(),
+        'variation_id'   => $isVariation ? $product->get_id() : 0,
+        'manage_stock'   => $product->get_manage_stock() === true,
+        'stock_quantity' => $product->get_stock_quantity(),
+        'stock_status'   => $product->get_stock_status(),
+    ];
+}
+add_action('woocommerce_product_set_stock', 'ep_queue_stock', 20);
+add_action('woocommerce_variation_set_stock', 'ep_queue_stock', 20);
+add_action('woocommerce_product_set_stock_status', function ($id) { ep_queue_stock(wc_get_product($id)); }, 20);
+add_action('woocommerce_variation_set_stock_status', function ($id) { ep_queue_stock(wc_get_product($id)); }, 20);
+
+add_action('shutdown', function () {
+    $products = array_keys($GLOBALS['ep_pending_products'] ?? []);
+    $stock = array_values($GLOBALS['ep_pending_stock'] ?? []);
+    $GLOBALS['ep_pending_products'] = [];
+    $GLOBALS['ep_pending_stock'] = [];
+    if (! $products && ! $stock) {
+        return;
+    }
+    if (function_exists('fastcgi_finish_request')) {
+        @fastcgi_finish_request();
+    }
+    foreach ($products as $id) {
+        $p = wc_get_product($id);
+        if ($p && ! $p->is_type('variation')) {
+            ep_post('products', ep_product_payload($p), 15);
+        }
+    }
+    foreach ($stock as $s) {
+        ep_post('stock', $s, 5);
+    }
+}, 25);
+
 /* ───────────────────────── Checkout check ───────────────────────── */
 
 /**
@@ -359,6 +475,33 @@ add_action('rest_api_init', function () {
             $GLOBALS['ep_from_crm'] = false;
 
             return new WP_REST_Response(['ok' => true, 'status' => $order->get_status()], 200);
+        },
+    ]);
+
+    // The CRM pulls the catalogue page by page ("Sync products").
+    register_rest_route('ecom-pilot/v1', '/products', [
+        'methods'             => 'POST',
+        'permission_callback' => 'ep_verify_incoming',
+        'callback'            => function (WP_REST_Request $request) {
+            $perPage = max(1, min(50, (int) ($request->get_param('per_page') ?: 25)));
+            $page = max(1, (int) ($request->get_param('page') ?: 1));
+            $result = wc_get_products([
+                'status'   => ['publish', 'private', 'draft'],
+                'type'     => ['simple', 'variable'],
+                'limit'    => $perPage,
+                'page'     => $page,
+                'paginate' => true,
+                'orderby'  => 'ID',
+                'order'    => 'ASC',
+            ]);
+
+            return new WP_REST_Response([
+                'ok'          => true,
+                'page'        => $page,
+                'total'       => (int) $result->total,
+                'total_pages' => (int) $result->max_num_pages,
+                'products'    => array_map('ep_product_payload', $result->products),
+            ], 200);
         },
     ]);
 
