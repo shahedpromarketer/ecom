@@ -22,6 +22,16 @@ class OrderObserver
     public function created(Order $order): void
     {
         CustomerSync::forOrder($order);
+
+        // The customer ordered (from the CRM or straight on the website): their open leads are won.
+        if ($order->customer_id) {
+            \App\Models\Lead::withoutGlobalScopes()
+                ->where('tenant_id', $order->tenant_id)
+                ->where('customer_id', $order->customer_id)
+                ->where('status', 'pending')
+                ->get()
+                ->each(fn ($lead) => $lead->confirmWith($order));
+        }
     }
 
     public function updated(Order $order): void

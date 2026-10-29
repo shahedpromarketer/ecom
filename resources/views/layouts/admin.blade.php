@@ -310,6 +310,22 @@
             </div>
         </div>
 
+        {{-- Leads / pre-orders --}}
+        @php
+            $leadsNew = \App\Models\Lead::query()->visibleTo(auth()->user())
+                ->where('status', 'pending')->whereNull('read_at')->count();
+        @endphp
+        <a href="{{ route('admin.leads.index') }}"
+           class="flex items-center gap-3 py-3 pr-4 text-sm font-medium transition-colors duration-150 {{ $navItem('admin.leads*') }}">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z"/>
+            </svg>
+            <span class="truncate">Leads / Pre-orders</span>
+            @if($leadsNew)
+                <span class="ml-auto px-1.5 py-0.5 text-[10px] font-bold rounded-md bg-blue-400 text-gray-900">{{ $leadsNew }}</span>
+            @endif
+        </a>
+
         {{-- Returns --}}
         <a href="{{ route('admin.returns.index') }}"
            class="flex items-center gap-3 py-3 pr-4 text-sm font-medium transition-colors duration-150 {{ $navItem('admin.returns*') }}">

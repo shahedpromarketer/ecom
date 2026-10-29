@@ -100,6 +100,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('customers/{customer}/notes', [CustomerController::class, 'storeNote'])->name('customers.notes.store');
         Route::delete('customers/notes/{note}', [CustomerController::class, 'destroyNote'])->name('customers.notes.destroy');
 
+        // Leads / pre-orders
+        Route::get('leads', [\App\Http\Controllers\Admin\LeadController::class, 'index'])->name('leads.index');
+        Route::post('leads', [\App\Http\Controllers\Admin\LeadController::class, 'store'])->name('leads.store');
+        Route::post('leads/import', [\App\Http\Controllers\Admin\LeadController::class, 'import'])->name('leads.import');
+        Route::post('leads/bulk', [\App\Http\Controllers\Admin\LeadController::class, 'bulk'])->name('leads.bulk');
+        Route::patch('leads/{lead}', [\App\Http\Controllers\Admin\LeadController::class, 'update'])->name('leads.update');
+
         // Follow-ups (call list)
         Route::get('followups', [\App\Http\Controllers\Admin\FollowupController::class, 'index'])->name('followups.index');
         Route::post('followups', [\App\Http\Controllers\Admin\FollowupController::class, 'store'])->name('followups.store');

@@ -15,7 +15,7 @@ class Permissions
 {
     /** Shown as checkbox groups on the Roles page. */
     public const GROUPS = [
-        'Orders'    => ['view_orders', 'manage_orders', 'export_orders'],
+        'Orders'    => ['view_orders', 'manage_orders', 'export_orders', 'view_all_leads'],
         'Products'  => ['view_products', 'manage_products'],
         'Customers' => ['view_customers', 'manage_customers', 'ban_customers', 'view_all_followups'],
         'Marketing' => ['manage_marketing'],
@@ -43,6 +43,8 @@ class Permissions
         // Orders & money
         'admin.orders.*'            => ['view_orders', 'manage_orders'],
         'admin.payments.*'          => ['view_orders', 'manage_orders'],
+        // Leads: importing / moving between staff also needs view_all_leads (checked in the controller).
+        'admin.leads.*'             => ['view_orders', 'manage_orders'],
         'admin.returns.*'           => ['view_orders', 'manage_orders'],
         'admin.invoices.*'          => ['view_orders', 'manage_orders'],
 
