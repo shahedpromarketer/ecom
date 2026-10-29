@@ -3,7 +3,7 @@
  * Plugin Name:       Ecom Pilot Connector
  * Plugin URI:        https://crm.netpilotdigital.com
  * Description:       Sends every WooCommerce order to your Ecom Pilot CRM, checks blacklisted / duplicate orders at checkout, and receives status updates from the CRM.
- * Version:           2.1.0
+ * Version:           2.1.1
  * Requires PHP:      7.4
  * Requires Plugins:  woocommerce
  * Author:            Ecom Pilot
@@ -15,7 +15,7 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
-define('EP_VERSION', '2.1.0');
+define('EP_VERSION', '2.1.1');
 define('EP_OPTION', 'ecom_pilot_settings');
 define('EP_RETRY_OPTION', 'ecom_pilot_retry_queue');
 
@@ -314,6 +314,13 @@ function ep_product_payload(WC_Product $product): array
             }
             $attributes = [];
             foreach ($v->get_variation_attributes(false) as $name => $value) {
+                // Global attributes store the term slug ("l"); send the name customers see ("L").
+                if ($value !== '' && taxonomy_exists($name)) {
+                    $term = get_term_by('slug', $value, $name);
+                    if ($term && ! is_wp_error($term)) {
+                        $value = $term->name;
+                    }
+                }
                 $attributes[wc_attribute_label($name, $product)] = $value;
             }
             $data['variations'][] = [
