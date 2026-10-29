@@ -29,8 +29,25 @@ class AuthController extends Controller
             'password' => ['required'],
         ]);
 
+        // 5 wrong passwords per email + IP, then a short lock-out.
+        $throttleKey = 'admin-login:' . \Illuminate\Support\Str::lower($request->input('email')) . '|' . $request->ip();
+
+        if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $seconds = \Illuminate\Support\Facades\RateLimiter::availableIn($throttleKey);
+
+            return back()->withErrors([
+                'email' => "Too many login attempts. Try again in {$seconds} seconds.",
+            ])->withInput($request->only('email'));
+        }
+
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
+            \Illuminate\Support\Facades\RateLimiter::clear($throttleKey);
             $user = auth()->user();
+
+            if ($user->is_banned) {
+                Auth::logout();
+                return back()->withErrors(['email' => 'This account has been disabled.'])->withInput($request->only('email'));
+            }
 
             // Super admin — go to super admin panel
             if ($user->is_super_admin) {
@@ -47,6 +64,8 @@ class AuthController extends Controller
             $request->session()->regenerate();
             return redirect()->route('admin.dashboard');
         }
+
+        \Illuminate\Support\Facades\RateLimiter::hit($throttleKey, 60);
 
         return back()->withErrors([
             'email' => 'These credentials do not match our records.',

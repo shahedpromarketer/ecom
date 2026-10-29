@@ -42,11 +42,36 @@ class Order extends Model
     {
         parent::boot();
 
+        // Runs after BelongsToTenant has stamped tenant_id.
         static::creating(function ($order) {
             if (empty($order->order_number)) {
-                $order->order_number = 'EPL' . date('Ymd') . '-' . str_pad(rand(0, 9999), 4, '0', STR_PAD_LEFT);
+                $order->order_number = static::nextOrderNumber($order->tenant_id);
             }
         });
+    }
+
+    /**
+     * EPL20261029-48213 style, unique inside the shop. The old 4-digit random
+     * number collided easily, and a collision made the insert fail (lost order).
+     */
+    public static function nextOrderNumber(?int $tenantId): string
+    {
+        $prefix = 'EPL' . now()->format('Ymd') . '-';
+
+        for ($i = 0; $i < 10; $i++) {
+            $number = $prefix . random_int(10000, 99999);
+
+            $taken = static::withoutGlobalScopes()
+                ->where('tenant_id', $tenantId)
+                ->where('order_number', $number)
+                ->exists();
+
+            if (! $taken) {
+                return $number;
+            }
+        }
+
+        return $prefix . now()->format('His') . random_int(100, 999);
     }
 
     public function user()
