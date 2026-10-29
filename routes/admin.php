@@ -4,7 +4,6 @@ use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\ApiTokenController;
 use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\AuthController;
-use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Admin\BlacklistController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CourierController;
@@ -118,11 +117,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Coupons
         Route::patch('coupons/{coupon}/toggle', [CouponController::class, 'toggle'])->name('coupons.toggle');
         Route::resource('coupons', CouponController::class);
-
-        // Banners
-        Route::post('banners/reorder', [BannerController::class, 'reorder'])->name('banners.reorder');
-        Route::patch('banners/{banner}/toggle', [BannerController::class, 'toggle'])->name('banners.toggle');
-        Route::resource('banners', BannerController::class)->except(['show']);
 
         // Marketing
         Route::get('marketing', [MarketingController::class, 'index'])->name('marketing.index');
