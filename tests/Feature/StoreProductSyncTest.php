@@ -33,12 +33,6 @@ class StoreProductSyncTest extends TestCase
         ]));
     }
 
-    /** The shop keeps stock in the CRM (Inventory → "Manage stock in Ecom Pilot"). */
-    private function crmStockOn(): void
-    {
-        \App\Support\Inventory::setManagedInCrm(true, $this->shop->id);
-    }
-
     private function signed(string $path, array $data)
     {
         $body = json_encode($data);
@@ -84,7 +78,7 @@ class StoreProductSyncTest extends TestCase
 
             $l = $p->variants->firstWhere('wp_variation_id', 601);
             $this->assertSame('L', $l->size);
-            $this->assertSame(7, $l->stock);
+            $this->assertSame(0, $l->stock);   // stock is counted in the CRM, not taken from the store
             $this->assertEquals(-100, $l->extra_price);       // 1350 sale vs 1450 base
             $xl = $p->variants->firstWhere('wp_variation_id', 602);
             $this->assertSame(['XL', 'Black'], [$xl->size, $xl->color]);
@@ -106,7 +100,7 @@ class StoreProductSyncTest extends TestCase
         });
     }
 
-    public function test_simple_product_gets_one_variant_with_stock(): void
+    public function test_simple_product_gets_one_variant(): void
     {
         $this->signed('products', ['id' => 700, 'name' => 'Cap', 'type' => 'simple', 'status' => 'publish', 'sku' => 'CAP-1',
             'regular_price' => '300', 'sale_price' => '250', 'manage_stock' => true, 'stock_quantity' => 12, 'stock_status' => 'instock', 'images' => []]);
@@ -115,53 +109,37 @@ class StoreProductSyncTest extends TestCase
             $p = Product::with('variants')->first();
             $this->assertEquals(250, $p->sale_price);
             $this->assertSame(1, $p->variants->count());
-            $this->assertSame(12, $p->variants->first()->stock);
+            $this->assertSame(0, $p->variants->first()->stock);   // stock is entered in the CRM, not copied
         });
     }
 
-    public function test_unmanaged_store_stock_starts_at_zero_in_the_crm(): void
+    public function test_store_stock_is_not_used(): void
     {
-        $this->crmStockOn();
-        $j = $this->jacket();
-        $j['variations'][0]['manage_stock'] = false;
-        $this->signed('products', $j);
-
-        $this->inShop(fn () => $this->assertSame(0, ProductVariant::where('wp_variation_id', 601)->value('stock')));   // counted in the CRM from 0
-    }
-
-    public function test_store_stock_reports_do_not_change_crm_stock(): void
-    {
-        $this->crmStockOn();
-        $this->withoutDefer();   // run the push to the store right away
-        \Illuminate\Support\Facades\Http::fake(['*' => \Illuminate\Support\Facades\Http::response(['ok' => true])]);
-        $this->signed('products', $this->jacket());
-        // WooCommerce's checkout reduced its stock to 3: the CRM keeps 7 (its own) and answers with it.
+        $this->signed('products', $this->jacket());   // the store says 7
         $this->signed('stock', ['product_id' => 501, 'variation_id' => 601, 'manage_stock' => true, 'stock_quantity' => 3, 'stock_status' => 'instock'])
-            ->assertOk()->assertJson(['updated' => false, 'crm_owns_stock' => true]);
+            ->assertOk()->assertJson(['updated' => false]);
 
-        $this->inShop(fn () => $this->assertSame(7, ProductVariant::where('wp_variation_id', 601)->value('stock')));
-        \Illuminate\Support\Facades\Http::assertSent(fn ($r) => str_ends_with($r->url(), '/ecom-pilot/v1/stock-set')
-            && collect($r['items'])->firstWhere('variation_id', 601)['stock'] === 7);
+        // Stock is counted in the CRM only: it starts at 0 until the shop enters it.
+        $this->inShop(fn () => $this->assertSame(0, ProductVariant::where('wp_variation_id', 601)->value('stock')));
     }
 
     public function test_resending_a_product_keeps_crm_stock(): void
     {
-        $this->crmStockOn();
         $this->signed('products', $this->jacket());
         $this->inShop(fn () => ProductVariant::where('wp_variation_id', 601)->update(['stock' => 4]));
-        $this->signed('products', $this->jacket());   // still says 7
+        $this->signed('products', $this->jacket());
 
         $this->inShop(fn () => $this->assertSame(4, ProductVariant::where('wp_variation_id', 601)->value('stock')));
     }
 
-    public function test_store_product_stock_goes_down_at_the_courier_and_is_sent_to_the_store(): void
+    public function test_store_product_stock_goes_down_at_the_courier_and_never_touches_the_store(): void
     {
-        $this->crmStockOn();
-        \Illuminate\Support\Facades\Http::fake(['*' => \Illuminate\Support\Facades\Http::response(['ok' => true])]);
+        \Illuminate\Support\Facades\Http::fake();
         $this->signed('products', $this->jacket());
 
         $this->inShop(function () {
             $variant = ProductVariant::where('wp_variation_id', 601)->first();
+            $variant->update(['stock' => 7]);   // the shop entered its stock
             $order = Order::create(['shipping_name' => 'A', 'shipping_phone' => '01700000000', 'shipping_address' => 'Dhaka',
                 'subtotal' => 1350, 'total' => 1350, 'payment_method' => 'cod', 'status' => 'confirmed']);
             OrderItem::create(['order_id' => $order->id, 'product_id' => $variant->product_id, 'variant_id' => $variant->id,
@@ -170,16 +148,30 @@ class StoreProductSyncTest extends TestCase
             $this->assertSame(7, $variant->fresh()->stock);   // confirmed: nothing taken yet
             $order->update(['status' => 'shipped']);
             $this->assertSame(5, $variant->fresh()->stock);   // handed to the courier
-            \App\Services\StoreStockPusher::push($variant->product);
             $order->update(['status' => 'cancelled']);
             $this->assertSame(7, $variant->fresh()->stock);
         });
-
-        \Illuminate\Support\Facades\Http::assertSent(fn ($r) => str_ends_with($r->url(), '/ecom-pilot/v1/stock-set')
-            && collect($r['items'])->firstWhere('variation_id', 601)['stock'] === 5
-            && \App\Support\PluginSignature::verify($this->store->api_key, $r->body(), $r->header('X-EP-Timestamp')[0], $r->header('X-EP-Signature')[0]));
+        \Illuminate\Support\Facades\Http::assertNothingSent();
     }
 
+    public function test_shops_without_stock_still_ship_everything(): void
+    {
+        $this->signed('products', $this->jacket());
+
+        $this->inShop(function () {
+            $variant = ProductVariant::where('wp_variation_id', 601)->first();   // stock 0, never entered
+            $order = Order::create(['shipping_name' => 'A', 'shipping_phone' => '01700000000', 'shipping_address' => 'Dhaka',
+                'subtotal' => 1350, 'total' => 1350, 'payment_method' => 'cod', 'status' => 'confirmed']);
+            OrderItem::create(['order_id' => $order->id, 'product_id' => $variant->product_id, 'variant_id' => $variant->id,
+                'product_name' => 'Jacket', 'qty' => 3, 'unit_price' => 1350, 'total' => 4050]);
+
+            $order->update(['status' => 'shipped']);
+            $this->assertSame('shipped', $order->fresh()->status);
+            $this->assertSame(0, $variant->fresh()->stock);   // never below 0
+            $order->update(['status' => 'returned']);
+            $this->assertSame('returned', $order->fresh()->status);
+        });
+    }
     public function test_order_line_without_a_variant_uses_the_only_one(): void
     {
         $this->inShop(function () {
@@ -231,49 +223,5 @@ class StoreProductSyncTest extends TestCase
         Tenancy::as($other->id, fn () => Category::create(['name' => 'Jacket', 'slug' => 'jacket', 'is_active' => true]));
 
         $this->assertSame(2, Category::withoutGlobalScopes()->where('slug', 'jacket')->count());
-    }
-    // ── Shops that do not keep stock in the CRM (the default) ──────────────
-
-    public function test_without_crm_stock_the_store_numbers_are_copied_and_never_pushed(): void
-    {
-        \Illuminate\Support\Facades\Http::fake();
-        $this->withoutDefer();
-        $j = $this->jacket();
-        $j['variations'][0]['manage_stock'] = false;
-        $this->signed('products', $j);
-        $this->inShop(fn () => $this->assertSame(999, ProductVariant::where('wp_variation_id', 601)->value('stock')));   // plenty
-
-        $this->signed('stock', ['product_id' => 501, 'variation_id' => 602, 'manage_stock' => true, 'stock_quantity' => 3, 'stock_status' => 'instock'])
-            ->assertOk()->assertJson(['updated' => true, 'crm_owns_stock' => false]);
-        $this->inShop(fn () => $this->assertSame(3, ProductVariant::where('wp_variation_id', 602)->value('stock')));
-
-        $this->inShop(function () {
-            $variant = ProductVariant::where('wp_variation_id', 602)->first();
-            $order = Order::create(['shipping_name' => 'A', 'shipping_phone' => '01700000000', 'shipping_address' => 'Dhaka',
-                'subtotal' => 1350, 'total' => 1350, 'payment_method' => 'cod', 'status' => 'confirmed']);
-            OrderItem::create(['order_id' => $order->id, 'product_id' => $variant->product_id, 'variant_id' => $variant->id,
-                'product_name' => 'Jacket', 'qty' => 5, 'unit_price' => 1350, 'total' => 6750]);
-            $order->update(['status' => 'shipped']);   // more than in stock: the order still ships
-            $this->assertSame('shipped', $order->fresh()->status);
-            $this->assertSame(3, $variant->fresh()->stock);   // the store counts its own stock
-        });
-        \Illuminate\Support\Facades\Http::assertNothingSent();
-    }
-
-    public function test_turning_crm_stock_on_puts_back_orders_not_shipped_yet(): void
-    {
-        \Illuminate\Support\Facades\Http::fake(['*' => \Illuminate\Support\Facades\Http::response(['ok' => true])]);
-        $this->signed('products', $this->jacket());   // store says 7 (an open order of 2 already taken off)
-        $this->signed('orders', ['id' => 9100, 'number' => '9100', 'status' => 'processing', 'total' => 2700, 'payment_method' => 'cod',
-            'billing' => ['first_name' => 'R', 'phone' => '01711111111', 'address_1' => 'Dhaka'],
-            'items' => [['product_id' => 501, 'variation_id' => 601, 'name' => 'Jacket', 'qty' => 2, 'price' => 1350, 'subtotal' => 2700, 'total' => 2700]]]);
-
-        $admin = \App\Models\User::factory()->create(['tenant_id' => $this->shop->id, 'role' => 'admin']);
-        $this->actingAs($admin)->get(route('admin.inventory.index'))->assertOk()->assertSee('Manage stock in Ecom Pilot');
-        $this->actingAs($admin)->post(route('admin.inventory.mode'), ['on' => 1])->assertSessionHas('success');
-
-        $this->assertTrue(\App\Support\Inventory::managedInCrm($this->shop->id));
-        $this->inShop(fn () => $this->assertSame(9, ProductVariant::where('wp_variation_id', 601)->value('stock')));
-        \Illuminate\Support\Facades\Http::assertSent(fn ($r) => str_ends_with($r->url(), '/ecom-pilot/v1/stock-set'));
     }
 }

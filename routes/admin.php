@@ -197,7 +197,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('inventory/variants/{variant}/logs', [InventoryController::class, 'logs'])->name('inventory.logs');
         Route::post('inventory/bulk-update', [InventoryController::class, 'bulkUpdate'])->name('inventory.bulkUpdate');
         Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
-        Route::post('inventory/mode', [InventoryController::class, 'setMode'])->name('inventory.mode');
 
         // Reports
         Route::get('reports/products', [ReportController::class, 'productReport'])->name('reports.products');

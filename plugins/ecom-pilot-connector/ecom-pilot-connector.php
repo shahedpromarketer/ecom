@@ -361,7 +361,6 @@ function ep_product_payload(WC_Product $product): array
 }
 
 $GLOBALS['ep_pending_products'] = [];
-$GLOBALS['ep_pending_stock'] = [];
 
 function ep_queue_product($product_id)
 {
@@ -378,32 +377,13 @@ add_action('woocommerce_new_product', 'ep_queue_product', 20);
 add_action('woocommerce_update_product', 'ep_queue_product', 20);
 add_action('woocommerce_update_product_variation', 'ep_queue_product', 20);
 
-function ep_queue_stock($product)
-{
-    // Stock set by the CRM itself is not reported back to it.
-    if (! empty($GLOBALS['ep_from_crm']) || ! ep_credentials() || ! $product instanceof WC_Product) {
-        return;
-    }
-    $isVariation = $product->is_type('variation');
-    $GLOBALS['ep_pending_stock'][$product->get_id()] = [
-        'product_id'     => $isVariation ? $product->get_parent_id() : $product->get_id(),
-        'variation_id'   => $isVariation ? $product->get_id() : 0,
-        'manage_stock'   => $product->get_manage_stock() === true,
-        'stock_quantity' => $product->get_stock_quantity(),
-        'stock_status'   => $product->get_stock_status(),
-    ];
-}
-add_action('woocommerce_product_set_stock', 'ep_queue_stock', 20);
-add_action('woocommerce_variation_set_stock', 'ep_queue_stock', 20);
-add_action('woocommerce_product_set_stock_status', function ($id) { ep_queue_stock(wc_get_product($id)); }, 20);
-add_action('woocommerce_variation_set_stock_status', function ($id) { ep_queue_stock(wc_get_product($id)); }, 20);
+// Stock is counted in Ecom Pilot only (it goes down when a parcel goes to the courier), so the
+// store's stock is not reported and the CRM never changes it.
 
 add_action('shutdown', function () {
     $products = array_keys($GLOBALS['ep_pending_products'] ?? []);
-    $stock = array_values($GLOBALS['ep_pending_stock'] ?? []);
     $GLOBALS['ep_pending_products'] = [];
-    $GLOBALS['ep_pending_stock'] = [];
-    if (! $products && ! $stock) {
+    if (! $products) {
         return;
     }
     if (function_exists('fastcgi_finish_request')) {
@@ -414,9 +394,6 @@ add_action('shutdown', function () {
         if ($p && ! $p->is_type('variation')) {
             ep_post('products', ep_product_payload($p), 15);
         }
-    }
-    foreach ($stock as $s) {
-        ep_post('stock', $s, 5);
     }
 }, 25);
 
@@ -640,33 +617,6 @@ add_action('rest_api_init', function () {
                 'total_pages' => (int) $result->max_num_pages,
                 'products'    => array_map('ep_product_payload', $result->products),
             ], 200);
-        },
-    ]);
-
-    // The CRM owns stock (it goes down when a parcel goes to the courier) and sends its numbers here.
-    register_rest_route('ecom-pilot/v1', '/stock-set', [
-        'methods'             => 'POST',
-        'permission_callback' => 'ep_verify_incoming',
-        'callback'            => function (WP_REST_Request $request) {
-            $done = [];
-            $GLOBALS['ep_from_crm'] = true;   // do not report these changes back to the CRM
-            foreach ((array) $request->get_param('items') as $item) {
-                $id = (int) ($item['variation_id'] ?? 0) ?: (int) ($item['product_id'] ?? 0);
-                $qty = max(0, (int) ($item['stock'] ?? 0));
-                $product = $id ? wc_get_product($id) : null;
-                if (! $product) {
-                    continue;
-                }
-                // The store does not count this product's stock: leave its setting alone.
-                if (! $product->get_manage_stock()) {
-                    continue;
-                }
-                wc_update_product_stock($product, $qty, 'set');
-                $done[] = $id;
-            }
-            $GLOBALS['ep_from_crm'] = false;
-
-            return new WP_REST_Response(['ok' => true, 'updated' => $done], 200);
         },
     ]);
 

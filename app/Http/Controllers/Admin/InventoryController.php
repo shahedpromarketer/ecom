@@ -43,9 +43,7 @@ class InventoryController extends Controller
             ->orderBy('product_variants.stock')->orderBy('product_variants.id')
             ->paginate(25)->withQueryString();
 
-        return view('admin.inventory.index', compact('variants', 'totalSkus', 'outOfStock', 'lowStock', 'totalStock', 'grandTotalValue', 'filter', 'search') + [
-            'crmStock' => \App\Support\Inventory::managedInCrm(),
-        ]);
+        return view('admin.inventory.index', compact('variants', 'totalSkus', 'outOfStock', 'lowStock', 'totalStock', 'grandTotalValue', 'filter', 'search'));
     }
 
     public function adjust(Request $request, ProductVariant $variant)
@@ -214,25 +212,4 @@ class InventoryController extends Controller
         return back()->with('success', 'Stock updated in bulk.');
     }
 
-    /**
-     * "Manage stock in Ecom Pilot" on / off for the shop. Switching on puts back store orders
-     * not shipped yet (the store had already taken them off) and sends the numbers to the store.
-     */
-    public function setMode(Request $request)
-    {
-        abort_unless(auth()->user()->can('manage_settings'), 403);
-        $on = $request->boolean('on');
-        $tenantId = (int) auth()->user()->tenant_id;
-        $was = \App\Support\Inventory::managedInCrm($tenantId);
-        \App\Support\Inventory::setManagedInCrm($on, $tenantId);
-
-        if ($on && ! $was) {
-            $fixed = count(\App\Services\StockOwnership::takeOver($tenantId));
-
-            return back()->with('success', 'Stock is now kept in Ecom Pilot: it goes down when an order goes to the courier'
-                . ($fixed ? " ({$fixed} variants corrected for orders not shipped yet)." : '.'));
-        }
-
-        return back()->with('success', $on ? 'Stock is kept in Ecom Pilot.' : 'Stock keeping switched off: nothing changes on your website, orders work as usual.');
-    }
 }

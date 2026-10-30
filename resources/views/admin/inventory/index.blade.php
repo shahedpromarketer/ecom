@@ -17,32 +17,12 @@
 </div>
 @endif
 
-{{-- Stock keeping is optional: shops that use it get stock counted when parcels go to the courier --}}
-<div class="mb-5 p-4 rounded-2xl border {{ $crmStock ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : 'bg-white border-border dark:bg-gray-800 dark:border-gray-700' }} flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
-    <div class="text-sm">
-        <p class="font-semibold text-textprimary dark:text-white">Manage stock in Ecom Pilot: <span class="{{ $crmStock ? 'text-green-700' : 'text-textsecondary' }}">{{ $crmStock ? 'On' : 'Off' }}</span></p>
-        <p class="text-xs text-textsecondary mt-0.5">
-            @if ($crmStock)
-                Stock goes down when an order is sent to the courier and comes back on cancel / return. Your website shows these numbers.
-                Add new stock here. Orders are never blocked by stock.
-            @else
-                Optional. Turn it on to count stock here: it goes down when an order goes to the courier, and your website shows the same numbers.
-                While off, nothing on your website changes and orders always go through.
-            @endif
-        </p>
-    </div>
-    @can('manage_settings')
-        <form method="POST" action="{{ route('admin.inventory.mode') }}"
-              onsubmit="return confirm(@js($crmStock ? 'Stop keeping stock in Ecom Pilot? Your website keeps its own stock again.' : 'Keep stock in Ecom Pilot? Stock will go down when orders go to the courier, and your website will show these numbers.'))">
-            @csrf
-            <input type="hidden" name="on" value="{{ $crmStock ? 0 : 1 }}">
-            <button class="px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap {{ $crmStock ? 'border border-border dark:border-gray-600' : 'bg-primary text-white' }}">
-                {{ $crmStock ? 'Turn off' : 'Turn on' }}
-            </button>
-        </form>
-    @endcan
+{{-- Stock is optional: only shops that enter stock here use it; nothing ever waits on it --}}
+<div class="mb-5 p-3.5 rounded-2xl border border-border dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-textsecondary">
+    <b class="text-textprimary dark:text-white">Stock is optional.</b>
+    Enter your stock here if you want it counted: it goes down when an order is sent to the courier and comes back on cancel / return.
+    Your website's stock is not used. Orders are never blocked by stock, so you can use Ecom Pilot without entering any.
 </div>
-
 {{-- Stats --}}
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
     <div class="bg-white dark:bg-gray-800 rounded-2xl border border-border dark:border-gray-700 shadow-sm p-5 flex items-center gap-4">

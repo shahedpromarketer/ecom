@@ -21,17 +21,12 @@ use Illuminate\Support\Str;
 class WooProductImporter
 {
     /** Not managed / unlimited stock in WooCommerce shows as this in the CRM. */
-    public const UNLIMITED_STOCK = 999;
 
-    /** Does the shop being imported keep stock in the CRM (Inventory → "Manage stock in Ecom Pilot")? */
-    private static bool $crmStock = false;
 
     /** @return array{0: Product, 1: string} created | updated */
     public static function upsert(WordPressSite $site, array $p): array
     {
-        self::$crmStock = \App\Support\Inventory::managedInCrm($site->tenant_id);
-
-        return StoreStockPusher::withoutPushing(fn () => DB::transaction(function () use ($p, $site) {
+        return DB::transaction(function () use ($p, $site) {
             $wpId = (string) $p['id'];
 
             $product = Product::withTrashed()->where('wp_product_id', $wpId)
@@ -71,35 +66,9 @@ class WooProductImporter
             self::syncVariants($product, $p, $regular);
 
             return [$product, $created ? 'created' : 'updated'];
-        }));
+        });
     }
 
-    /**
-     * WooCommerce reported a stock change (a sale, refund or manual edit).
-     * Shops keeping stock in the CRM: the CRM keeps its number (it goes down at the courier) and
-     * sends it back to the store. Other shops: the CRM copies the store's number.
-     *
-     * @return array{0: ?Product, 1: bool} the product, and whether the CRM copied the number
-     */
-    public static function updateStock(array $s): array
-    {
-        $product = Product::where('wp_product_id', (string) ($s['product_id'] ?? ''))->first();
-        if (! $product) {
-            return [null, false];
-        }
-        if (\App\Support\Inventory::managedInCrm($product->tenant_id)) {
-            return [$product, false];
-        }
-
-        self::$crmStock = false;
-        $qty = self::stock($s['stock_quantity'] ?? null, $s['manage_stock'] ?? false, $s['stock_status'] ?? 'instock');
-        if (! empty($s['variation_id'])) {
-            return [$product, (bool) ProductVariant::where('wp_variation_id', (int) $s['variation_id'])->update(['stock' => $qty])];
-        }
-
-        // Simple product: the store's stock goes on the size-less slot only (CRM-added sizes keep theirs).
-        return [$product, (bool) $product->variants()->defaultSlot()->update(['stock' => $qty])];
-    }
     private static function syncVariants(Product $product, array $p, float $basePrice): void
     {
         $keep = [];
@@ -117,8 +86,8 @@ class WooProductImporter
                     'sku'             => ($v['sku'] ?? '') !== '' ? $v['sku'] : null,
                     'size'            => $size,
                     'color'           => $color,
-                    // The CRM owns stock: the store's number is only the starting point for a new variation.
-                    ...($variant->exists && self::$crmStock ? [] : ['stock' => self::stock($v['stock_quantity'] ?? null, $v['manage_stock'] ?? false, $v['stock_status'] ?? 'instock')]),
+                    // Stock is counted in the CRM only: a new variation starts at 0, the store's number is not used.
+                    ...($variant->exists ? [] : ['stock' => 0]),
                     'extra_price'     => round($price - ($product->sale_price ?? $basePrice), 2),
                     'is_active'       => ($v['status'] ?? 'publish') === 'publish',
                 ])->save();
@@ -137,7 +106,7 @@ class WooProductImporter
                 $variant->fill([
                     'product_id' => $product->id,
                     'sku'        => ($p['sku'] ?? '') !== '' ? $p['sku'] : null,
-                    ...($variant->exists && self::$crmStock ? [] : ['stock' => self::stock($p['stock_quantity'] ?? null, $p['manage_stock'] ?? false, $p['stock_status'] ?? 'instock')]),
+                    ...($variant->exists ? [] : ['stock' => 0]),
                     'extra_price'=> 0,
                     'is_active'  => true,
                 ])->save();
@@ -209,21 +178,6 @@ class WooProductImporter
         }
 
         return [$size ? mb_substr($size, 0, 50) : null, $color ? mb_substr($color, 0, 50) : null];
-    }
-
-    private static function stock($qty, $managed, string $status): int
-    {
-        if ($managed && $qty !== null && $qty !== '') {
-            return max(0, (int) $qty);
-        }
-
-        // The store does not count this product. Shops keeping stock in the CRM count it there from 0;
-        // the others never look at it, so it shows as plenty.
-        if (self::$crmStock) {
-            return 0;
-        }
-
-        return $status === 'outofstock' ? 0 : self::UNLIMITED_STOCK;
     }
 
     private static function uniqueSlug(string $base, ?int $ignoreId): string

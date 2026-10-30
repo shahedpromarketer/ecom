@@ -27,18 +27,7 @@ class ProductVariant extends Model
         return $this->belongsTo(Product::class);
     }
 
-    protected static function booted(): void
-    {
-        // The CRM owns stock: any change is sent to the product's WooCommerce store.
-        static::saved(function (self $v) {
-            if ($v->wasRecentlyCreated || $v->wasChanged(['stock', 'is_active', 'size', 'color'])) {
-                \App\Services\StoreStockPusher::queue($v->product_id);
-            }
-        });
-        static::deleted(fn (self $v) => \App\Services\StoreStockPusher::queue($v->product_id));
-    }
-
-    /** The one size-less variant a simple store product gets (its stock mirrors the store). */
+    /** The one size-less variant a simple store product gets. */
     public function isDefaultSlot(): bool
     {
         return ! $this->wp_variation_id && blank($this->size) && blank($this->color);
