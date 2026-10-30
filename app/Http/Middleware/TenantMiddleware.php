@@ -4,6 +4,9 @@ use Closure;
 use Illuminate\Http\Request;
 
 class TenantMiddleware {
+    /** Order work that waits for a recharge when a paying shop's wallet is empty. */
+    private const WALLET_LOCKED = ['admin.orders.*', 'admin.dispatch.*', 'admin.failed-orders.*', 'admin.invoices.*', 'admin.payments.*', 'admin.returns.*'];
+
     public function handle(Request $request, Closure $next) {
         if (!auth()->check()) return redirect('/admin/login');
 
@@ -28,12 +31,23 @@ class TenantMiddleware {
             return redirect('/admin/login')->with('error', 'Your account has been suspended.');
         }
 
-        if ($tenant->plan_expires_at && $tenant->plan_expires_at->isPast()) {
+        // Shops paying per order are governed by their wallet, not by a plan end date.
+        if ((float) $tenant->order_charge <= 0 && $tenant->plan_expires_at && $tenant->plan_expires_at->isPast()) {
             auth()->logout();
             return redirect('/admin/login')->with('error', 'Your plan has expired. Please renew.');
         }
 
         app()->instance('tenant', $tenant);
+
+        // Empty wallet: orders keep arriving, but working them waits for a recharge.
+        if ($tenant->walletLocked() && $request->routeIs(...self::WALLET_LOCKED)) {
+            $message = 'Your wallet balance is empty. New orders are still saved — recharge to work on them.';
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $message, 'wallet_locked' => true], 402);
+            }
+
+            return redirect()->route('admin.wallet.index')->with('error', $message);
+        }
 
         return $next($request);
     }

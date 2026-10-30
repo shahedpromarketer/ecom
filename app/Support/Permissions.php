@@ -79,6 +79,7 @@ class Permissions
         'admin.roles.*'             => 'manage_staff',
 
         // Settings
+        'admin.wallet.*'            => 'manage_settings',
         'admin.settings.*'          => 'manage_settings',
         'admin.courier.*'           => 'manage_settings',
         'admin.integrations.*'      => 'manage_settings',   // incl. api-docs and sheet setup

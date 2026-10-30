@@ -2,6 +2,11 @@
 
 return [
 
+    // Prepaid wallet: what a new shop pays per order (super admin can change it per shop).
+    'wallet' => [
+        'order_charge' => (float) env('WALLET_ORDER_CHARGE', 0.45),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Third Party Services

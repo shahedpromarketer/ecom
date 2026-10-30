@@ -16,7 +16,36 @@ env:
   APP_DIR: /home/netpilotdigital-crm/htdocs/crm.netpilotdigital.com
 
 jobs:
+  # All automatic tests must pass before anything reaches the live server.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite3, intl, bcmath, zip, gd
+          coverage: none
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: |
+          composer install --no-interaction --no-progress --prefer-dist
+          npm ci --no-audit --no-fund
+          npm run build
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Run the tests
+        run: php artisan test
+
   deploy:
+    needs: test   # only when every test passed
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

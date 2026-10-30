@@ -198,6 +198,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('inventory/bulk-update', [InventoryController::class, 'bulkUpdate'])->name('inventory.bulkUpdate');
         Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
 
+        // Wallet (prepaid, per-order fee)
+        Route::get('wallet', [\App\Http\Controllers\Admin\WalletController::class, 'index'])->name('wallet.index');
+        Route::post('wallet/requests', [\App\Http\Controllers\Admin\WalletController::class, 'storeRequest'])->name('wallet.request');
+        Route::get('wallet/requests/{recharge}/screenshot', [\App\Http\Controllers\Admin\WalletController::class, 'screenshot'])->name('wallet.screenshot');
+
         // Reports
         Route::get('reports/products', [ReportController::class, 'productReport'])->name('reports.products');
         Route::get('reports/users', [ReportController::class, 'userReport'])->name('reports.users');

@@ -52,6 +52,14 @@ Route::prefix('super-admin')->middleware(['auth', 'super_admin'])->name('super.'
     Route::post('/system-health/clear-failed', [SuperAdminController::class, 'clearFailedJobs'])->name('system-health.clear-failed');
 
     Route::get('/activity-log',              [SuperAdminController::class, 'activityLog'])->name('activity-log');
+
+    // Wallet: recharge requests, balances, per-order charges
+    Route::get('/wallet',                    [\App\Http\Controllers\SuperAdmin\WalletAdminController::class, 'index'])->name('wallet');
+    Route::post('/wallet/requests/{id}/approve', [\App\Http\Controllers\SuperAdmin\WalletAdminController::class, 'approve'])->name('wallet.approve');
+    Route::post('/wallet/requests/{id}/reject',  [\App\Http\Controllers\SuperAdmin\WalletAdminController::class, 'reject'])->name('wallet.reject');
+    Route::get('/wallet/requests/{id}/screenshot', [\App\Http\Controllers\SuperAdmin\WalletAdminController::class, 'screenshot'])->name('wallet.screenshot');
+    Route::post('/wallet/tenants/{id}',      [\App\Http\Controllers\SuperAdmin\WalletAdminController::class, 'updateTenant'])->name('wallet.tenant');
+    Route::post('/wallet/payment-info',      [\App\Http\Controllers\SuperAdmin\WalletAdminController::class, 'paymentInfo'])->name('wallet.payment-info');
 });
 
 require __DIR__ . '/auth.php';

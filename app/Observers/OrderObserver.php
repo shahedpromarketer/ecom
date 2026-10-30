@@ -29,6 +29,9 @@ class OrderObserver
 
     public function created(Order $order): void
     {
+        // Every new order (website, sheet, API or made here) costs the shop's per-order fee, once.
+        \App\Services\Wallet::chargeOrder($order);
+
         CustomerSync::forOrder($order);
 
         // The customer ordered (from the CRM or straight on the website): their open leads are won.
