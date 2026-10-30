@@ -81,8 +81,9 @@ class WooProductImporter
             return false;
         }
 
-        // Simple product: the CRM keeps its stock on one default variant.
-        return (bool) $product->variants()->whereNull('wp_variation_id')->update(['stock' => $qty]);
+        // Simple product: the store's stock goes on the size-less slot only.
+        // Sizes added in the CRM (landing-page products) keep their own stock.
+        return (bool) $product->variants()->defaultSlot()->update(['stock' => $qty]);
     }
 
     private static function syncVariants(Product $product, array $p, float $basePrice): void
@@ -109,16 +110,24 @@ class WooProductImporter
                 $keep[] = $variant->id;
             }
         } else {
-            // Simple product → one default variant carrying the stock.
-            $variant = $product->variants()->whereNull('wp_variation_id')->first() ?? new ProductVariant(['product_id' => $product->id]);
-            $variant->fill([
-                'product_id' => $product->id,
-                'sku'        => ($p['sku'] ?? '') !== '' ? $p['sku'] : null,
-                'stock'      => self::stock($p['stock_quantity'] ?? null, $p['manage_stock'] ?? false, $p['stock_status'] ?? 'instock'),
-                'extra_price'=> 0,
-                'is_active'  => true,
-            ])->save();
-            $keep[] = $variant->id;
+            // Simple product. Sizes added in the CRM (e.g. a CartFlows landing-page product sold
+            // as simple, size asked at checkout) are the CRM's own: keep them as they are.
+            $crmSizes = $product->variants()->whereNull('wp_variation_id')->get()->filter->isCrmOnly();
+            $keep = $crmSizes->pluck('id')->all();
+
+            // One size-less slot carries the store's stock — only while the CRM has no sizes for it.
+            $default = $product->variants()->defaultSlot()->first();
+            if ($crmSizes->where('is_active', true)->isEmpty()) {
+                $variant = $default ?? new ProductVariant(['product_id' => $product->id]);
+                $variant->fill([
+                    'product_id' => $product->id,
+                    'sku'        => ($p['sku'] ?? '') !== '' ? $p['sku'] : null,
+                    'stock'      => self::stock($p['stock_quantity'] ?? null, $p['manage_stock'] ?? false, $p['stock_status'] ?? 'instock'),
+                    'extra_price'=> 0,
+                    'is_active'  => true,
+                ])->save();
+                $keep[] = $variant->id;
+            }
         }
 
         // Variations deleted in WooCommerce: switch off (keep them for past orders).

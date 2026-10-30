@@ -72,7 +72,8 @@ JSON;
                 <tr><td class="py-1 pr-3 font-mono">external_id</td><td>yes</td><td>Your own order id. Unique per order.</td></tr>
                 <tr><td class="py-1 pr-3 font-mono">customer.name / phone / address</td><td>yes</td><td>Phone: Bangladeshi mobile, any format (01…, +880…).</td></tr>
                 <tr><td class="py-1 pr-3 font-mono">customer.district, area, email, alt_phone</td><td>no</td><td></td></tr>
-                <tr><td class="py-1 pr-3 font-mono">items[].name, qty, price</td><td>yes</td><td><code>sku</code> links the line to a CRM product; <code>variant</code> is free text (size/colour).</td></tr>
+                <tr><td class="py-1 pr-3 font-mono">items[].name, qty, price</td><td>yes</td><td><code>sku</code> links the line to a CRM product; <code>variant</code> is free text (size/colour); <code>size</code> (e.g. "L") picks that size of the CRM product.</td></tr>
+                <tr><td class="py-1 pr-3 font-mono">size</td><td>no</td><td>Size chosen for the whole order (like a landing page's size field); used for items without their own size.</td></tr>
                 <tr><td class="py-1 pr-3 font-mono">shipping_charge, discount</td><td>no</td><td><code>total</code> is calculated if you leave it out.</td></tr>
                 <tr><td class="py-1 pr-3 font-mono">payment_method</td><td>no</td><td><code>cod</code> (default), <code>bkash</code>, <code>nagad</code>, <code>rocket</code>, <code>card</code>; <code>paid: true</code> if already paid.</td></tr>
                 <tr><td class="py-1 pr-3 font-mono">note, ip, utm_*, created_at, order_number</td><td>no</td><td></td></tr>

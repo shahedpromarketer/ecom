@@ -162,8 +162,20 @@ class WooOrderImporter
     {
         OrderItem::where('order_id', $order->id)->delete();
 
+        // Landing pages (CartFlows) sell a simple product and ask the size in a checkout
+        // field (billing_size). That size picks the matching size variant in the CRM.
+        $orderSize = trim((string) ($p['size'] ?? $p['billing_size'] ?? ''));
+
         foreach ($p['items'] ?? [] as $item) {
+            if ($orderSize !== '' && ! \App\Support\SizeMatcher::chosenSize((array) ($item['attributes'] ?? []))) {
+                $item['attributes'] = array_merge((array) ($item['attributes'] ?? []), ['Size' => $orderSize]);
+            }
             [$product, $variant] = self::matchProduct($item);
+            // No variant, or only the simple product's size-less slot: use the chosen size if the CRM has it.
+            if ($product && (! $variant || $variant->isDefaultSlot())) {
+                $sized = \App\Support\SizeMatcher::find($product, \App\Support\SizeMatcher::chosenSize((array) ($item['attributes'] ?? [])));
+                $variant = $sized ?? $variant;
+            }
             $qty = max(1, (int) ($item['qty'] ?? 1));
             $lineTotal = (float) ($item['total'] ?? 0);
 

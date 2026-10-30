@@ -26,4 +26,26 @@ class ProductVariant extends Model
     {
         return $this->belongsTo(Product::class);
     }
+
+    /** The one size-less variant a simple store product gets (its stock mirrors the store). */
+    public function isDefaultSlot(): bool
+    {
+        return ! $this->wp_variation_id && blank($this->size) && blank($this->color);
+    }
+
+    /**
+     * A size / colour added in the CRM to a product the store sells as simple
+     * (e.g. CartFlows landing pages). Its stock lives in the CRM only.
+     */
+    public function isCrmOnly(): bool
+    {
+        return ! $this->wp_variation_id && ! $this->isDefaultSlot();
+    }
+
+    public function scopeDefaultSlot($q)
+    {
+        return $q->whereNull('wp_variation_id')
+            ->where(fn ($w) => $w->whereNull('size')->orWhere('size', ''))
+            ->where(fn ($w) => $w->whereNull('color')->orWhere('color', ''));
+    }
 }

@@ -107,7 +107,9 @@ class OrderObserver
 
                 // Products synced from a WooCommerce store: WooCommerce already reduced its stock
                 // when the order was placed and the plugin reports every change, so don't count it twice.
-                if ($variant->product?->wp_product_id) {
+                // Sizes added only in the CRM (landing-page products the store sells as simple)
+                // have no stock in WooCommerce, so the CRM counts those itself.
+                if ($variant->product?->wp_product_id && ! $variant->isCrmOnly()) {
                     continue;
                 }
 

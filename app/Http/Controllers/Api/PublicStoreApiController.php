@@ -45,6 +45,8 @@ class PublicStoreApiController extends Controller
             'items.*.name'       => 'required|string|max:255',
             'items.*.sku'        => 'nullable|string|max:100',
             'items.*.variant'    => 'nullable|string|max:255',
+            'items.*.size'       => 'nullable|string|max:30',
+            'size'               => 'nullable|string|max:30',
             'items.*.qty'        => 'required|integer|min:1|max:1000',
             'items.*.price'      => 'required|numeric|min:0',
             'shipping_charge'    => 'nullable|numeric|min:0',
@@ -142,7 +144,7 @@ class PublicStoreApiController extends Controller
             'price'      => (float) $i['price'],
             'subtotal'   => (float) $i['price'] * (int) $i['qty'],
             'total'      => (float) $i['price'] * (int) $i['qty'],
-            'attributes' => ! empty($i['variant']) ? [$i['variant']] : [],
+            'attributes' => array_filter(['Size' => $i['size'] ?? null]) + (! empty($i['variant']) ? [$i['variant']] : []),
         ], $d['items']);
         $subtotal = array_sum(array_column($items, 'total'));
         $shipping = (float) ($d['shipping_charge'] ?? 0);
@@ -150,6 +152,7 @@ class PublicStoreApiController extends Controller
 
         return [
             'id'             => $d['external_id'],
+            'size'           => $d['size'] ?? null,
             'number'         => $d['order_number'] ?? $d['external_id'],
             'status'         => ($d['status'] ?? 'new') === 'cancelled' ? 'cancelled' : 'processing',
             'created_at'     => $d['created_at'] ?? null,

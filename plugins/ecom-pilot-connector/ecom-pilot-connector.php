@@ -3,7 +3,7 @@
  * Plugin Name:       Ecom Pilot Connector
  * Plugin URI:        https://crm.netpilotdigital.com
  * Description:       Sends every WooCommerce order to your Ecom Pilot CRM, saves unfinished checkouts, checks blacklisted / duplicate orders at checkout, and receives status updates from the CRM.
- * Version:           2.2.0
+ * Version:           2.3.0
  * Requires PHP:      7.4
  * Requires Plugins:  woocommerce
  * Author:            Ecom Pilot
@@ -15,7 +15,7 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
-define('EP_VERSION', '2.2.0');
+define('EP_VERSION', '2.3.0');
 define('EP_OPTION', 'ecom_pilot_settings');
 define('EP_RETRY_OPTION', 'ecom_pilot_retry_queue');
 
@@ -166,6 +166,8 @@ function ep_order_payload(WC_Order $order): array
 
     return [
         'id'             => $order->get_id(),
+        // Size asked at checkout on landing pages (CartFlows field "billing_size") for simple products.
+        'size'           => ep_order_size($order),
         'number'         => (string) $order->get_order_number(),
         'status'         => $order->get_status(),
         'created_at'     => $created ? $created->format(DATE_ATOM) : null,
@@ -191,6 +193,23 @@ function ep_order_payload(WC_Order $order): array
             'referrer'     => (string) $order->get_meta('_wc_order_attribution_referrer'),
         ],
     ];
+}
+
+/**
+ * The size the customer chose in a checkout field (CartFlows landing pages use "billing_size";
+ * other builders use similar names). Empty when the order has no such field.
+ */
+function ep_order_size(WC_Order $order): string
+{
+    $keys = apply_filters('ecom_pilot_size_meta_keys', ['_billing_size', 'billing_size', '_shipping_size', 'size', '_size']);
+    foreach ($keys as $key) {
+        $value = $order->get_meta($key, true);
+        if (is_scalar($value) && trim((string) $value) !== '') {
+            return sanitize_text_field((string) $value);
+        }
+    }
+
+    return '';
 }
 
 /** Orders created/changed during this request, sent once the request is done (items are saved by then). */
