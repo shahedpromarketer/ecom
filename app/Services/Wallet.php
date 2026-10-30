@@ -10,13 +10,24 @@ use App\Support\Tenancy;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Prepaid wallet. Every new order costs the shop's order_charge (default ৳0.45), once.
+ * Prepaid wallet. Each order costs the shop's order_charge (set per shop, default ৳0.45), once.
+ * When it is taken is set per shop too: when the order is confirmed (default) or when it arrives.
  * Orders are never refused: at zero balance they still arrive, and order work is locked
  * until a recharge is approved.
  */
 class Wallet
 {
-    /** Take the fee for a new order (safe to call twice: one charge per order, ever). */
+    public const CHARGE_ON = ['confirmed' => 'When the order is confirmed', 'created' => 'When the order arrives'];
+
+    /** Statuses an order only reaches once it was accepted (confirmed directly, or moved on past it). */
+    public const CONFIRMED = ['confirmed', 'processing', 'shipped', 'hand_delivery', 'hand_delivery_completed', 'delivered',
+        'completed', 'courier_payment_validate', 'pending_return', 'return_collection', 'returned', 'partial_delivered'];
+
+    /**
+     * Take the fee for an order if it is due now (safe to call on every change:
+     * one charge per order, ever). Pending / cancelled-before-confirming orders cost nothing
+     * in shops charged on confirmation.
+     */
     public static function chargeOrder(Order $order): void
     {
         if (! $order->tenant_id) {
@@ -28,6 +39,9 @@ class Wallet
             $fee = (float) ($tenant?->order_charge ?? 0);
             if (! $tenant || $fee <= 0 || WalletTransaction::withoutGlobalScopes()->where('order_id', $order->id)->exists()) {
                 return;
+            }
+            if (($tenant->charge_on ?? 'confirmed') === 'confirmed' && ! in_array($order->status, self::CONFIRMED, true)) {
+                return;   // not confirmed yet
             }
 
             $balance = round((float) $tenant->wallet_balance - $fee, 2);

@@ -29,7 +29,7 @@ class OrderObserver
 
     public function created(Order $order): void
     {
-        // Every new order (website, sheet, API or made here) costs the shop's per-order fee, once.
+        // The shop's per-order fee: now for shops charged on arrival (or an order made already confirmed).
         \App\Services\Wallet::chargeOrder($order);
 
         CustomerSync::forOrder($order);
@@ -62,6 +62,9 @@ class OrderObserver
         if (! $order->wasChanged('status')) {
             return;
         }
+
+        // Confirmed (or moved on past confirmed) for the first time: the shop's per-order fee.
+        \App\Services\Wallet::chargeOrder($order);
 
         if (in_array($order->status, self::COURIER_STATUSES, true) && ! $order->stock_deducted) {
             $this->deductStock($order);

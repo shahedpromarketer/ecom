@@ -3,7 +3,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 
 class Tenant extends Model {
-    protected $fillable = ['name','email','phone','logo','status','plan','plan_expires_at','owner_id','max_orders','max_users','settings','order_charge'];
+    protected $fillable = ['name','email','phone','logo','status','plan','plan_expires_at','owner_id','max_orders','max_users','settings','order_charge','charge_on'];
     protected $casts = ['settings' => 'array', 'plan_expires_at' => 'datetime', 'wallet_balance' => 'decimal:2', 'order_charge' => 'decimal:2'];
 
     protected static function booted(): void {

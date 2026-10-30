@@ -37,16 +37,56 @@ class WalletTest extends TestCase
             'shipping_name' => 'R', 'shipping_phone' => '01711111111', 'shipping_address' => 'Dhaka', 'subtotal' => 500, 'total' => 500, 'status' => 'pending']));
     }
 
-    public function test_every_new_order_costs_the_fee_once(): void
+    public function test_the_fee_is_taken_once_when_an_order_is_confirmed(): void
     {
         Wallet::credit($this->shop, 10, 'recharge');
         $order = $this->order();
-        Wallet::chargeOrder($order);   // a second call (e.g. a resend) never charges twice
+        $this->assertEquals(10, (float) $this->shop->fresh()->wallet_balance);   // pending: nothing yet
 
+        Tenancy::as($this->shop->id, fn () => $order->update(['status' => 'confirmed']));
+        $this->assertEquals(9.55, (float) $this->shop->fresh()->wallet_balance);
+
+        Tenancy::as($this->shop->id, function () use ($order) {
+            $order->update(['status' => 'shipped']);
+            $order->update(['status' => 'pending']);
+            $order->update(['status' => 'confirmed']);   // back and forth: still one fee
+        });
+        Wallet::chargeOrder($order->fresh());
         $this->assertEquals(9.55, (float) $this->shop->fresh()->wallet_balance);
         $this->assertSame(1, WalletTransaction::withoutGlobalScopes()->where('type', 'order')->count());
     }
 
+    public function test_orders_cancelled_before_confirming_cost_nothing_and_skipping_confirm_still_counts(): void
+    {
+        Wallet::credit($this->shop, 10, 'recharge');
+        $cancelled = $this->order();
+        Tenancy::as($this->shop->id, fn () => $cancelled->update(['status' => 'cancelled']));
+        $this->assertEquals(10, (float) $this->shop->fresh()->wallet_balance);
+
+        $straight = $this->order();
+        Tenancy::as($this->shop->id, fn () => $straight->update(['status' => 'processing']));   // confirmed by moving on
+        $this->assertEquals(9.55, (float) $this->shop->fresh()->wallet_balance);
+    }
+
+    public function test_bulk_status_change_charges_each_order(): void
+    {
+        Wallet::credit($this->shop, 10, 'recharge');
+        $a = $this->order();
+        $b = $this->order();
+        $this->actingAs($this->owner)->postJson(route('admin.orders.bulkStatus'), ['ids' => [$a->id, $b->id], 'status' => 'confirmed'])->assertOk();
+
+        $this->assertEquals(9.10, (float) $this->shop->fresh()->wallet_balance);
+    }
+
+    public function test_shops_charged_on_arrival(): void
+    {
+        $this->shop->update(['charge_on' => 'created']);
+        Wallet::credit($this->shop, 10, 'recharge');
+        $order = $this->order();
+        $this->assertEquals(9.55, (float) $this->shop->fresh()->wallet_balance);
+        Tenancy::as($this->shop->id, fn () => $order->update(['status' => 'confirmed']));
+        $this->assertEquals(9.55, (float) $this->shop->fresh()->wallet_balance);
+    }
     public function test_free_shops_are_never_charged(): void
     {
         $free = Tenant::create(['name' => 'Free', 'email' => 'f@test.local', 'status' => 'active', 'plan' => 'basic', 'order_charge' => 0]);
@@ -58,6 +98,7 @@ class WalletTest extends TestCase
 
     public function test_orders_still_arrive_with_an_empty_wallet(): void
     {
+        $this->shop->update(['charge_on' => 'created']);
         $site = Tenancy::as($this->shop->id, fn () => WordPressSite::create(['name' => 'Woo', 'site_url' => 'https://s.test', 'type' => 'woocommerce',
             'api_key' => WordPressSite::generateApiKey(), 'is_active' => true]));
         $body = json_encode(['id' => 1, 'number' => '1', 'status' => 'processing', 'total' => 500, 'payment_method' => 'cod',
@@ -128,7 +169,7 @@ class WalletTest extends TestCase
     public function test_super_admin_sets_charge_and_adjusts_balance(): void
     {
         $super = User::factory()->create(['is_super_admin' => true, 'role' => 'admin', 'tenant_id' => null]);
-        $this->actingAs($super)->post(route('super.wallet.tenant', $this->shop->id), ['order_charge' => 0.5, 'adjust' => 100, 'note' => 'Welcome credit'])
+        $this->actingAs($super)->post(route('super.wallet.tenant', $this->shop->id), ['order_charge' => 0.5, 'charge_on' => 'confirmed', 'adjust' => 100, 'note' => 'Welcome credit'])
             ->assertSessionHas('success');
         $this->post(route('super.wallet.payment-info'), ['payment_info' => 'bKash: 01700000000'])->assertSessionHas('success');
 

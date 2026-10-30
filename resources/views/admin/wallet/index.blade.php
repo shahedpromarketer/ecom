@@ -29,8 +29,9 @@
             @if ($fee > 0)<p class="text-xs text-textsecondary">≈ {{ number_format($tenant->ordersLeft()) }} more orders</p>@endif
         </div>
         <div class="{{ $card }} p-4"><p class="text-xs text-textsecondary">Per order</p>
-            <p class="text-xl font-bold">{{ $fee > 0 ? '৳' . number_format($fee, 2) : 'Free' }}</p></div>
-        <div class="{{ $card }} p-4"><p class="text-xs text-textsecondary">Orders this month</p>
+            <p class="text-xl font-bold">{{ $fee > 0 ? '৳' . number_format($fee, 2) : 'Free' }}</p>
+            @if ($fee > 0)<p class="text-xs text-textsecondary">{{ ($tenant->charge_on ?? 'confirmed') === 'created' ? 'Taken when an order arrives' : 'Taken when an order is confirmed' }}</p>@endif</div>
+        <div class="{{ $card }} p-4"><p class="text-xs text-textsecondary">Charged orders this month</p>
             <p class="text-xl font-bold">{{ number_format($ordersMonth) }}</p></div>
         <div class="{{ $card }} p-4"><p class="text-xs text-textsecondary">Spent this month</p>
             <p class="text-xl font-bold">৳{{ number_format($spentMonth, 2) }}</p></div>

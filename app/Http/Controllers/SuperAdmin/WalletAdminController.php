@@ -64,11 +64,12 @@ class WalletAdminController extends Controller
     {
         $data = $request->validate([
             'order_charge' => 'required|numeric|min:0|max:1000',
+            'charge_on'    => ['required', \Illuminate\Validation\Rule::in(array_keys(Wallet::CHARGE_ON))],
             'adjust'       => 'nullable|numeric|min:-1000000|max:1000000',
             'note'         => 'nullable|string|max:255',
         ]);
         $tenant = Tenant::findOrFail($id);
-        $tenant->forceFill(['order_charge' => $data['order_charge']])->save();
+        $tenant->forceFill(['order_charge' => $data['order_charge'], 'charge_on' => $data['charge_on']])->save();
         if (! empty($data['adjust']) && (float) $data['adjust'] !== 0.0) {
             Wallet::credit($tenant, (float) $data['adjust'], 'adjustment', $data['note'] ?: 'Adjusted by Ecom Pilot', null, auth()->id());
         }

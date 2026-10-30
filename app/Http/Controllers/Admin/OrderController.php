@@ -1011,10 +1011,16 @@ class OrderController extends Controller
 
     public function bulkStatus(Request $request)
     {
-        $request->validate(['ids' => 'required|array', 'status' => 'required|string']);
+        $request->validate(['ids' => 'required|array|max:500', 'status' => ['required', 'string', \Illuminate\Validation\Rule::in(self::ALL_STATUSES)]]);
         $q = Order::whereIn('id', $request->ids);
         if (!auth()->user()->is_super_admin) { $q->where('tenant_id', auth()->user()->tenant_id); }
-        $q->update(['status' => $request->status]);
+        // One by one, so each order gets what a status change brings: wallet fee on confirming,
+        // stock at the courier / back on return, customer counts and the store's status.
+        foreach ($q->get() as $order) {
+            if ($order->status !== $request->status) {
+                $order->update(['status' => $request->status]);
+            }
+        }
         $this->clearSidebarCache();
         return response()->json(['success' => true]);
     }

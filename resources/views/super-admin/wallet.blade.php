@@ -73,9 +73,13 @@
                         <b>{{ $t->name }}</b>
                         <span class="{{ $t->walletLocked() ? 'text-red-600 font-bold' : '' }}">৳{{ number_format((float) $t->wallet_balance, 2) }}{{ $t->walletLocked() ? ' · locked' : '' }}</span>
                     </div>
-                    <div class="grid grid-cols-3 gap-2">
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         <label class="text-xs text-gray-500">Per order (৳, 0 = free)
                             <input type="number" name="order_charge" step="0.01" min="0" value="{{ (float) $t->order_charge }}" class="{{ $input }}"></label>
+                        <label class="text-xs text-gray-500">Charge
+                            <select name="charge_on" class="{{ $input }}">
+                                @foreach (\App\Services\Wallet::CHARGE_ON as $k => $l)<option value="{{ $k }}" @selected(($t->charge_on ?? 'confirmed') === $k)>{{ $l }}</option>@endforeach
+                            </select></label>
                         <label class="text-xs text-gray-500">Add / take (৳)
                             <input type="number" name="adjust" step="0.01" placeholder="e.g. 100 or -50" class="{{ $input }}"></label>
                         <label class="text-xs text-gray-500">Note
