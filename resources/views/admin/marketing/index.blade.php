@@ -180,11 +180,11 @@ $platformConfig = [
          }">
 
         {{-- ── Accordion Header ── --}}
-        <div class="px-6 py-4 flex items-center justify-between cursor-pointer
+        <div class="px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-3 cursor-pointer
                     hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors select-none"
              @click="open = !open">
 
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-3 sm:gap-4 min-w-0">
                 {{-- Gradient icon --}}
                 <div class="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm {{ $cfg['gradient'] }}">
                     <svg class="w-6 h-6 text-white" viewBox="{{ $cfg['icon_vb'] }}" fill="currentColor">

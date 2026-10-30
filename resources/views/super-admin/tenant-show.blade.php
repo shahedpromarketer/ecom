@@ -70,7 +70,7 @@
                 <h3 class="font-semibold text-gray-800">Recent Orders</h3>
             </div>
             <div class="overflow-x-auto">
-                <table class="min-w-full text-sm">
+                <table class="ep-stack min-w-full text-sm">
                     <thead class="bg-gray-50">
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order ID</th>

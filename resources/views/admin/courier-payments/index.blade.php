@@ -52,7 +52,7 @@
     </div>
 
     <div class="{{ $card }} overflow-x-auto">
-        <table class="w-full text-sm">
+        <table class="ep-stack w-full text-sm">
             <thead><tr class="text-left text-xs text-textsecondary border-b border-border dark:border-gray-700">
                 <th class="p-3">Date</th><th>Courier</th><th>File</th><th class="text-right">Collected</th><th class="text-right">Charge</th>
                 <th class="text-center">Matched</th><th class="text-center">Different</th><th class="text-center">Unknown</th><th></th></tr></thead>

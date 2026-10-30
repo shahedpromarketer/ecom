@@ -94,7 +94,7 @@
 
     {{-- Table --}}
     <div class="overflow-x-auto">
-        <table class="w-full text-sm">
+        <table class="ep-stack w-full text-sm">
             <thead class="bg-gray-50 dark:bg-gray-700/50 border-b border-border dark:border-gray-700">
                 <tr>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Return ID</th>

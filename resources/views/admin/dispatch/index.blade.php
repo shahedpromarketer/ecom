@@ -48,10 +48,10 @@
 
         <form @submit.prevent="scan(code)" class="flex gap-2">
             <input x-ref="input" x-model="code" autocomplete="off" autofocus inputmode="text"
-                   class="flex-1 px-4 py-3 text-lg rounded-xl border-2 border-primary/40 focus:border-primary focus:outline-none bg-white dark:bg-gray-900"
+                   class="flex-1 min-w-0 px-3 sm:px-4 py-3 text-lg rounded-xl border-2 border-primary/40 focus:border-primary focus:outline-none bg-white dark:bg-gray-900"
                    placeholder="Scan or type the order number / tracking code">
-            <button class="px-4 rounded-xl bg-primary text-white font-semibold" :disabled="busy">Find</button>
-            <button type="button" @click="toggleCamera()" class="px-4 rounded-xl border border-border dark:border-gray-600 font-semibold"
+            <button class="px-3 sm:px-4 rounded-xl bg-primary text-white font-semibold" :disabled="busy">Find</button>
+            <button type="button" @click="toggleCamera()" class="px-3 sm:px-4 rounded-xl border border-border dark:border-gray-600 font-semibold"
                     x-text="camera ? 'Stop' : 'Camera'"></button>
         </form>
         <div x-show="camera" x-cloak id="ep-scanner" class="rounded-xl overflow-hidden max-w-md"></div>

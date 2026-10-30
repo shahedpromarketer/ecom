@@ -119,22 +119,22 @@
 
     {{-- Customer Insight inline row --}}
     @php $phoneOrderCount = \App\Models\Order::where('shipping_phone', $order->shipping_phone)->count(); @endphp
-    <div class="flex flex-wrap items-center gap-4 mt-4 pt-4 border-t dark:border-gray-700">
-        <div class="flex items-center gap-1 text-sm">
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4 pt-4 border-t dark:border-gray-700">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
             <span class="text-gray-500 dark:text-gray-400 text-xs">Total Orders:</span>
             <span class="font-bold text-[#1B2A4A] dark:text-white">{{ $phoneOrderCount }}</span>
-            <a href="{{ route('admin.orders.index', ['search' => $order->shipping_phone]) }}" class="text-xs text-[#F59E0B] hover:underline ml-1" target="_blank">View All ↗</a>
+            <a href="{{ route('admin.orders.index', ['search' => $order->shipping_phone]) }}" class="text-xs text-[#F59E0B] hover:underline whitespace-nowrap" target="_blank">View All ↗</a>
             @if($order->customer_id)
                 @can('view_customers')
-                <a href="{{ route('admin.customers.show', $order->customer_id) }}" class="text-xs text-primary hover:underline ml-2">Customer profile →</a>
-                <a href="{{ route('admin.customers.show', $order->customer_id) }}#followups" class="text-xs text-primary hover:underline ml-2">Schedule follow-up</a>
+                <a href="{{ route('admin.customers.show', $order->customer_id) }}" class="text-xs text-primary hover:underline whitespace-nowrap">Customer profile →</a>
+                <a href="{{ route('admin.customers.show', $order->customer_id) }}#followups" class="text-xs text-primary hover:underline whitespace-nowrap">Schedule follow-up</a>
                 @endcan
             @endif
             @can('manage_orders')
-                <form method="POST" action="{{ route('admin.orders.destroy', $order) }}" class="inline ml-3"
+                <form method="POST" action="{{ route('admin.orders.destroy', $order) }}" class="inline"
                       onsubmit="return confirm('Move order #{{ $order->order_number }} to the Recycle Bin?')">
                     @csrf @method('DELETE')
-                    <button class="text-xs text-red-500 hover:underline">Delete order</button>
+                    <button class="text-xs text-red-500 hover:underline whitespace-nowrap">Delete order</button>
                 </form>
             @endcan
         </div>
@@ -246,7 +246,7 @@
     </div>
 
     <div class="overflow-x-auto">
-        <table class="w-full text-sm" id="productsTable">
+        <table class="ep-stack w-full text-sm" id="productsTable">
             <thead>
                 <tr class="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-xl">
                     <th class="text-left px-3 py-2 rounded-l-xl">Product</th>

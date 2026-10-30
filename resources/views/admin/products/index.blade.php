@@ -67,7 +67,7 @@
     </form>
 
     <div class="overflow-x-auto">
-        <table class="w-full text-sm">
+        <table class="ep-stack w-full text-sm">
             <thead class="border-b border-border dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
                 <tr>
                     <th class="px-6 py-3 w-10">

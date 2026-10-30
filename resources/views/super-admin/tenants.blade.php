@@ -47,10 +47,10 @@
 <form method="POST" action="{{ route('super.tenants.bulk') }}" id="bulkForm">
     @csrf
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div class="flex items-center gap-3 px-4 py-3 border-b border-gray-100 bg-gray-50">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 border-b border-gray-100 bg-gray-50">
             <input type="checkbox" id="selectAll" class="rounded border-gray-300 text-blue-600" onclick="toggleAll(this)">
             <label for="selectAll" class="text-xs font-medium text-gray-500">Select All</label>
-            <select name="bulk_action" class="ml-4 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <select name="bulk_action" class="sm:ml-4 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">Bulk Action</option>
                 <option value="activate">Activate</option>
                 <option value="suspend">Suspend</option>
@@ -65,7 +65,7 @@
         </div>
 
         <div class="overflow-x-auto">
-            <table class="min-w-full text-sm">
+            <table class="ep-stack min-w-full text-sm">
                 <thead class="bg-gray-50 border-b border-gray-100">
                     <tr>
                         <th class="px-4 py-3 w-8"></th>

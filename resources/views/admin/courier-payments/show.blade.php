@@ -29,7 +29,7 @@
     </div>
 
     <div class="bg-white dark:bg-gray-800 rounded-2xl border border-border dark:border-gray-700 overflow-x-auto">
-        <table class="w-full text-sm">
+        <table class="ep-stack w-full text-sm">
             <thead><tr class="text-left text-xs text-textsecondary border-b border-border dark:border-gray-700">
                 <th class="p-3">Courier id</th><th>Order</th><th class="text-right">Paid</th><th class="text-right">Expected</th><th class="text-right">Charge</th><th class="pl-3">Result</th></tr></thead>
             <tbody>

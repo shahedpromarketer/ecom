@@ -10,6 +10,7 @@
     <script>if(localStorage.getItem('adminTheme')==='dark')document.documentElement.classList.add('dark');</script>
     @vite(['resources/css/admin.css'])
     @stack('styles')
+    @include('layouts.partials.responsive')
     <style>
         .nav-collapsed .sidebar-section-label { display: none !important; }
         .nav-collapsed > div > span { display: none !important; }
@@ -673,7 +674,7 @@
         <div class="flex items-center flex-1 min-w-0 relative">
             {{-- Page title: visible when search closed --}}
             <h1 x-show="!searchOpen"
-                class="font-heading font-semibold text-base sm:text-lg truncate flex-shrink-0
+                class="font-heading font-semibold text-base sm:text-lg truncate min-w-0
                        text-textprimary dark:text-gray-100
                        @if(request()->routeIs('admin.dashboard')) hidden sm:block @endif">
                 @yield('page-title', 'Dashboard')
@@ -854,6 +855,7 @@ window.showToast = window.showToast || function (msg, type = 'success') {
     document.body.appendChild(t);
     setTimeout(() => t.remove(), 3000);
 };
+
 </script>
 @stack('scripts')
 

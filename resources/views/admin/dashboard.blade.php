@@ -86,75 +86,75 @@
 </div>
 
 {{-- ═══ SECTION 1: 5 Summary Cards ═══ --}}
-<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
+<div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 mb-6">
 
     {{-- Total Orders --}}
-    <div class="rounded-2xl p-5 text-white" style="background: #1e3a5f;">
-        <div class="flex items-center justify-between mb-3">
-            <div class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center">
+    <div class="rounded-2xl p-3.5 sm:p-5 text-white" style="background: #1e3a5f;">
+        <div class="flex items-center justify-between gap-1 mb-2 sm:mb-3">
+            <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white/15 flex items-center justify-center">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z"/>
                 </svg>
             </div>
             <span class="text-xs font-medium bg-white/15 px-2 py-0.5 rounded-full">Orders</span>
         </div>
-        <p id="summary-total-orders" class="text-3xl font-bold">{{ number_format($totalOrders) }}</p>
+        <p id="summary-total-orders" class="text-2xl sm:text-3xl font-bold">{{ number_format($totalOrders) }}</p>
         <p class="text-xs text-white/70 mt-1">Total for period</p>
     </div>
 
     {{-- Total Revenue --}}
-    <div class="rounded-2xl p-5 text-white" style="background: #0f5132;">
-        <div class="flex items-center justify-between mb-3">
-            <div class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center">
+    <div class="rounded-2xl p-3.5 sm:p-5 text-white" style="background: #0f5132;">
+        <div class="flex items-center justify-between gap-1 mb-2 sm:mb-3">
+            <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white/15 flex items-center justify-center">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
             </div>
             <span class="text-xs font-medium bg-white/15 px-2 py-0.5 rounded-full">Revenue</span>
         </div>
-        <p id="summary-revenue" class="text-3xl font-bold">৳{{ number_format($totalRevenue, 0) }}</p>
+        <p id="summary-revenue" class="text-2xl sm:text-3xl font-bold">৳{{ number_format($totalRevenue, 0) }}</p>
         <p class="text-xs text-white/70 mt-1">Delivered & completed</p>
     </div>
 
     {{-- Pending Orders --}}
-    <div class="rounded-2xl p-5 text-white" style="background: #78350f;">
-        <div class="flex items-center justify-between mb-3">
-            <div class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center">
+    <div class="rounded-2xl p-3.5 sm:p-5 text-white" style="background: #78350f;">
+        <div class="flex items-center justify-between gap-1 mb-2 sm:mb-3">
+            <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white/15 flex items-center justify-center">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
             </div>
             <span class="text-xs font-medium bg-white/15 px-2 py-0.5 rounded-full">Pending</span>
         </div>
-        <p id="summary-pending" class="text-3xl font-bold">{{ number_format($pendingOrders) }}</p>
+        <p id="summary-pending" class="text-2xl sm:text-3xl font-bold">{{ number_format($pendingOrders) }}</p>
         <p class="text-xs text-white/70 mt-1">Awaiting action</p>
     </div>
 
     {{-- In Courier --}}
-    <div class="rounded-2xl p-5 text-white" style="background: #7c3aed;">
-        <div class="flex items-center justify-between mb-3">
-            <div class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center">
+    <div class="rounded-2xl p-3.5 sm:p-5 text-white" style="background: #7c3aed;">
+        <div class="flex items-center justify-between gap-1 mb-2 sm:mb-3">
+            <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white/15 flex items-center justify-center">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/>
                 </svg>
             </div>
             <span class="text-xs font-medium bg-white/15 px-2 py-0.5 rounded-full">Shipped</span>
         </div>
-        <p id="summary-in-courier" class="text-3xl font-bold">{{ number_format($inCourier) }}</p>
+        <p id="summary-in-courier" class="text-2xl sm:text-3xl font-bold">{{ number_format($inCourier) }}</p>
         <p class="text-xs text-white/70 mt-1">In transit</p>
     </div>
 
     {{-- Conversion Rate --}}
-    <div class="rounded-2xl p-5 text-white" style="background: #1f2937;">
-        <div class="flex items-center justify-between mb-3">
-            <div class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center">
+    <div class="rounded-2xl p-3.5 sm:p-5 text-white col-span-2 md:col-span-1" style="background: #1f2937;">
+        <div class="flex items-center justify-between gap-1 mb-2 sm:mb-3">
+            <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white/15 flex items-center justify-center">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/>
                 </svg>
             </div>
             <span class="text-xs font-medium bg-white/15 px-2 py-0.5 rounded-full">Rate</span>
         </div>
-        <p id="summary-conversion" class="text-3xl font-bold">{{ $conversionRate }}%</p>
+        <p id="summary-conversion" class="text-2xl sm:text-3xl font-bold">{{ $conversionRate }}%</p>
         <p class="text-xs text-white/70 mt-1">Completion rate</p>
     </div>
 
@@ -722,7 +722,7 @@ function statusCardData() {
                 this.loading = false;
                 applyStatusChart(data.statuses);
                 this.updateLegend(data.statuses);
-                this.updateCards(data.cards, data.total, data.return_ratio);
+                // The summary cards at the top follow the page's own date filter, not this chart's.
             });
         },
 

@@ -59,7 +59,8 @@
             <span class="text-sm font-semibold text-textprimary dark:text-white">Who receives orders</span>
             <span class="text-xs {{ $queued ? 'text-amber-600 font-semibold' : 'text-textsecondary' }}">{{ $queued }} order(s) waiting in the queue</span>
         </div>
-        <table class="w-full text-sm">
+        <div class="overflow-x-auto">
+        <table class="ep-stack w-full text-sm min-w-[560px]">
             <thead class="bg-gray-50 dark:bg-gray-700/50">
                 <tr class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     <th class="px-5 py-2.5">Receives orders</th>
@@ -85,6 +86,7 @@
                 @endforelse
             </tbody>
         </table>
+        </div>
     </div>
 
     <div class="flex flex-wrap gap-2">

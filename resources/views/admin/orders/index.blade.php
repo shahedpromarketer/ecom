@@ -2,7 +2,7 @@
 
 @section('title', 'Ecom Pilot')
 
-@section('page-title')@endsection
+@section('page-title', 'Orders')
 
 
 @section('content')
@@ -471,8 +471,8 @@
     {{-- Table Header Bar --}}
     <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
 
-        {{-- Single Row: Title + Show entries (left) | Both searches (right) --}}
-        <div class="flex items-center justify-between gap-4">
+        {{-- One row on wide screens; on phones the searches go to their own line --}}
+        <div class="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
 
             {{-- Left: Title + Show entries --}}
             <div class="flex items-center gap-4 min-w-0">
@@ -491,7 +491,7 @@
             </div>
 
             {{-- Right: ID search + General search --}}
-            <div class="flex items-center gap-3 flex-shrink-0">
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
 
                 {{-- ID-only search --}}
                 {{-- ID search --}}
@@ -499,17 +499,17 @@
                     <span class="inline-flex items-center h-[30px] px-2 bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-200 text-xs font-bold rounded-l-lg border border-gray-300 dark:border-gray-500 border-r-0">ID</span>
                     <input type="text" id="id-search-input" value="{{ request('id_search') }}"
                         placeholder="Search by ID"
-                        class="h-[30px] w-32 px-3 text-xs rounded-r-lg border border-gray-300 dark:border-gray-500
+                        class="h-[30px] w-28 sm:w-32 px-3 text-xs rounded-r-lg border border-gray-300 dark:border-gray-500
                                bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400
                                focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
                 </div>
 
                 {{-- General search --}}
-                <div class="flex items-center gap-1.5">
+                <div class="flex items-center gap-1.5 flex-1 sm:flex-none min-w-0">
                     <label class="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">Search:</label>
                     <input type="text" id="search-input" value="{{ request('search') }}"
                         placeholder="Order# or phone..."
-                        class="h-[30px] w-44 px-3 text-xs rounded-lg border border-gray-300 dark:border-gray-500
+                        class="h-[30px] w-full sm:w-44 min-w-0 px-3 text-xs rounded-lg border border-gray-300 dark:border-gray-500
                                bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400
                                focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
                 </div>
@@ -527,8 +527,10 @@
     {{-- Table + Pagination (replaced on real-time search) --}}
     <div id="orders-table-container">
 
-    {{-- Table --}}
-    <div class="overflow-x-auto w-full">
+    @include('admin.orders.partials.mobile-cards')
+
+    {{-- Table (tablets and up) --}}
+    <div class="hidden md:block overflow-x-auto w-full">
         <table class="w-full text-sm min-w-[1400px] border-collapse">
         <thead>
         <tr class="bg-gray-50 dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400 border-b-2 border-gray-200 dark:border-gray-700">
@@ -807,7 +809,6 @@
         </table>
     </div>
 
-    <p class="text-xs text-gray-400 text-center py-2 sm:hidden">← Scroll to see more →</p>
 
     {{-- Pagination --}}
     <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex justify-center">

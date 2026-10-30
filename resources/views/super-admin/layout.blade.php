@@ -5,17 +5,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Super Admin — Ecom Pilot</title>
     @vite(['resources/css/admin.css'])
+    @include('layouts.partials.responsive')
     <style>
         .sa-sidebar { background-color: #1B2A4A; }
+        /* Phones: the menu slides in from the left; desktop: always open. */
+        @media (max-width: 1023px) {
+            .sa-sidebar { transform: translateX(-100%); transition: transform .2s ease; }
+            body.sa-menu-open .sa-sidebar { transform: none; }
+            body.sa-menu-open .sa-overlay { display: block; }
+        }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex">
+<body class="bg-gray-100 min-h-screen overflow-x-hidden">
+
+{{-- Dark background behind the open menu on phones --}}
+<div class="sa-overlay hidden fixed inset-0 bg-black/40 z-40 lg:hidden" onclick="document.body.classList.remove('sa-menu-open')"></div>
 
 {{-- Sidebar --}}
-<aside class="sa-sidebar w-64 min-h-screen flex flex-col text-white fixed left-0 top-0 z-50">
-    <div class="p-6 border-b border-white/10">
-        <h1 class="text-lg font-bold leading-tight">Ecom Pilot</h1>
-        <p class="text-xs text-blue-300 mt-0.5">Super Admin Panel</p>
+<aside class="sa-sidebar w-64 h-screen overflow-y-auto flex flex-col text-white fixed left-0 top-0 z-50">
+    <div class="p-6 border-b border-white/10 flex items-start justify-between">
+        <div>
+            <h1 class="text-lg font-bold leading-tight">Ecom Pilot</h1>
+            <p class="text-xs text-blue-300 mt-0.5">Super Admin Panel</p>
+        </div>
+        <button type="button" class="lg:hidden p-1 -mr-2 text-gray-300 hover:text-white" aria-label="Close menu"
+                onclick="document.body.classList.remove('sa-menu-open')">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
     </div>
 
     <nav class="flex-1 p-4 space-y-1">
@@ -68,17 +84,21 @@
 </aside>
 
 {{-- Main Content --}}
-<div class="ml-64 flex-1 flex flex-col min-h-screen">
+<div class="lg:ml-64 flex flex-col min-h-screen min-w-0">
     {{-- Top Bar --}}
-    <header class="bg-white shadow-sm px-6 py-4 flex items-center justify-between">
-        <h2 class="text-lg font-semibold text-gray-800">@yield('page-title', 'Super Admin')</h2>
-        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+    <header class="bg-white shadow-sm px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3 sticky top-0 z-30">
+        <button type="button" class="lg:hidden p-2 -ml-2 rounded-lg text-gray-600 hover:bg-gray-100" aria-label="Open menu"
+                onclick="document.body.classList.add('sa-menu-open')">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg>
+        </button>
+        <h2 class="text-base sm:text-lg font-semibold text-gray-800 truncate min-w-0 flex-1">@yield('page-title', 'Super Admin')</h2>
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700 whitespace-nowrap">
             Super Admin
         </span>
     </header>
 
     {{-- Flash Messages --}}
-    <div class="px-6 pt-4">
+    <div class="px-4 sm:px-6 pt-4">
         @if (session('success'))
             <div class="p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm mb-4">
                 {{ session('success') }}
@@ -92,7 +112,7 @@
     </div>
 
     {{-- Page Content --}}
-    <main class="flex-1 p-6">
+    <main class="flex-1 p-4 sm:p-6 min-w-0">
         @yield('content')
     </main>
 </div>

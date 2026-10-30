@@ -134,8 +134,8 @@
         </button>
     </div>
     @else
-    <div class="overflow-x-clip">
-        <table class="w-full table-fixed">
+    <div class="overflow-x-auto">
+        <table class="w-full table-fixed min-w-[860px]">
             <thead class="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
                 <tr>
                     <th class="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-[28%]">Site</th>
@@ -363,7 +363,7 @@
     </div>
     @else
     <div class="overflow-x-auto">
-        <table class="w-full min-w-[500px]">
+        <table class="ep-stack w-full min-w-[500px]">
             <thead class="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
                 <tr>
                     <th class="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Site</th>

@@ -142,7 +142,7 @@
         <div class="rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-700 text-sm font-semibold text-textprimary dark:text-white">Orders</div>
             <div class="overflow-x-auto">
-                <table class="w-full text-sm">
+                <table class="ep-stack w-full text-sm">
                     <thead class="bg-gray-50 dark:bg-gray-700/50">
                         <tr class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                             <th class="px-5 py-2.5">Order</th><th class="px-4 py-2.5">Products</th>

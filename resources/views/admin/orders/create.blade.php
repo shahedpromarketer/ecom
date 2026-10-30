@@ -148,7 +148,7 @@
     </div>
 
     <div class="overflow-x-auto">
-        <table class="w-full text-sm" id="productsTable">
+        <table class="ep-stack w-full text-sm" id="productsTable">
             <thead>
                 <tr class="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-xl">
                     <th class="text-left px-3 py-2 rounded-l-xl">Product</th>
