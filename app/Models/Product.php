@@ -9,7 +9,7 @@ class Product extends Model
     use \App\Models\Concerns\BelongsToTenant, \App\Models\Concerns\GoesToRecycleBin;
 
     protected $fillable = [
-        'wp_product_id', 'name', 'slug', 'description', 'short_description',
+        'wp_product_id', 'wordpress_site_id', 'name', 'slug', 'description', 'short_description',
         'price', 'regular_price', 'sale_price',
         'sku', 'status', 'is_featured', 'meta_title', 'meta_description',
         'tenant_id',

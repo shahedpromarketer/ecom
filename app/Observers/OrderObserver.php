@@ -94,22 +94,17 @@ class OrderObserver
     {
         DB::transaction(function () use ($order) {
             foreach ($order->items()->with('variant')->get() as $item) {
-                // If variant_id not set, try to match by product + size info
-                $variant = $item->variant ?? ProductVariant::where('product_id', $item->product_id)
-                    ->where(function ($q) use ($item) {
-                        $q->where('size', $item->variant_info)
-                          ->orWhere('color', $item->variant_info);
-                    })
-                    ->first();
-                if (! $variant) {
-                    continue;
+                // The CRM owns stock for every product (store products too): it goes down here,
+                // when the parcel goes to the courier, and the new number is sent to the store.
+                $variant = $item->variant ?? $this->variantFor($item);
+                if ($variant && ! $item->variant_id) {
+                    $item->forceFill(['variant_id' => $variant->id])->saveQuietly();   // remember which one it was
                 }
-
-                // Products synced from a WooCommerce store: WooCommerce already reduced its stock
-                // when the order was placed and the plugin reports every change, so don't count it twice.
-                // Sizes added only in the CRM (landing-page products the store sells as simple)
-                // have no stock in WooCommerce, so the CRM counts those itself.
-                if ($variant->product?->wp_product_id && ! $variant->isCrmOnly()) {
+                if (! $variant) {
+                    if ($item->product_id) {
+                        \App\Models\ActivityLog::log('order.stock_skipped', $order,
+                            "Stock not reduced for \"{$item->product_name}\": choose its size / variant on the order.");
+                    }
                     continue;
                 }
 
@@ -142,6 +137,29 @@ class OrderObserver
      * courier_deduct stock log, so a later edit to the order items does not
      * change how much comes back).
      */
+    /**
+     * A line without a chosen variant: its size from the order text ("Size: L"),
+     * or the product's only variant when it has just one.
+     */
+    private function variantFor(\App\Models\OrderItem $item): ?ProductVariant
+    {
+        if (! $item->product_id) {
+            return null;
+        }
+        $product = \App\Models\Product::find($item->product_id);
+        if (! $product) {
+            return null;
+        }
+        $info = (string) $item->variant_info;
+        $sized = \App\Support\SizeMatcher::find($product, \App\Support\SizeMatcher::chosenSize($info !== '' ? explode(' / ', $info) : []));
+        if ($sized) {
+            return $sized;
+        }
+        $active = $product->variants()->where('is_active', true)->get();
+
+        return $active->count() === 1 ? $active->first() : null;
+    }
+
     private function restoreStock(Order $order): void
     {
         DB::transaction(function () use ($order) {

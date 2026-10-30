@@ -26,10 +26,11 @@ class WooProductImporter
     /** @return array{0: Product, 1: string} created | updated */
     public static function upsert(WordPressSite $site, array $p): array
     {
-        return DB::transaction(function () use ($p) {
+        return StoreStockPusher::withoutPushing(fn () => DB::transaction(function () use ($p, $site) {
             $wpId = (string) $p['id'];
 
-            $product = Product::withTrashed()->where('wp_product_id', $wpId)->first()
+            $product = Product::withTrashed()->where('wp_product_id', $wpId)
+                    ->where(fn ($q) => $q->where('wordpress_site_id', $site->id)->orWhereNull('wordpress_site_id'))->first()
                 ?? (! empty($p['sku']) ? Product::withTrashed()->whereNull('wp_product_id')->where('sku', $p['sku'])->first() : null);
 
             $created = ! $product;
@@ -48,6 +49,7 @@ class WooProductImporter
 
             $product->fill([
                 'wp_product_id'     => $wpId,
+                'wordpress_site_id' => $site->id,
                 'name'              => (string) ($p['name'] ?? 'Unnamed product'),
                 'slug'              => $product->slug ?: self::uniqueSlug((string) ($p['slug'] ?? $p['name'] ?? $wpId), $product->id),
                 'sku'               => ($p['sku'] ?? '') !== '' ? $p['sku'] : $product->sku,
@@ -64,28 +66,18 @@ class WooProductImporter
             self::syncVariants($product, $p, $regular);
 
             return [$product, $created ? 'created' : 'updated'];
-        });
+        }));
     }
 
-    /** Only stock changed in WooCommerce (sent on every sale / restock). */
-    public static function updateStock(array $s): bool
+    /**
+     * WooCommerce reported a stock change (its own checkout reduces stock when an order is placed).
+     * The CRM owns stock — it only goes down when a parcel goes to the courier — so the CRM keeps
+     * its number and sends it back to the store. Returns the product, or null if not imported yet.
+     */
+    public static function updateStock(array $s): ?Product
     {
-        $qty = self::stock($s['stock_quantity'] ?? null, $s['manage_stock'] ?? false, $s['stock_status'] ?? 'instock');
-
-        if (! empty($s['variation_id'])) {
-            return (bool) ProductVariant::where('wp_variation_id', (int) $s['variation_id'])->update(['stock' => $qty]);
-        }
-
-        $product = Product::where('wp_product_id', (string) ($s['product_id'] ?? ''))->first();
-        if (! $product) {
-            return false;
-        }
-
-        // Simple product: the store's stock goes on the size-less slot only.
-        // Sizes added in the CRM (landing-page products) keep their own stock.
-        return (bool) $product->variants()->defaultSlot()->update(['stock' => $qty]);
+        return Product::where('wp_product_id', (string) ($s['product_id'] ?? ''))->first();
     }
-
     private static function syncVariants(Product $product, array $p, float $basePrice): void
     {
         $keep = [];
@@ -103,7 +95,8 @@ class WooProductImporter
                     'sku'             => ($v['sku'] ?? '') !== '' ? $v['sku'] : null,
                     'size'            => $size,
                     'color'           => $color,
-                    'stock'           => self::stock($v['stock_quantity'] ?? null, $v['manage_stock'] ?? false, $v['stock_status'] ?? 'instock'),
+                    // The CRM owns stock: the store's number is only the starting point for a new variation.
+                    ...($variant->exists ? [] : ['stock' => self::stock($v['stock_quantity'] ?? null, $v['manage_stock'] ?? false, $v['stock_status'] ?? 'instock')]),
                     'extra_price'     => round($price - ($product->sale_price ?? $basePrice), 2),
                     'is_active'       => ($v['status'] ?? 'publish') === 'publish',
                 ])->save();
@@ -122,7 +115,7 @@ class WooProductImporter
                 $variant->fill([
                     'product_id' => $product->id,
                     'sku'        => ($p['sku'] ?? '') !== '' ? $p['sku'] : null,
-                    'stock'      => self::stock($p['stock_quantity'] ?? null, $p['manage_stock'] ?? false, $p['stock_status'] ?? 'instock'),
+                    ...($variant->exists ? [] : ['stock' => self::stock($p['stock_quantity'] ?? null, $p['manage_stock'] ?? false, $p['stock_status'] ?? 'instock')]),
                     'extra_price'=> 0,
                     'is_active'  => true,
                 ])->save();

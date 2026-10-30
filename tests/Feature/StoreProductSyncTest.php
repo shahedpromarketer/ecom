@@ -122,17 +122,32 @@ class StoreProductSyncTest extends TestCase
         $this->inShop(fn () => $this->assertSame(999, ProductVariant::where('wp_variation_id', 601)->value('stock')));
     }
 
-    public function test_stock_push_updates_variant(): void
+    public function test_store_stock_reports_do_not_change_crm_stock(): void
     {
+        $this->withoutDefer();   // run the push to the store right away
+        \Illuminate\Support\Facades\Http::fake(['*' => \Illuminate\Support\Facades\Http::response(['ok' => true])]);
         $this->signed('products', $this->jacket());
+        // WooCommerce's checkout reduced its stock to 3: the CRM keeps 7 (its own) and answers with it.
         $this->signed('stock', ['product_id' => 501, 'variation_id' => 601, 'manage_stock' => true, 'stock_quantity' => 3, 'stock_status' => 'instock'])
-            ->assertOk()->assertJson(['updated' => true]);
+            ->assertOk()->assertJson(['updated' => false, 'crm_owns_stock' => true]);
 
-        $this->inShop(fn () => $this->assertSame(3, ProductVariant::where('wp_variation_id', 601)->value('stock')));
+        $this->inShop(fn () => $this->assertSame(7, ProductVariant::where('wp_variation_id', 601)->value('stock')));
+        \Illuminate\Support\Facades\Http::assertSent(fn ($r) => str_ends_with($r->url(), '/ecom-pilot/v1/stock-set')
+            && collect($r['items'])->firstWhere('variation_id', 601)['stock'] === 7);
     }
 
-    public function test_crm_does_not_deduct_stock_for_store_products(): void
+    public function test_resending_a_product_keeps_crm_stock(): void
     {
+        $this->signed('products', $this->jacket());
+        $this->inShop(fn () => ProductVariant::where('wp_variation_id', 601)->update(['stock' => 4]));
+        $this->signed('products', $this->jacket());   // still says 7
+
+        $this->inShop(fn () => $this->assertSame(4, ProductVariant::where('wp_variation_id', 601)->value('stock')));
+    }
+
+    public function test_store_product_stock_goes_down_at_the_courier_and_is_sent_to_the_store(): void
+    {
+        \Illuminate\Support\Facades\Http::fake(['*' => \Illuminate\Support\Facades\Http::response(['ok' => true])]);
         $this->signed('products', $this->jacket());
 
         $this->inShop(function () {
@@ -142,8 +157,31 @@ class StoreProductSyncTest extends TestCase
             OrderItem::create(['order_id' => $order->id, 'product_id' => $variant->product_id, 'variant_id' => $variant->id,
                 'product_name' => 'Jacket', 'qty' => 2, 'unit_price' => 1350, 'total' => 2700]);
 
+            $this->assertSame(7, $variant->fresh()->stock);   // confirmed: nothing taken yet
             $order->update(['status' => 'shipped']);
-            $this->assertSame(7, $variant->fresh()->stock);   // WooCommerce owns this stock
+            $this->assertSame(5, $variant->fresh()->stock);   // handed to the courier
+            \App\Services\StoreStockPusher::push($variant->product);
+            $order->update(['status' => 'cancelled']);
+            $this->assertSame(7, $variant->fresh()->stock);
+        });
+
+        \Illuminate\Support\Facades\Http::assertSent(fn ($r) => str_ends_with($r->url(), '/ecom-pilot/v1/stock-set')
+            && collect($r['items'])->firstWhere('variation_id', 601)['stock'] === 5
+            && \App\Support\PluginSignature::verify($this->store->api_key, $r->body(), $r->header('X-EP-Timestamp')[0], $r->header('X-EP-Signature')[0]));
+    }
+
+    public function test_order_line_without_a_variant_uses_the_only_one(): void
+    {
+        $this->inShop(function () {
+            $p = Product::create(['name' => 'Cap', 'slug' => 'cap', 'price' => 300]);
+            $v = ProductVariant::create(['product_id' => $p->id, 'stock' => 10, 'is_active' => true]);
+            $order = Order::create(['shipping_name' => 'A', 'shipping_phone' => '01700000000', 'shipping_address' => 'Dhaka',
+                'subtotal' => 300, 'total' => 300, 'payment_method' => 'cod', 'status' => 'confirmed']);
+            $item = OrderItem::create(['order_id' => $order->id, 'product_id' => $p->id, 'product_name' => 'Cap', 'qty' => 3, 'unit_price' => 100, 'total' => 300]);
+
+            $order->update(['status' => 'shipped']);
+            $this->assertSame(7, $v->fresh()->stock);
+            $this->assertSame($v->id, $item->fresh()->variant_id);
         });
     }
 

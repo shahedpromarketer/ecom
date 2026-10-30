@@ -3,7 +3,7 @@
  * Plugin Name:       Ecom Pilot Connector
  * Plugin URI:        https://crm.netpilotdigital.com
  * Description:       Sends every WooCommerce order to your Ecom Pilot CRM, saves unfinished checkouts, checks blacklisted / duplicate orders at checkout, and receives status updates from the CRM.
- * Version:           2.3.0
+ * Version:           2.4.0
  * Requires PHP:      7.4
  * Requires Plugins:  woocommerce
  * Author:            Ecom Pilot
@@ -15,7 +15,7 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
-define('EP_VERSION', '2.3.0');
+define('EP_VERSION', '2.4.0');
 define('EP_OPTION', 'ecom_pilot_settings');
 define('EP_RETRY_OPTION', 'ecom_pilot_retry_queue');
 
@@ -380,7 +380,8 @@ add_action('woocommerce_update_product_variation', 'ep_queue_product', 20);
 
 function ep_queue_stock($product)
 {
-    if (! ep_credentials() || ! $product instanceof WC_Product) {
+    // Stock set by the CRM itself is not reported back to it.
+    if (! empty($GLOBALS['ep_from_crm']) || ! ep_credentials() || ! $product instanceof WC_Product) {
         return;
     }
     $isVariation = $product->is_type('variation');
@@ -639,6 +640,37 @@ add_action('rest_api_init', function () {
                 'total_pages' => (int) $result->max_num_pages,
                 'products'    => array_map('ep_product_payload', $result->products),
             ], 200);
+        },
+    ]);
+
+    // The CRM owns stock (it goes down when a parcel goes to the courier) and sends its numbers here.
+    register_rest_route('ecom-pilot/v1', '/stock-set', [
+        'methods'             => 'POST',
+        'permission_callback' => 'ep_verify_incoming',
+        'callback'            => function (WP_REST_Request $request) {
+            $done = [];
+            $GLOBALS['ep_from_crm'] = true;   // do not report these changes back to the CRM
+            foreach ((array) $request->get_param('items') as $item) {
+                $id = (int) ($item['variation_id'] ?? 0) ?: (int) ($item['product_id'] ?? 0);
+                $qty = max(0, (int) ($item['stock'] ?? 0));
+                $product = $id ? wc_get_product($id) : null;
+                if (! $product) {
+                    continue;
+                }
+                // "Plenty" in the CRM for a product the store does not count: leave it uncounted.
+                if (! $product->get_manage_stock() && $qty >= 999) {
+                    continue;
+                }
+                if (! $product->get_manage_stock()) {
+                    $product->set_manage_stock(true);
+                    $product->save();
+                }
+                wc_update_product_stock($product, $qty, 'set');
+                $done[] = $id;
+            }
+            $GLOBALS['ep_from_crm'] = false;
+
+            return new WP_REST_Response(['ok' => true, 'updated' => $done], 200);
         },
     ]);
 
