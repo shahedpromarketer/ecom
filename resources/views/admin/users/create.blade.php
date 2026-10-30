@@ -45,15 +45,15 @@
                        class="w-full px-4 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary dark:focus:border-primary transition-all duration-200">
             </div>
             <div>
-                <label class="block text-xs font-medium text-textsecondary dark:text-gray-400 mb-1.5">Phone</label>
+                <label class="block text-xs font-medium text-textsecondary dark:text-gray-400 mb-1.5">Mobile number</label>
                 <input type="text" name="phone" value="{{ old('phone') }}" placeholder="01XXXXXXXXX"
                        class="w-full px-4 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary dark:focus:border-primary transition-all duration-200">
             </div>
         </div>
 
         <div>
-            <label class="block text-xs font-medium text-textsecondary dark:text-gray-400 mb-1.5">Email <span class="text-danger">*</span></label>
-            <input type="email" name="email" value="{{ old('email') }}" required
+            <label class="block text-xs font-medium text-textsecondary dark:text-gray-400 mb-1.5">Email <span class="text-textsecondary font-normal">(or give a mobile number — either one is used to sign in)</span></label>
+            <input type="email" name="email" value="{{ old('email') }}"
                    class="w-full px-4 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary dark:focus:border-primary transition-all duration-200">
         </div>
 

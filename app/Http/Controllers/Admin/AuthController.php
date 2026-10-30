@@ -24,8 +24,8 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        $credentials = $request->validate([
-            'email'    => ['required', 'email'],
+        $request->validate([
+            'email'    => ['required', 'string', 'max:150'],   // email or mobile number
             'password' => ['required'],
         ]);
 
@@ -40,7 +40,8 @@ class AuthController extends Controller
             ])->withInput($request->only('email'));
         }
 
-        if (Auth::attempt($credentials, $request->boolean('remember'))) {
+        $account = \App\Models\User::findForLogin((string) $request->input('email'));
+        if ($account && Auth::attempt(['id' => $account->id, 'password' => $request->input('password')], $request->boolean('remember'))) {
             \Illuminate\Support\Facades\RateLimiter::clear($throttleKey);
             $user = auth()->user();
 

@@ -359,13 +359,13 @@ class SuperAdminController extends Controller {
             'action_performed' => 'user.password_reset',
             'subject_type'     => User::class,
             'subject_id'       => $user->id,
-            'description'      => 'Super admin set a new password for ' . $user->email,
+            'description'      => 'Super admin set a new password for ' . $user->loginId(),
             'ip_address'       => $request->ip(),
             'user_agent'       => $request->userAgent(),
             'tenant_id'        => null,
         ]);
 
-        return back()->with('success', 'New password set for ' . $user->email . '. Send it to the client; they can change it later from their profile.');
+        return back()->with('success', 'New password set for ' . $user->loginId() . '. Send it to the client; they can change it later from their profile.');
     }
 
     // ─── Feature 2: Impersonation ─────────────────────────────────────────────

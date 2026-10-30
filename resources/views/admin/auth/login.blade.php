@@ -77,11 +77,11 @@
                     <div>
                         <label for="email" class="block text-sm font-medium mb-1.5
                                                    text-textprimary dark:text-gray-200">
-                            Email address
+                            Email or mobile number
                         </label>
-                        <input type="email" id="email" name="email"
-                               value="{{ old('email') }}"
-                               required autofocus autocomplete="email"
+                        <input type="text" id="email" name="email"
+                               value="{{ old('email') }}" placeholder="you@example.com or 01XXXXXXXXX"
+                               required autofocus autocomplete="username"
                                class="w-full px-4 py-2.5 text-sm rounded-lg transition-colors
                                       focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent
                                       text-textprimary dark:text-gray-100

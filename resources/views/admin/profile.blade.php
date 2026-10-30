@@ -70,7 +70,7 @@
             {{-- Title + user info --}}
             <div class="min-w-0">
                 <p class="text-sm font-semibold text-textprimary dark:text-gray-100">Personal Information</p>
-                <p class="text-xs text-textsecondary dark:text-gray-400 truncate">{{ $user->email }}</p>
+                <p class="text-xs text-textsecondary dark:text-gray-400 truncate">{{ $user->email ?: $user->phone }}</p>
             </div>
         </div>
 

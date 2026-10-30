@@ -82,6 +82,44 @@ class User extends Authenticatable
         return $this->roleModel?->display_name ?? 'Staff';
     }
 
+    /** Bangladeshi mobile numbers kept one way: 01XXXXXXXXX (no spaces, dashes or +880). */
+    public static function normalizePhone(?string $phone): ?string
+    {
+        $digits = preg_replace('/\D+/', '', (string) $phone);
+        if (str_starts_with($digits, '880') && strlen($digits) === 13) {
+            $digits = '0' . substr($digits, 3);
+        }
+
+        return $digits !== '' ? $digits : null;
+    }
+
+    /** The account for an email address or a mobile number (only when exactly one account has it). */
+    public static function findForLogin(string $login): ?self
+    {
+        $login = trim($login);
+        if (str_contains($login, '@')) {
+            return static::where('email', $login)->first();
+        }
+        $phone = static::normalizePhone($login);
+        if (! $phone || strlen($phone) < 6) {
+            return null;
+        }
+        $found = static::where('phone', $phone)->limit(2)->get();
+
+        return $found->count() === 1 ? $found->first() : null;
+    }
+
+    public function setPhoneAttribute($value): void
+    {
+        $this->attributes['phone'] = static::normalizePhone($value);
+    }
+
+    /** Email, or the mobile number for staff added without one. */
+    public function loginId(): string
+    {
+        return $this->email ?: (string) $this->phone;
+    }
+
     /** Can sign in to the shop panel (owner/admin or staff with a role). */
     public function canUseAdminPanel(): bool
     {

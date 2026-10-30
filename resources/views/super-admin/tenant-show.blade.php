@@ -154,13 +154,13 @@
                         </div>
                         <div class="flex-1 min-w-0">
                             <p class="text-sm font-medium text-gray-900">{{ $user->name }}</p>
-                            <p class="text-xs text-gray-500 truncate">{{ $user->email }} · {{ ucfirst($user->role ?? 'user') }}</p>
+                            <p class="text-xs text-gray-500 truncate">{{ $user->loginId() }} · {{ ucfirst($user->role ?? 'user') }}</p>
                         </div>
                     </div>
                     <details class="mt-2 group">
                         <summary class="inline-block cursor-pointer list-none px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 text-xs font-semibold hover:bg-gray-200">Set new password</summary>
                         <form method="POST" action="{{ route('super.tenants.user-password', [$tenant->id, $user->id]) }}" class="flex flex-wrap gap-2 pt-2"
-                              onsubmit="return confirm('Set this as the new password for {{ addslashes($user->email) }}? Their old password stops working.')">
+                              onsubmit="return confirm('Set this as the new password for {{ addslashes($user->loginId()) }}? Their old password stops working.')">
                             @csrf
                             <input name="password" required minlength="8" maxlength="100" autocomplete="new-password" placeholder="New password (min 8)"
                                    class="ep-pw flex-1 min-w-[180px] border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-mono">

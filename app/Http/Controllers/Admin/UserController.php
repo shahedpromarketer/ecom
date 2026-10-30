@@ -121,13 +121,14 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
+        $request->merge(['phone' => User::normalizePhone($request->phone), 'email' => $request->filled('email') ? trim($request->email) : null]);
         $request->validate([
             'name'     => 'required|string|max:255',
-            'email'    => 'required|email|unique:users,email',
-            'phone'    => 'nullable|string|max:20',
+            'email'    => 'nullable|required_without:phone|email|max:150|unique:users,email',
+            'phone'    => 'nullable|required_without:email|string|min:10|max:20|unique:users,phone',
             'password' => 'required|string|min:8',
             'role_id'  => ['required', $this->roleRule()],
-        ]);
+        ], ['email.required_without' => 'Give an email or a mobile number — staff sign in with either.', 'phone.unique' => 'This mobile number is already used by another account.']);
 
         $tenant   = auth()->user()->tenant;
         $maxUsers = $tenant?->max_users ?? null;
@@ -160,14 +161,25 @@ class UserController extends Controller
     {
         $this->assertSameTenant($user);
 
+        $request->merge(['phone' => User::normalizePhone($request->phone), 'email' => $request->filled('email') ? trim($request->email) : null]);
         $request->validate([
-            'name'    => 'required|string|max:255',
-            'email'   => 'required|email|unique:users,email,' . $user->id,
-            'phone'   => 'nullable|string|max:20',
-            'role_id' => ['required', $this->roleRule()],
-        ]);
+            'name'     => 'required|string|max:255',
+            'email'    => 'nullable|required_without:phone|email|max:150|unique:users,email,' . $user->id,
+            'phone'    => 'nullable|required_without:email|string|min:10|max:20|unique:users,phone,' . $user->id,
+            'role_id'  => ['required', $this->roleRule()],
+            'password' => 'nullable|string|min:8|max:100',
+        ], ['email.required_without' => 'Give an email or a mobile number — staff sign in with either.', 'phone.unique' => 'This mobile number is already used by another account.']);
 
         $data = $request->only('name', 'email', 'phone');
+
+        // New password for a staff member who forgot theirs (no email here). Not your own (use Profile), not the owner's.
+        if ($request->filled('password')) {
+            if ($error = $this->guardProtectedUser($user)) {
+                return back()->withInput()->with('error', $error === 'You cannot do this to your own account.' ? 'Change your own password from your Profile.' : $error);
+            }
+            $data['password'] = Hash::make($request->password);
+            $data['remember_token'] = \Illuminate\Support\Str::random(60);
+        }
 
         // Changing someone's role: not your own (no self-promotion/lock-out), not the owner's.
         if ((int) $request->role_id !== (int) $user->role_id || $this->accessLevelFor((int) $request->role_id) !== $user->role) {
@@ -178,9 +190,14 @@ class UserController extends Controller
             $data['role']    = $this->accessLevelFor((int) $request->role_id);
         }
 
-        $user->update($data);
+        $user->forceFill($data)->save();
+        if (isset($data['password'])) {
+            rescue(fn () => \Illuminate\Support\Facades\DB::table('sessions')->where('user_id', $user->id)->delete(), null, false);   // sign out old sessions
+        }
 
-        return redirect()->route('admin.users.index')->with('success', 'User updated successfully.');
+        return redirect()->route('admin.users.index')->with('success', isset($data['password'])
+            ? 'User updated. New password set — share it with ' . $user->name . '.'
+            : 'User updated successfully.');
     }
 
     public function ban(Request $request, User $user)

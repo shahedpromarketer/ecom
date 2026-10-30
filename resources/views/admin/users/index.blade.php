@@ -156,7 +156,7 @@
                             </div>
                             <div class="min-w-0">
                                 <p class="font-medium text-textprimary dark:text-gray-100 truncate">{{ $user->name }}</p>
-                                <p class="text-xs text-textsecondary dark:text-gray-400 truncate">{{ $user->email }}</p>
+                                <p class="text-xs text-textsecondary dark:text-gray-400 truncate">{{ $user->email ?: $user->phone }}</p>
                             </div>
                         </div>
                     </td>
