@@ -1687,7 +1687,11 @@
             body: JSON.stringify({ ids: selected, status: status })
         });
         const data = await response.json();
-        if (data.success) {
+        if (data.success && data.errors && data.errors.length) {
+            showToast(`${selected.length - data.errors.length} টি update হয়েছে। ${data.errors.length} টি হয়নি — আগে Confirm করুন, তারপর courier-এ পাঠান।`, 'error');
+            refreshSidebarCounts();
+            setTimeout(() => window.location.reload(), 2500);
+        } else if (data.success) {
             showToast(`${selected.length} orders updated to ${status}`, 'success');
             refreshSidebarCounts();
             setTimeout(() => window.location.reload(), 1000);

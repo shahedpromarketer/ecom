@@ -37,6 +37,10 @@ class CourierTracker
      */
     public static function book(Order $order, CourierSetting $account, ?float $deliveryFee = null, ?string $notes = null): CourierShipment
     {
+        if ($why = $order->courierBlockReason('shipped')) {
+            throw new \RuntimeException($why);
+        }
+
         $existing = $order->shipment;
         if ($existing && $existing->consignment_id && ! in_array($existing->status, ['cancelled'], true)) {
             throw new \RuntimeException('Order #' . $order->order_number . ' is already booked with ' . ucfirst($existing->courier_name) . ' (' . $existing->tracking_code . ').');

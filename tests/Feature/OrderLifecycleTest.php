@@ -80,7 +80,7 @@ class OrderLifecycleTest extends TestCase
     {
         $order = $this->order();
 
-        foreach (['damage', 'hand_delivery', 'hand_delivery_completed', 'others'] as $status) {
+        foreach (['confirmed', 'hand_delivery', 'hand_delivery_completed', 'damage', 'others'] as $status) {   // hand delivery only after confirming
             $this->patch(route('admin.orders.updateStatus', $order), ['status' => $status])->assertRedirect();
             $this->assertSame($status, $order->fresh()->status);
         }

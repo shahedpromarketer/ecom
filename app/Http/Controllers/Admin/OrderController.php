@@ -297,6 +297,10 @@ class OrderController extends Controller
         $shipping      = (float)($request->shipping_charge ?? 0);
         $total         = max(0, $subtotal - $discount + $shipping);
 
+        if (in_array($request->order_status, Order::COURIER_STAGE, true)) {
+            return back()->withInput()->with('error', 'A new order can\'t go straight to the courier: save it as confirmed first, then submit it to the courier.');
+        }
+
         $order = Order::create([
             'shipping_name'     => $shippingName,
             'shipping_phone'    => $shippingPhone,
@@ -472,6 +476,10 @@ class OrderController extends Controller
             'status' => 'required|in:' . implode(',', self::ALL_STATUSES),
         ]);
 
+        if ($why = $order->courierBlockReason($request->status)) {
+            return back()->with('error', $why);
+        }
+
         $old = $order->status;
         $order->update(['status' => $request->status]);
 
@@ -548,6 +556,10 @@ class OrderController extends Controller
             'skip_followup'     => 'nullable|boolean',
             'items'             => 'nullable|array',
         ]);
+
+        if ($request->order_status !== $order->status && ($why = $order->courierBlockReason($request->order_status))) {
+            return back()->withInput()->with('error', $why);
+        }
 
         $oldData = $order->toArray();
 
@@ -660,6 +672,10 @@ class OrderController extends Controller
             'delivery_fee' => 'nullable|numeric|min:0',
             'notes'        => 'nullable|string|max:500',
         ]);
+
+        if ($why = $order->courierBlockReason('shipped')) {
+            return back()->with('error', $why);
+        }
 
         if ($request->courier === 'manual') {
             $order->shipment()->updateOrCreate(
@@ -1016,13 +1032,18 @@ class OrderController extends Controller
         if (!auth()->user()->is_super_admin) { $q->where('tenant_id', auth()->user()->tenant_id); }
         // One by one, so each order gets what a status change brings: wallet fee on confirming,
         // stock at the courier / back on return, customer counts and the store's status.
+        $errors = [];
         foreach ($q->get() as $order) {
+            if ($why = $order->courierBlockReason($request->status)) {
+                $errors[] = $why;   // pending orders go to the courier only after confirming
+                continue;
+            }
             if ($order->status !== $request->status) {
                 $order->update(['status' => $request->status]);
             }
         }
         $this->clearSidebarCache();
-        return response()->json(['success' => true]);
+        return response()->json(['success' => true, 'errors' => $errors]);
     }
 
     public function bulkCourier(Request $request)
@@ -1037,6 +1058,10 @@ class OrderController extends Controller
         $errors = [];
         $booked = 0;
         foreach (Order::whereIn('id', $request->ids)->get() as $order) {
+            if ($why = $order->courierBlockReason('shipped')) {
+                $errors[] = $why;
+                continue;
+            }
             if (! $account) {
                 CourierShipment::updateOrCreate(['order_id' => $order->id], [
                     'courier_account_id' => null, 'courier_name' => 'manual',

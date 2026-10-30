@@ -117,6 +117,28 @@ class Order extends Model
             : (string) $this->order_number;
     }
 
+    /** Statuses an order can go to the courier (or be handed over) from: it was confirmed first. */
+    public const COURIER_READY = ['confirmed', 'processing', 'shipped', 'hand_delivery'];
+
+    /** Statuses that mean "with the courier / on its way to the customer". */
+    public const COURIER_STAGE = ['shipped', 'hand_delivery'];
+
+    /** A pending (unconfirmed) order never goes to the courier: confirm it first. */
+    public function readyForCourier(): bool
+    {
+        return in_array($this->status, self::COURIER_READY, true);
+    }
+
+    /** Why this order can't move to $newStatus, or null when it can. */
+    public function courierBlockReason(string $newStatus): ?string
+    {
+        if (in_array($newStatus, self::COURIER_STAGE, true) && ! $this->readyForCourier()) {
+            return 'Order #' . $this->order_number . ' is "' . str_replace('_', ' ', $this->status) . '": confirm it first, then send it to the courier.';
+        }
+
+        return null;
+    }
+
     public function packer()
     {
         return $this->belongsTo(User::class, 'packed_by');

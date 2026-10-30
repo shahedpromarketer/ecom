@@ -18,7 +18,7 @@ use Illuminate\Http\Request;
 class DispatchController extends Controller
 {
     private const PACKABLE = ['confirmed', 'processing', 'hold'];
-    private const HANDOVER = ['confirmed', 'processing', 'hold', 'shipped'];
+    private const HANDOVER = ['confirmed', 'processing', 'shipped'];   // confirmed first; never straight from pending / hold
     private const RETURNS  = ['pending_return', 'return_collection', 'shipped', 'hold'];
 
     public function index()

@@ -366,4 +366,41 @@ class CourierTest extends TestCase
             ->assertJsonPath('status', 'On hold')
             ->assertJsonFragment(['note' => 'On hold — Customer not reachable']);
     }
+
+    // ── Confirm before courier ─────────────────────────────────────
+
+    public function test_pending_orders_never_go_to_the_courier(): void
+    {
+        $a = $this->account('steadfast');
+        Http::fake(['*' => Http::response(['status' => 200, 'consignment' => ['consignment_id' => 1, 'tracking_code' => 'T1']])]);
+        $pending = $this->order(['status' => 'pending']);
+        $hold    = $this->order(['status' => 'hold']);
+
+        $this->get(route('admin.orders.show', $pending))->assertOk()->assertSee('Confirm the order first');
+        $this->post(route('admin.orders.submitCourier', $pending), ['courier' => 'a' . $a->id])->assertSessionHas('error');
+        $this->post(route('admin.orders.submitCourier', $pending), ['courier' => 'manual'])->assertSessionHas('error');
+        $this->patch(route('admin.orders.updateStatus', $pending), ['status' => 'shipped'])->assertSessionHas('error');
+        $this->postJson(route('admin.orders.bulkCourier'), ['ids' => [$pending->id, $hold->id], 'courier' => 'a' . $a->id])
+            ->assertJsonCount(2, 'errors');
+        $this->postJson(route('admin.orders.bulkStatus'), ['ids' => [$pending->id], 'status' => 'hand_delivery'])
+            ->assertJsonCount(1, 'errors');
+        $this->postJson(route('admin.dispatch.handover'), ['account_id' => $a->id, 'order_ids' => [$hold->id]])->assertJsonPath('done', 0);
+
+        try {
+            CourierTracker::book($pending->fresh(), $a);
+            $this->fail('Booked a pending order');
+        } catch (\RuntimeException $e) {
+            $this->assertStringContainsString('confirm it first', $e->getMessage());
+        }
+        $this->assertSame('pending', $pending->fresh()->status);
+        $this->assertSame('hold', $hold->fresh()->status);
+        $this->assertSame(0, CourierShipment::count());
+        Http::assertNothingSent();
+
+        // Confirm it → now it can go.
+        $this->patch(route('admin.orders.updateStatus', $pending), ['status' => 'confirmed'])->assertSessionHas('success');
+        $this->get(route('admin.orders.show', $pending))->assertDontSee('Confirm the order first');
+        $this->post(route('admin.orders.submitCourier', $pending), ['courier' => 'a' . $a->id])->assertSessionHas('success');
+        $this->assertSame('shipped', $pending->fresh()->status);
+    }
 }
