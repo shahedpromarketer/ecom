@@ -70,6 +70,7 @@ class WalletAdminController extends Controller
 
         return view('super-admin.wallet-history', [
             'tenant'       => $tenant,
+            'w'            => \App\Services\WalletStats::summary($tenant),
             'type'         => $type,
             'transactions' => (clone $base)->with('order')->when($type, fn ($q) => $q->where('type', $type))->latest('id')->paginate(50)->withQueryString(),
             'feesMonth'    => -1 * (float) (clone $base)->where('type', 'order')->where('created_at', '>=', now()->startOfMonth())->sum('amount'),

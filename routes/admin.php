@@ -200,6 +200,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Wallet (prepaid, per-order fee)
         Route::get('wallet', [\App\Http\Controllers\Admin\WalletController::class, 'index'])->name('wallet.index');
+        Route::get('wallet/history', [\App\Http\Controllers\Admin\WalletController::class, 'history'])->name('wallet.history');
         Route::post('wallet/requests', [\App\Http\Controllers\Admin\WalletController::class, 'storeRequest'])->name('wallet.request');
         Route::get('wallet/requests/{recharge}/screenshot', [\App\Http\Controllers\Admin\WalletController::class, 'screenshot'])->name('wallet.screenshot');
 

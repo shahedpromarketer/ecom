@@ -97,23 +97,29 @@
         </div>
         <div class="divide-y divide-gray-100">
             @foreach ($tenants as $t)
-                @php $isLocked = $t->walletLocked(); $fee = (float) $t->order_charge; @endphp
-                <form method="POST" action="{{ route('super.wallet.tenant', $t->id) }}" class="p-4">@csrf
-                    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                @php $fee = (float) $t->order_charge; $sw = \App\Services\WalletStats::summary($t); @endphp
+                <form method="POST" action="{{ route('super.wallet.tenant', $t->id) }}" class="p-4 grid lg:grid-cols-3 gap-4">@csrf
+                    <div class="space-y-2">
                         <div class="flex items-center gap-2 min-w-0">
                             <span class="w-9 h-9 rounded-lg bg-blue-50 text-blue-700 font-bold flex items-center justify-center shrink-0">{{ mb_strtoupper(mb_substr($t->name, 0, 1)) }}</span>
                             <div class="min-w-0">
-                                <p class="font-semibold truncate">{{ $t->name }} <a href="{{ route('super.wallet.history', $t->id) }}" class="ml-1 text-xs font-medium text-blue-600 hover:underline">Fee history →</a></p>
-                                <p class="text-xs text-gray-500">{{ $fee > 0 ? '৳' . number_format($fee, 2) . ' per order · ' . strtolower(\App\Services\Wallet::CHARGE_ON[$t->charge_on ?? 'confirmed'] ?? '') : 'Free (no fee)' }}</p>
+                                <a href="{{ route('super.tenants.show', $t->id) }}#wallet" class="font-semibold truncate hover:underline block">{{ $t->name }}</a>
+                                <a href="{{ route('super.wallet.history', $t->id) }}" class="text-xs font-medium text-blue-600 hover:underline">History →</a>
                             </div>
                         </div>
-                        <div class="text-right">
-                            <p class="text-xs text-gray-500">Balance</p>
-                            <p class="text-lg font-bold {{ $isLocked ? 'text-red-600' : ((float) $t->wallet_balance > 0 ? 'text-green-700' : '') }}">৳{{ number_format((float) $t->wallet_balance, 2) }}</p>
-                            @if ($isLocked)<span class="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[11px] font-semibold">Locked</span>@endif
-                        </div>
+                        @include('partials.wallet-balance', ['w' => $sw, 'compact' => true])
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+                    <div class="lg:col-span-2 space-y-3">
+                    <div class="grid grid-cols-3 gap-2 text-center">
+                        @foreach (['today' => 'Today', 'month' => 'This month', 'all' => 'All time'] as $k => $l)
+                            <div class="rounded-lg bg-gray-50 p-2">
+                                <p class="text-[11px] text-gray-500">{{ $l }}</p>
+                                <p class="font-bold">৳{{ number_format($sw[$k]['cost'], 2) }}</p>
+                                <p class="text-[11px] text-gray-500">{{ number_format($sw[$k]['orders']) }} orders</p>
+                            </div>
+                        @endforeach
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
                         <label class="block text-xs text-gray-500">Fee per order (৳)
                             <input type="number" name="order_charge" step="0.01" min="0" value="{{ $fee }}" class="{{ $input }} mt-1"></label>
                         <label class="block text-xs text-gray-500">Take the fee
@@ -124,7 +130,8 @@
                             <input type="number" name="adjust" step="0.01" placeholder="100 or -50" class="{{ $input }} mt-1"></label>
                         <label class="block text-xs text-gray-500">Note
                             <input name="note" maxlength="255" placeholder="e.g. Welcome credit" class="{{ $input }} mt-1"></label>
-                        <button class="px-5 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700">Save</button>
+                        <button class="sm:col-span-2 px-5 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700">Save</button>
+                    </div>
                     </div>
                 </form>
             @endforeach

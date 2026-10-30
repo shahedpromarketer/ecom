@@ -175,7 +175,8 @@ class WalletTest extends TestCase
 
         $this->assertEquals(0.5, (float) $this->shop->fresh()->order_charge);
         $this->assertEquals(100, (float) $this->shop->fresh()->wallet_balance);
-        $this->actingAs($this->owner)->get(route('admin.wallet.index'))->assertSee('bKash: 01700000000')->assertSee('Welcome credit');
+        $this->actingAs($this->owner)->get(route('admin.wallet.index'))->assertSee('bKash: 01700000000')->assertSee('৳100.00');
+        $this->get(route('admin.wallet.history', ['day' => now()->toDateString()]))->assertSee('Welcome credit');
     }
 
     public function test_paying_shops_are_not_logged_out_by_a_plan_date(): void
@@ -193,11 +194,37 @@ class WalletTest extends TestCase
 
         $this->patch(route('admin.orders.updateStatus', $order), ['status' => 'confirmed']);
         $this->actingAs($this->owner->fresh())->get(route('admin.orders.show', $order))->assertSee('৳0.45 charged');
-        $this->get(route('admin.wallet.index'))->assertSee('#' . $order->order_number)->assertSee('Confirmed')->assertSee('৳9.55');
+        $this->get(route('admin.wallet.index'))->assertSee('৳9.55');
+        $this->get(route('admin.wallet.history', ['day' => now()->toDateString()]))->assertSee('#' . $order->order_number)->assertSee('Confirmed');
 
         $super = User::factory()->create(['is_super_admin' => true, 'role' => 'admin', 'tenant_id' => null]);
-        $this->actingAs($super)->get(route('super.wallet'))->assertSee('Fee history');
+        $this->actingAs($super)->get(route('super.wallet'))->assertSee('History →');
         $this->get(route('super.wallet.history', $this->shop->id))->assertOk()
             ->assertSee($order->order_number)->assertSee('Confirmed')->assertSee('৳0.45');
+    }
+    public function test_wallet_screens_show_balance_health_costs_and_daily_history(): void
+    {
+        Wallet::credit($this->shop, 100, 'recharge', 'Recharge via bKash');
+        $orders = collect(range(1, 3))->map(fn () => $this->order());
+        foreach ($orders as $o) {
+            Tenancy::as($this->shop->id, fn () => $o->update(['status' => 'confirmed']));
+        }
+        // ৳98.65 left ≈ 219 orders: green
+        $this->actingAs($this->owner->fresh())->get(route('admin.wallet.index'))->assertOk()
+            ->assertSee('৳98.65')->assertSee('219')->assertSee('Balance is good')->assertSee('৳1.35')->assertSee('walletChart');
+        $this->get(route('admin.wallet.history'))->assertOk()->assertSee('Today')->assertSee('−৳1.35')->assertSee('+৳100.00');
+        $this->get(route('admin.wallet.history', ['day' => now()->toDateString()]))->assertOk()
+            ->assertSee('#' . $orders[0]->order_number)->assertSee('Confirmed');
+
+        $this->shop->forceFill(['wallet_balance' => 30])->save();   // ≈ 66 orders: yellow
+        $this->actingAs($this->owner->fresh())->get(route('admin.wallet.index'))->assertSee('getting low');
+        $this->shop->forceFill(['wallet_balance' => 5])->save();   // ≈ 11 orders: red
+        $this->actingAs($this->owner->fresh())->get(route('admin.wallet.index'))->assertSee('almost empty');
+
+        $super = User::factory()->create(['is_super_admin' => true, 'role' => 'admin', 'tenant_id' => null]);
+        $this->actingAs($super)->get(route('super.tenants.show', $this->shop->id))->assertOk()
+            ->assertSee('Wallet')->assertSee('almost empty')->assertSee($orders[0]->order_number)->assertSee('Last 14 days');
+        $this->get(route('super.wallet'))->assertOk()->assertSee('almost empty');
+        $this->get(route('super.wallet.history', $this->shop->id))->assertOk()->assertSee($orders[0]->order_number);
     }
 }

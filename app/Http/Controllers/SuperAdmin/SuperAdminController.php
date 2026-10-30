@@ -103,7 +103,13 @@ class SuperAdminController extends Controller {
                             ->whereNotNull('consumer_key')
                             ->whereNotNull('consumer_secret')
                             ->get();
-        return view('super-admin.tenant-show', compact('tenant', 'recentOrders', 'usersCount', 'wpSites'));
+        // Wallet: balance health, costs, recharges and the latest fees with their orders.
+        $w          = \App\Services\WalletStats::summary($tenant);
+        $walletDays = \App\Services\WalletStats::daily($tenant, now()->subDays(13)->startOfDay());
+        $walletTx   = \App\Models\WalletTransaction::withoutGlobalScopes()->with('order')->where('tenant_id', $tenant->id)->latest('id')->take(30)->get();
+        $recharges  = \App\Models\WalletRechargeRequest::withoutGlobalScopes()->where('tenant_id', $tenant->id)->latest('id')->take(8)->get();
+
+        return view('super-admin.tenant-show', compact('tenant', 'recentOrders', 'usersCount', 'wpSites', 'w', 'walletDays', 'walletTx', 'recharges'));
     }
 
     public function syncTenantOrders(Request $request, $id)

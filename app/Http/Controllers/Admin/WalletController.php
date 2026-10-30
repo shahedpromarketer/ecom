@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use App\Models\WalletRechargeRequest;
 use App\Models\WalletTransaction;
+use App\Services\WalletStats;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -15,15 +17,35 @@ class WalletController extends Controller
 {
     public function index()
     {
-        $tenant = auth()->user()->tenant;
+        $tenant = auth()->user()->tenant ?? \App\Models\Tenant::find(\App\Support\Tenancy::id());
+        abort_unless($tenant, 404);
 
         return view('admin.wallet.index', [
             'tenant'       => $tenant,
-            'transactions' => WalletTransaction::with('order')->latest('id')->paginate(30),
+            'w'            => WalletStats::summary($tenant),
+            'chart'        => WalletStats::chart($tenant, 30),
             'requests'     => WalletRechargeRequest::latest('id')->take(10)->get(),
             'paymentInfo'  => Setting::getValue('wallet_payment_info', null, null),
-            'ordersMonth'  => WalletTransaction::where('type', 'order')->where('created_at', '>=', now()->startOfMonth())->count(),
-            'spentMonth'   => -1 * (float) WalletTransaction::where('type', 'order')->where('created_at', '>=', now()->startOfMonth())->sum('amount'),
+        ]);
+    }
+
+    /** Day by day: what each day cost; ?day=YYYY-MM-DD opens that day's orders. */
+    public function history(Request $request)
+    {
+        $tenant = auth()->user()->tenant ?? \App\Models\Tenant::find(\App\Support\Tenancy::id());
+        abort_unless($tenant, 404);
+        $day = $request->filled('day') ? rescue(fn () => Carbon::createFromFormat('Y-m-d', $request->day)->startOfDay(), null, false) : null;
+        $month = rescue(fn () => Carbon::createFromFormat('Y-m', (string) $request->month)->startOfMonth(), null, false) ?? now()->startOfMonth();
+
+        return view('admin.wallet.history', [
+            'tenant'       => $tenant,
+            'w'            => WalletStats::summary($tenant),
+            'day'          => $day,
+            'month'        => $month,
+            'days'         => $day ? collect() : WalletStats::daily($tenant, $month->copy(), $month->copy()->endOfMonth()),
+            'transactions' => $day
+                ? WalletTransaction::with('order')->whereBetween('created_at', [$day, $day->copy()->endOfDay()])->latest('id')->paginate(100)->withQueryString()
+                : null,
         ]);
     }
 

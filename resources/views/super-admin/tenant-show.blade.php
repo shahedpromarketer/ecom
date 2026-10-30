@@ -64,6 +64,47 @@
             </div>
         </div>
 
+        {{-- Wallet --}}
+        <div id="wallet" class="bg-white rounded-xl shadow-sm border border-gray-100">
+            <div class="flex flex-wrap items-center justify-between gap-2 px-6 py-4 border-b border-gray-100">
+                <h3 class="font-semibold text-gray-800">Wallet</h3>
+                <div class="flex gap-3 text-xs font-semibold">
+                    <a href="{{ route('super.wallet') }}" class="text-blue-600 hover:underline">Change fee / add money</a>
+                    <a href="{{ route('super.wallet.history', $tenant->id) }}" class="text-blue-600 hover:underline">Full history →</a>
+                </div>
+            </div>
+            <div class="p-6 space-y-5">
+                @include('partials.wallet-balance', ['w' => $w])
+                @include('partials.wallet-spend', ['w' => $w])
+
+                <div class="grid xl:grid-cols-2 gap-5">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-700 mb-2">Recharges <span class="font-normal text-gray-500">· ৳{{ number_format($w['recharged'], 2) }} in total</span></p>
+                        @forelse ($recharges as $r)
+                            <div class="flex items-center justify-between gap-2 py-1.5 border-b border-gray-100 text-sm">
+                                <span>{{ $r->created_at->format('d M Y') }} · {{ \App\Models\WalletRechargeRequest::METHODS[$r->method] ?? $r->method }}</span>
+                                <span class="flex items-center gap-2">
+                                    <b>৳{{ number_format((float) $r->amount) }}</b>
+                                    <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold {{ ['pending' => 'bg-amber-100 text-amber-700', 'approved' => 'bg-green-100 text-green-700', 'rejected' => 'bg-red-100 text-red-700'][$r->status] ?? '' }}">{{ ucfirst($r->status) }}</span>
+                                </span>
+                            </div>
+                        @empty
+                            <p class="text-sm text-gray-500">No recharges yet.</p>
+                        @endforelse
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold text-gray-700 mb-2">Last 14 days</p>
+                        @include('partials.wallet-daily', ['days' => $walletDays])
+                    </div>
+                </div>
+
+                <div>
+                    <p class="text-sm font-semibold text-gray-700 mb-2">Latest wallet history</p>
+                    @include('partials.wallet-transactions', ['transactions' => $walletTx])
+                </div>
+            </div>
+        </div>
+
         {{-- Recent Orders --}}
         <div class="bg-white rounded-xl shadow-sm border border-gray-100">
             <div class="px-6 py-4 border-b border-gray-100">
