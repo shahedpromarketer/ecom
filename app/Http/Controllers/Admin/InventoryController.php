@@ -12,25 +12,38 @@ class InventoryController extends Controller
 {
     public function index(Request $request)
     {
-        $query = ProductVariant::with(['product.images'])->where('is_active', true);
+        $base = ProductVariant::query()->where('product_variants.is_active', true);
         if (!auth()->user()->is_super_admin) {
-            $query->whereHas('product', fn($p) => $p->where('tenant_id', auth()->user()->tenant_id));
+            $base->whereHas('product', fn($p) => $p->where('tenant_id', auth()->user()->tenant_id));
         }
 
-        $variants = $query->orderBy('stock')->get();
+        // Totals for every variant, worked out by the database (not by loading them all).
+        $agg = (clone $base)
+            ->join('products', 'products.id', '=', 'product_variants.product_id')
+            ->selectRaw('COUNT(*) AS skus, COALESCE(SUM(product_variants.stock), 0) AS stock,
+                SUM(CASE WHEN product_variants.stock = 0 THEN 1 ELSE 0 END) AS out_count,
+                SUM(CASE WHEN product_variants.stock > 0 AND product_variants.stock <= 10 THEN 1 ELSE 0 END) AS low_count,
+                COALESCE(SUM((COALESCE(products.sale_price, products.price, 0) + COALESCE(product_variants.extra_price, 0)) * product_variants.stock), 0) AS value')
+            ->first();
+        $totalSkus       = (int) $agg->skus;
+        $totalStock      = (int) $agg->stock;
+        $outOfStock      = (int) $agg->out_count;
+        $lowStock        = (int) $agg->low_count;
+        $grandTotalValue = (float) $agg->value;
 
-        $totalSkus  = $variants->count();
-        $totalStock = $variants->sum('stock');
-        $outOfStock = $variants->where('stock', 0)->count();
-        $lowStock   = $variants->where('stock', '>', 0)->where('stock', '<=', 10)->count();
+        // The list: filtered and searched on the server, 50 rows a page.
+        $filter = in_array($request->filter, ['in', 'low', 'out'], true) ? $request->filter : 'all';
+        $search = trim((string) $request->input('q', ''));
+        $variants = (clone $base)->with(['product.images'])
+            ->when($filter === 'out', fn ($q) => $q->where('product_variants.stock', 0))
+            ->when($filter === 'low', fn ($q) => $q->whereBetween('product_variants.stock', [1, 10]))
+            ->when($filter === 'in', fn ($q) => $q->where('product_variants.stock', '>', 10))
+            ->when($search !== '', fn ($q) => $q->where(fn ($w) => $w->where('product_variants.sku', 'like', "%{$search}%")
+                ->orWhereHas('product', fn ($p) => $p->where('name', 'like', "%{$search}%"))))
+            ->orderBy('product_variants.stock')->orderBy('product_variants.id')
+            ->paginate(50)->withQueryString();
 
-        $grandTotalValue = $variants->sum(function ($v) {
-            $price = (float) ($v->product?->sale_price ?? $v->product?->price ?? 0)
-                   + (float) ($v->extra_price ?? 0);
-            return $price * $v->stock;
-        });
-
-        return view('admin.inventory.index', compact('variants', 'totalSkus', 'outOfStock', 'lowStock', 'totalStock', 'grandTotalValue'));
+        return view('admin.inventory.index', compact('variants', 'totalSkus', 'outOfStock', 'lowStock', 'totalStock', 'grandTotalValue', 'filter', 'search'));
     }
 
     public function adjust(Request $request, ProductVariant $variant)

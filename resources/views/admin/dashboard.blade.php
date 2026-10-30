@@ -590,7 +590,7 @@ $statusMeta = [
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="{{ asset('js/vendor/chart-4.4.0.umd.min.js') }}"></script>
 <script>
 // ── Period dropdown (top-level filter — AJAX, no page reload) ────────────────
 function periodDropdown() {

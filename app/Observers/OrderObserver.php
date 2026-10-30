@@ -19,6 +19,14 @@ class OrderObserver
     /** Order fields that change a customer's profile or counters. */
     private const CUSTOMER_FIELDS = ['shipping_phone', 'status', 'total', 'shipping_name', 'shipping_address', 'shipping_district', 'email', 'alt_phone', 'tenant_id'];
 
+    /** Side menu counts are cached: refresh them whenever an order comes, goes or changes status. */
+    public function saved(Order $order): void
+    {
+        if ($order->wasRecentlyCreated || $order->wasChanged('status')) {
+            \App\Support\SidebarCounts::forget($order->tenant_id);
+        }
+    }
+
     public function created(Order $order): void
     {
         CustomerSync::forOrder($order);
@@ -68,6 +76,7 @@ class OrderObserver
 
     public function deleted(Order $order): void
     {
+        \App\Support\SidebarCounts::forget($order->tenant_id);
         if ($order->customer_id) {
             CustomerSync::recalculateById($order->customer_id);
         }

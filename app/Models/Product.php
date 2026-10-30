@@ -59,6 +59,11 @@ class Product extends Model
 
     public function getPrimaryImageAttribute()
     {
+        // Use the images already loaded with the list (no extra query per product).
+        if ($this->relationLoaded('images')) {
+            return $this->images->firstWhere('is_primary', true) ?? $this->images->first();
+        }
+
         return $this->images()->where('is_primary', true)->first()
             ?? $this->images()->first();
     }

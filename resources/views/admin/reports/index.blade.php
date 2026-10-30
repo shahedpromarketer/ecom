@@ -10,7 +10,7 @@
 
 @section('content')
 
-<div x-data="{ tab: 'products', loading: false, rows: [], from: '{{ now()->subDays(30)->toDateString() }}', to: '{{ now()->toDateString() }}' }">
+<div x-data="reportsPage">
 
 <div class="flex flex-wrap gap-1 mb-6 bg-white dark:bg-gray-800 rounded-2xl border border-border dark:border-gray-700 shadow-sm p-1.5 w-fit">
     @foreach(['products' => 'Products', 'users' => 'Customers', 'stock' => 'Stock', 'payment' => 'Payments'] as $key => $label)

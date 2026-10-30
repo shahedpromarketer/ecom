@@ -77,25 +77,21 @@
         </div>{{-- end flex items-center gap-3 --}}
     </div>
 
-    {{-- Filter tabs + Search — client-side, no page reload --}}
-    <div x-data class="flex flex-wrap items-center gap-2 px-6 py-3 border-b border-border dark:border-gray-700">
-        <button @click="$store.inv.filter='all'"
-                :class="$store.inv.filter==='all' ? 'bg-primary text-white' : 'border border-border dark:border-gray-600 text-textsecondary dark:text-gray-400 hover:text-textprimary dark:hover:text-gray-200'"
-                class="px-3 py-1.5 text-xs font-medium rounded-xl transition-colors">All</button>
-        <button @click="$store.inv.filter='in'"
-                :class="$store.inv.filter==='in' ? 'bg-primary text-white' : 'border border-border dark:border-gray-600 text-textsecondary dark:text-gray-400 hover:text-textprimary dark:hover:text-gray-200'"
-                class="px-3 py-1.5 text-xs font-medium rounded-xl transition-colors">In Stock</button>
-        <button @click="$store.inv.filter='low'"
-                :class="$store.inv.filter==='low' ? 'bg-primary text-white' : 'border border-border dark:border-gray-600 text-textsecondary dark:text-gray-400 hover:text-textprimary dark:hover:text-gray-200'"
-                class="px-3 py-1.5 text-xs font-medium rounded-xl transition-colors">Low Stock</button>
-        <button @click="$store.inv.filter='out'"
-                :class="$store.inv.filter==='out' ? 'bg-primary text-white' : 'border border-border dark:border-gray-600 text-textsecondary dark:text-gray-400 hover:text-textprimary dark:hover:text-gray-200'"
-                class="px-3 py-1.5 text-xs font-medium rounded-xl transition-colors">Out of Stock</button>
+    {{-- Filter tabs + Search (on the server, so any number of products stays fast) --}}
+    @php
+        $tab = fn ($key) => request()->fullUrlWithQuery(['filter' => $key === 'all' ? null : $key, 'page' => null]);
+        $tabClass = fn ($key) => $filter === $key ? 'bg-primary text-white' : 'border border-border dark:border-gray-600 text-textsecondary dark:text-gray-400 hover:text-textprimary dark:hover:text-gray-200';
+    @endphp
+    <div class="flex flex-wrap items-center gap-2 px-4 sm:px-6 py-3 border-b border-border dark:border-gray-700">
+        @foreach (['all' => 'All', 'in' => 'In Stock', 'low' => 'Low Stock', 'out' => 'Out of Stock'] as $key => $label)
+            <a href="{{ $tab($key) }}" class="px-3 py-1.5 text-xs font-medium rounded-xl transition-colors {{ $tabClass($key) }}">{{ $label }}</a>
+        @endforeach
 
-        <div class="ml-auto">
-            <input type="text" x-model="$store.inv.search" placeholder="Search product or SKU…"
-                   class="px-3 py-1.5 text-xs rounded-xl border border-border dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all w-52">
-        </div>
+        <form method="GET" class="w-full sm:w-auto sm:ml-auto">
+            @if ($filter !== 'all')<input type="hidden" name="filter" value="{{ $filter }}">@endif
+            <input type="search" name="q" value="{{ $search }}" placeholder="Search product or SKU…"
+                   class="px-3 py-1.5 text-xs rounded-xl border border-border dark:border-gray-600 bg-white dark:bg-gray-700/50 text-textprimary dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all w-full sm:w-52">
+        </form>
     </div>
 
     {{-- Table --}}
@@ -261,6 +257,9 @@
             </tfoot>
         </table>
     </div>
+    @if ($variants->hasPages())
+        <div class="px-4 sm:px-6 py-4 border-t border-border dark:border-gray-700">{{ $variants->links() }}</div>
+    @endif
 </div>
 
 @endsection
@@ -269,7 +268,7 @@
 <script>
 document.addEventListener('alpine:init', () => {
     Alpine.store('inv', {
-        filter: 'all',
+        filter: @js($filter),
         search: '',
     });
 });

@@ -1,4 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&family=Tiro+Bangla:ital@0;1&display=swap');
+/* Fonts served from our own build (no Google request, cached long-term). Latin for Inter / Poppins, Bengali from Tiro Bangla. */
+@import '@fontsource/inter/latin-400.css';
+@import '@fontsource/inter/latin-500.css';
+@import '@fontsource/inter/latin-600.css';
+@import '@fontsource/inter/latin-700.css';
+@import '@fontsource/poppins/latin-500.css';
+@import '@fontsource/poppins/latin-600.css';
+@import '@fontsource/poppins/latin-700.css';
+@import '@fontsource/tiro-bangla/bengali-400.css';
 
 @tailwind base;
 @tailwind components;

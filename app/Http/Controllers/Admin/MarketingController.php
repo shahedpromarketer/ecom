@@ -15,13 +15,11 @@ class MarketingController extends Controller
     {
         $tenantId = auth()->user()->tenant_id;
 
-        $pixels = collect(self::PLATFORMS)->mapWithKeys(function ($platform) use ($tenantId) {
-            $pixel = MarketingPixel::firstOrCreate(
-                ['platform' => $platform, 'tenant_id' => $tenantId],
-                ['is_active' => false]
-            );
-            return [$platform => $pixel];
-        });
+        // One query for all platforms; only missing ones are created.
+        $existing = MarketingPixel::whereIn('platform', self::PLATFORMS)->get()->keyBy('platform');
+        $pixels = collect(self::PLATFORMS)->mapWithKeys(fn ($platform) => [
+            $platform => $existing[$platform] ?? MarketingPixel::create(['platform' => $platform, 'tenant_id' => $tenantId, 'is_active' => false]),
+        ]);
 
         return view('admin.marketing.index', compact('pixels'));
     }

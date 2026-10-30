@@ -8,9 +8,7 @@
     <span class="text-textprimary font-medium">Analytics</span>
 @endsection
 
-@push('styles')
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-@endpush
+
 
 @section('content')
 
@@ -136,6 +134,7 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('js/vendor/chart-4.4.0.umd.min.js') }}"></script>
 <script>
 (function() {
     const isDark = document.documentElement.classList.contains('dark');

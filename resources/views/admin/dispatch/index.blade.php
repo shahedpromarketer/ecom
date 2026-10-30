@@ -121,7 +121,6 @@
     </template>
 </div>
 
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
 function dispatchDesk(accounts) {
     const csrf = document.querySelector('meta[name=csrf-token]').content;
@@ -179,7 +178,10 @@ function dispatchDesk(accounts) {
         },
         async toggleCamera() {
             if (this.camera) { await this.scanner?.stop().catch(() => {}); this.camera = false; return; }
-            if (!window.Html5Qrcode) return this.say('Camera scanner could not load.', false);
+            if (!window.Html5Qrcode) {   // loaded only when the camera is first used (375 KB)
+                await new Promise(ok => { const sc = document.createElement('script'); sc.src = @js(asset('js/vendor/html5-qrcode-2.3.8.min.js')); sc.onload = ok; sc.onerror = ok; document.head.appendChild(sc); });
+                if (!window.Html5Qrcode) return this.say('Camera scanner could not load.', false);
+            }
             this.camera = true;
             await this.$nextTick();
             this.scanner = new Html5Qrcode('ep-scanner', { formatsToSupport: [Html5QrcodeSupportedFormats.CODE_128, Html5QrcodeSupportedFormats.QR_CODE, Html5QrcodeSupportedFormats.CODE_39, Html5QrcodeSupportedFormats.EAN_13] });

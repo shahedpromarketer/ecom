@@ -63,6 +63,8 @@ jobs:
             php8.4 artisan migrate --force
             php8.4 artisan optimize:clear
             php8.4 artisan config:cache
+            php8.4 artisan route:cache
+            php8.4 artisan event:cache
             php8.4 artisan view:cache
             php8.4 artisan queue:restart || true
             # Only files this user owns; files the web server created can't be chmod-ed by us.

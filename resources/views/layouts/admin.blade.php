@@ -161,30 +161,9 @@
             $sidebarUser   = auth()->user();
             $sidebarTenant = $sidebarUser?->tenant_id;
             $sidebarIsSA   = $sidebarUser?->is_super_admin;
-            $sidebarCacheKey = 'sidebar_order_counts_' . ($sidebarIsSA ? 'sa' : $sidebarTenant);
-
-            $counts = \Illuminate\Support\Facades\Cache::remember($sidebarCacheKey, 120, function () use ($sidebarTenant, $sidebarIsSA) {
-                $base = fn($s = null) => $sidebarIsSA
-                    ? ($s ? \App\Models\Order::where('status', $s) : \App\Models\Order::query())
-                    : ($s ? \App\Models\Order::where('tenant_id', $sidebarTenant)->where('status', $s)
-                          : \App\Models\Order::where('tenant_id', $sidebarTenant));
-
-                return [
-                    'all'            => $base()->count(),
-                    'pending'        => $base('pending')->count(),
-                    'confirmed'      => $base('confirmed')->count(),
-                    'processing'     => $base('processing')->count(),
-                    'hold'           => $base('hold')->count(),
-                    'shipped'        => $base('shipped')->count(),
-                    'delivered'      => $base('delivered')->count(),
-                    'completed'      => $base('completed')->count(),
-                    'cancelled'      => $base('cancelled')->count(),
-                    'pending_return' => $base('pending_return')->count(),
-                    'returned'       => $base('returned')->count(),
-                    'incomplete'     => ($sidebarIsSA ? \App\Models\Order::query() : \App\Models\Order::where('tenant_id', $sidebarTenant))
-                                        ->where('status','pending')->where('payment_status','unpaid')->where('source','!=','manual')->count(),
-                ];
-            });
+            // One grouped query (cached 2 min) for the order counts; badges cached 1 min per user.
+            $counts        = \App\Support\SidebarCounts::orders($sidebarUser);
+            $sidebarBadges = \App\Support\SidebarCounts::badges($sidebarUser);
             $ordersActive = request()->is('admin/orders*') || request()->is('admin/payments*');
         @endphp
 
@@ -312,7 +291,7 @@
         </div>
 
         {{-- Failed orders (unfinished checkouts) --}}
-        @php $failedPending = \App\Models\IncompleteOrder::where('status', 'pending')->count(); @endphp
+        @php $failedPending = $sidebarBadges['failed']; @endphp
         <a href="{{ route('admin.failed-orders.index') }}"
            class="flex items-center gap-3 py-3 pr-4 text-sm font-medium transition-colors duration-150 {{ $navItem('admin.failed-orders*') }}">
             <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
@@ -326,7 +305,7 @@
 
         @can('manage_orders')
         {{-- Packing, hand-over, returns (scanning) --}}
-        @php $returnsWaiting = \App\Models\Order::whereIn('status', ['pending_return', 'return_collection'])->count(); @endphp
+        @php $returnsWaiting = $counts['return_waiting'] ?? 0; @endphp
         <a href="{{ route('admin.dispatch.index') }}"
            class="flex items-center gap-3 py-3 pr-4 text-sm font-medium transition-colors duration-150 {{ $navItem('admin.dispatch*') }}">
             <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
@@ -351,8 +330,7 @@
 
         {{-- Leads / pre-orders --}}
         @php
-            $leadsNew = \App\Models\Lead::query()->visibleTo(auth()->user())
-                ->where('status', 'pending')->whereNull('read_at')->count();
+            $leadsNew = $sidebarBadges['leads'];
         @endphp
         <a href="{{ route('admin.leads.index') }}"
            class="flex items-center gap-3 py-3 pr-4 text-sm font-medium transition-colors duration-150 {{ $navItem('admin.leads*') }}">
@@ -390,8 +368,7 @@
         </a>
 
         @php
-            $followupsDue = \App\Models\Followup::query()->visibleTo(auth()->user())->open()
-                ->whereDate('scheduled_for', '<=', today())->count();
+            $followupsDue = $sidebarBadges['followups'];
         @endphp
         <a href="{{ route('admin.followups.index') }}"
            class="flex items-center gap-3 py-3 pr-4 text-sm font-medium transition-colors duration-150 {{ $navItem('admin.followups*') }}">

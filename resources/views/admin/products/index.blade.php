@@ -115,7 +115,7 @@
                         @endif
                     </td>
                     <td class="px-4 py-3">
-                        @php $totalStock = $product->variants->sum('stock'); @endphp
+                        @php $totalStock = (int) ($product->variants_sum_stock ?? $product->variants->sum('stock')); @endphp
                         <span class="text-sm font-medium {{ $totalStock === 0 ? 'text-danger' : ($totalStock <= 10 ? 'text-amber-600 dark:text-amber-400' : 'text-textprimary dark:text-gray-100') }}">
                             {{ $totalStock }}
                         </span>

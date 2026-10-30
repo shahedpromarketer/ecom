@@ -29,25 +29,8 @@ class OrderController extends Controller
 
     public function index(Request $request)
     {
-        // Auto-pull new orders from active WooCommerce sites silently
-        try {
-            $wpQuery = \App\Models\WordPressSite::where('is_active', true)
-                ->whereIn('type', ['woocommerce', 'wordpress'])
-                ->whereNotNull('consumer_key')
-                ->whereNotNull('consumer_secret');
-            if (!auth()->user()->is_super_admin) {
-                $wpQuery->where('tenant_id', auth()->user()->tenant_id);
-            }
-            $sites = $wpQuery->get();
-
-            foreach ($sites as $site) {
-                if (true) {
-                    app(IntegrationController::class)->pullNewOrders($site);
-                }
-            }
-        } catch (\Exception $e) {
-            // Silent fail — never break the orders page
-        }
+        // New store orders arrive by themselves (plugin push, and the orders:pull-new job every
+        // few seconds), so opening this page never waits on a store's server.
 
         $perPage = in_array((int) $request->get('per_page', 10), [10,25,50,100,150,200,250,300,500,1000,1500,2000])
             ? (int) $request->get('per_page', 10) : 10;
@@ -1200,9 +1183,7 @@ class OrderController extends Controller
 
     private function clearSidebarCache(): void
     {
-        $user = auth()->user();
-        $key  = 'sidebar_order_counts_' . ($user->is_super_admin ? 'sa' : $user->tenant_id);
-        Cache::forget($key);
+        \App\Support\SidebarCounts::forget(auth()->user()->tenant_id);
     }
 
     private function parseDateRange(string $range): array

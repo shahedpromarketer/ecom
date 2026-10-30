@@ -195,14 +195,24 @@
                     </tr>
                 </thead>
                 <tbody>
+                    @php
+                        // One query for every courier (was three per courier).
+                        $courierStats = \App\Models\CourierShipment::query()
+                            ->join('orders', 'orders.id', '=', 'courier_shipments.order_id')
+                            ->selectRaw("courier_shipments.courier_name,
+                                COUNT(*) AS total,
+                                SUM(CASE WHEN orders.status IN ('delivered','completed') THEN 1 ELSE 0 END) AS success,
+                                SUM(CASE WHEN orders.status IN ('cancelled','returned','failed') THEN 1 ELSE 0 END) AS failed")
+                            ->whereNull('orders.deleted_at')
+                            ->groupBy('courier_shipments.courier_name')
+                            ->get()->keyBy('courier_name');
+                    @endphp
                     @foreach($activeCouriers as $courier)
                     @php
                         $cName   = $courier->courier;
-                        $total   = \App\Models\CourierShipment::where('courier_name', $cName)->count();
-                        $success = \App\Models\CourierShipment::where('courier_name', $cName)
-                            ->whereHas('order', fn($q) => $q->whereIn('status', ['delivered','completed']))->count();
-                        $failed  = \App\Models\CourierShipment::where('courier_name', $cName)
-                            ->whereHas('order', fn($q) => $q->whereIn('status', ['cancelled','returned','failed']))->count();
+                        $total   = (int) ($courierStats[$cName]->total ?? 0);
+                        $success = (int) ($courierStats[$cName]->success ?? 0);
+                        $failed  = (int) ($courierStats[$cName]->failed ?? 0);
                         $pct     = $total > 0 ? round(($success / $total) * 100) : 0;
                         $barCls  = $pct >= 70 ? 'bg-green-500' : ($pct >= 40 ? 'bg-yellow-500' : 'bg-red-500');
                         $txtCls  = $pct >= 70 ? 'text-green-600' : ($pct >= 40 ? 'text-yellow-600' : 'text-red-600');

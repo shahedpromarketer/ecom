@@ -1,4 +1,23 @@
-{{-- Shared by the admin and super-admin layouts: no sideways page scrolling, and list tables as cards on phones. --}}
+{{-- Shared by the admin and super-admin layouts: no sideways page scrolling, list tables as cards on phones,
+     and pages fetched in advance when a link is pointed at / touched (so they open almost instantly). --}}
+<script type="speculationrules">
+{
+  "prefetch": [{
+    "where": { "and": [
+      { "or": [ { "href_matches": "/admin/*" }, { "href_matches": "/super-admin/*" } ] },
+      { "not": { "href_matches": "/*export*" } },
+      { "not": { "href_matches": "/*csv*" } },
+      { "not": { "href_matches": "/*download*" } },
+      { "not": { "href_matches": "/*print*" } },
+      { "not": { "href_matches": "/*generate*" } },
+      { "not": { "href_matches": "/*logout*" } },
+      { "not": { "href_matches": "/*impersonat*" } },
+      { "not": { "selector_matches": "[target=_blank], [download], [data-no-prefetch]" } }
+    ] },
+    "eagerness": "moderate"
+  }]
+}
+</script>
 <style>
         /* Grid / flex children may shrink below their content (charts, long text, tables) instead of pushing the page wider. */
         main .grid > * { min-width: 0; }
