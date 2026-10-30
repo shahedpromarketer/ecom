@@ -185,4 +185,19 @@ class WalletTest extends TestCase
 
         $this->actingAs($this->owner)->get(route('admin.dashboard'))->assertOk();
     }
+    public function test_each_confirmed_orders_fee_is_visible(): void
+    {
+        Wallet::credit($this->shop, 10, 'recharge');
+        $order = $this->order();
+        $this->actingAs($this->owner->fresh())->get(route('admin.orders.show', $order))->assertSee('not charged yet');
+
+        $this->patch(route('admin.orders.updateStatus', $order), ['status' => 'confirmed']);
+        $this->actingAs($this->owner->fresh())->get(route('admin.orders.show', $order))->assertSee('৳0.45 charged');
+        $this->get(route('admin.wallet.index'))->assertSee('#' . $order->order_number)->assertSee('Confirmed')->assertSee('৳9.55');
+
+        $super = User::factory()->create(['is_super_admin' => true, 'role' => 'admin', 'tenant_id' => null]);
+        $this->actingAs($super)->get(route('super.wallet'))->assertSee('Fee history');
+        $this->get(route('super.wallet.history', $this->shop->id))->assertOk()
+            ->assertSee($order->order_number)->assertSee('Confirmed')->assertSee('৳0.45');
+    }
 }

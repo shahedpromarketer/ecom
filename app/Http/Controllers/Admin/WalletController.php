@@ -19,7 +19,7 @@ class WalletController extends Controller
 
         return view('admin.wallet.index', [
             'tenant'       => $tenant,
-            'transactions' => WalletTransaction::latest('id')->paginate(30),
+            'transactions' => WalletTransaction::with('order')->latest('id')->paginate(30),
             'requests'     => WalletRechargeRequest::latest('id')->take(10)->get(),
             'paymentInfo'  => Setting::getValue('wallet_payment_info', null, null),
             'ordersMonth'  => WalletTransaction::where('type', 'order')->where('created_at', '>=', now()->startOfMonth())->count(),

@@ -91,18 +91,26 @@
     <div class="{{ $card }} overflow-x-auto">
         <table class="ep-stack w-full text-sm">
             <thead><tr class="text-left text-xs text-textsecondary border-b border-border dark:border-gray-700">
-                <th class="p-3">Date</th><th>What</th><th class="text-right">Amount</th><th class="text-right pr-3">Balance</th></tr></thead>
+                <th class="p-3">Date</th><th>What</th><th>Order status</th><th class="text-right">Amount</th><th class="text-right pr-3">Balance</th></tr></thead>
             <tbody>
                 @forelse ($transactions as $t)
                     <tr class="border-b border-border dark:border-gray-700">
                         <td class="p-3 whitespace-nowrap">{{ $t->created_at->format('d M Y, h:i A') }}</td>
                         <td>{{ ['recharge' => 'Recharge', 'order' => 'Order fee', 'adjustment' => 'Adjustment'][$t->type] ?? $t->type }}
-                            <span class="text-xs text-textsecondary">{{ $t->note }}</span></td>
+                            @if ($t->type === 'order' && $t->order)
+                                <a href="{{ route('admin.orders.show', $t->order_id) }}" class="text-xs text-primary hover:underline">#{{ $t->order->order_number }}</a>
+                            @else
+                                <span class="text-xs text-textsecondary">{{ $t->note }}</span>
+                            @endif</td>
+                        <td>@if ($t->type === 'order')
+                            @if ($t->order)<span class="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700">{{ ucwords(str_replace('_', ' ', $t->order->status)) }}</span>
+                            @else<span class="text-xs text-textsecondary">Deleted</span>@endif
+                        @endif</td>
                         <td class="text-right font-semibold {{ (float) $t->amount < 0 ? 'text-red-600' : 'text-green-700' }}">{{ (float) $t->amount < 0 ? '−' : '+' }}৳{{ number_format(abs((float) $t->amount), 2) }}</td>
                         <td class="text-right pr-3">৳{{ number_format((float) $t->balance_after, 2) }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="4" class="p-6 text-center text-textsecondary">No wallet activity yet.</td></tr>
+                    <tr><td colspan="5" class="p-6 text-center text-textsecondary">No wallet activity yet.</td></tr>
                 @endforelse
             </tbody>
         </table>

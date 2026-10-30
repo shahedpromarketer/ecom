@@ -103,7 +103,7 @@
                         <div class="flex items-center gap-2 min-w-0">
                             <span class="w-9 h-9 rounded-lg bg-blue-50 text-blue-700 font-bold flex items-center justify-center shrink-0">{{ mb_strtoupper(mb_substr($t->name, 0, 1)) }}</span>
                             <div class="min-w-0">
-                                <p class="font-semibold truncate">{{ $t->name }}</p>
+                                <p class="font-semibold truncate">{{ $t->name }} <a href="{{ route('super.wallet.history', $t->id) }}" class="ml-1 text-xs font-medium text-blue-600 hover:underline">Fee history →</a></p>
                                 <p class="text-xs text-gray-500">{{ $fee > 0 ? '৳' . number_format($fee, 2) . ' per order · ' . strtolower(\App\Services\Wallet::CHARGE_ON[$t->charge_on ?? 'confirmed'] ?? '') : 'Free (no fee)' }}</p>
                             </div>
                         </div>

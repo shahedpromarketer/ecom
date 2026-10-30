@@ -61,6 +61,23 @@ class WalletAdminController extends Controller
         return Storage::disk('local')->response($r->screenshot_path);
     }
 
+    /** One shop's wallet: every fee (with its order and status), recharge and adjustment. */
+    public function history(Request $request, int $id)
+    {
+        $tenant = Tenant::findOrFail($id);
+        $type = in_array($request->type, ['order', 'recharge', 'adjustment'], true) ? $request->type : null;
+        $base = WalletTransaction::withoutGlobalScopes()->where('tenant_id', $tenant->id);
+
+        return view('super-admin.wallet-history', [
+            'tenant'       => $tenant,
+            'type'         => $type,
+            'transactions' => (clone $base)->with('order')->when($type, fn ($q) => $q->where('type', $type))->latest('id')->paginate(50)->withQueryString(),
+            'feesMonth'    => -1 * (float) (clone $base)->where('type', 'order')->where('created_at', '>=', now()->startOfMonth())->sum('amount'),
+            'ordersMonth'  => (clone $base)->where('type', 'order')->where('created_at', '>=', now()->startOfMonth())->count(),
+            'feesAll'      => -1 * (float) (clone $base)->where('type', 'order')->sum('amount'),
+        ]);
+    }
+
     /** Per-order charge, and manual add / take (e.g. welcome credit, refunds). */
     public function updateTenant(Request $request, int $id)
     {

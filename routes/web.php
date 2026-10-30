@@ -59,6 +59,7 @@ Route::prefix('super-admin')->middleware(['auth', 'super_admin'])->name('super.'
     Route::post('/wallet/requests/{id}/reject',  [\App\Http\Controllers\SuperAdmin\WalletAdminController::class, 'reject'])->name('wallet.reject');
     Route::get('/wallet/requests/{id}/screenshot', [\App\Http\Controllers\SuperAdmin\WalletAdminController::class, 'screenshot'])->name('wallet.screenshot');
     Route::post('/wallet/tenants/{id}',      [\App\Http\Controllers\SuperAdmin\WalletAdminController::class, 'updateTenant'])->name('wallet.tenant');
+    Route::get('/wallet/tenants/{id}/history', [\App\Http\Controllers\SuperAdmin\WalletAdminController::class, 'history'])->name('wallet.history');
     Route::post('/wallet/payment-info',      [\App\Http\Controllers\SuperAdmin\WalletAdminController::class, 'paymentInfo'])->name('wallet.payment-info');
 });
 

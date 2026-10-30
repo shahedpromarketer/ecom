@@ -19,6 +19,22 @@
 </div>
 @endif
 
+{{-- WALLET FEE for this order --}}
+@php
+    $feeTx   = \App\Models\WalletTransaction::where('order_id', $order->id)->where('type', 'order')->first();
+    $shopFee = (float) (auth()->user()->tenant?->order_charge ?? 0);
+@endphp
+@if ($feeTx)
+<div class="mb-4 px-4 py-2.5 rounded-2xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 text-sm text-blue-800 dark:text-blue-300 flex flex-wrap items-center gap-x-2">
+    <b>Wallet fee: ৳{{ number_format(abs((float) $feeTx->amount), 2) }} charged</b>
+    <span class="text-xs">on {{ $feeTx->created_at->format('d M Y, h:i A') }} · balance after ৳{{ number_format((float) $feeTx->balance_after, 2) }}</span>
+</div>
+@elseif ($shopFee > 0)
+<div class="mb-4 px-4 py-2.5 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-300">
+    Wallet fee: not charged yet — ৳{{ number_format($shopFee, 2) }} is taken when this order is {{ (auth()->user()->tenant?->charge_on ?? 'confirmed') === 'created' ? 'saved' : 'confirmed' }}.
+</div>
+@endif
+
 {{-- MAIN FORM --}}
 <form action="{{ route('admin.orders.update', $order->id) }}" method="POST" enctype="multipart/form-data" id="orderForm">
 @csrf
