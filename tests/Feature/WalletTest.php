@@ -128,18 +128,18 @@ class WalletTest extends TestCase
     public function test_recharge_request_approve_and_reject(): void
     {
         $this->actingAs($this->owner)->post(route('admin.wallet.request'), [
-            'amount' => 500, 'method' => 'bkash', 'transaction_id' => 'TX123', 'sender' => '01700000000',
+            'amount' => 500, 'method' => 'bkash', 'note' => 'From 01700000000',
             'screenshot' => UploadedFile::fake()->image('pay.jpg'),
         ])->assertSessionHas('success');
-        $this->post(route('admin.wallet.request'), ['amount' => 500, 'method' => 'bkash', 'transaction_id' => 'TX123',
-            'screenshot' => UploadedFile::fake()->image('pay.jpg')])->assertSessionHas('error');   // same transaction twice
+        $this->post(route('admin.wallet.request'), ['amount' => 500, 'method' => 'bkash',
+            'screenshot' => UploadedFile::fake()->image('pay.jpg')])->assertSessionHas('error');   // double click: sent once
 
         $r = WalletRechargeRequest::withoutGlobalScopes()->first();
         Storage::disk('local')->assertExists($r->screenshot_path);
         $this->get(route('admin.wallet.screenshot', $r))->assertOk();
 
         $super = User::factory()->create(['is_super_admin' => true, 'role' => 'admin', 'tenant_id' => null]);
-        $this->actingAs($super)->get(route('super.wallet'))->assertOk()->assertSee('TX123');
+        $this->actingAs($super)->get(route('super.wallet'))->assertOk()->assertSee('From 01700000000')->assertSee('View screenshot');
         $this->get(route('super.wallet.screenshot', $r->id))->assertOk();
         $this->post(route('super.wallet.approve', $r->id), ['amount' => 450])->assertSessionHas('success');   // received less
         $this->post(route('super.wallet.approve', $r->id))->assertSessionHas('error');                       // never twice
@@ -147,9 +147,9 @@ class WalletTest extends TestCase
         $this->assertEquals(450, (float) $this->shop->fresh()->wallet_balance);
         $this->assertSame('approved', $r->fresh()->status);
 
-        $this->actingAs($this->owner)->post(route('admin.wallet.request'), ['amount' => 100, 'method' => 'nagad', 'transaction_id' => 'TX9',
+        $this->actingAs($this->owner)->post(route('admin.wallet.request'), ['amount' => 100, 'method' => 'nagad',
             'screenshot' => UploadedFile::fake()->image('p.png')]);
-        $r2 = WalletRechargeRequest::withoutGlobalScopes()->where('transaction_id', 'TX9')->first();
+        $r2 = WalletRechargeRequest::withoutGlobalScopes()->where('method', 'nagad')->first();
         $this->actingAs($super)->post(route('super.wallet.reject', $r2->id), ['reason' => 'Not received'])->assertSessionHas('success');
         $this->assertSame('rejected', $r2->fresh()->status);
         $this->assertEquals(450, (float) $this->shop->fresh()->wallet_balance);
@@ -157,7 +157,7 @@ class WalletTest extends TestCase
 
     public function test_other_shops_cannot_see_a_screenshot(): void
     {
-        $this->actingAs($this->owner)->post(route('admin.wallet.request'), ['amount' => 100, 'method' => 'bkash', 'transaction_id' => 'T1',
+        $this->actingAs($this->owner)->post(route('admin.wallet.request'), ['amount' => 100, 'method' => 'bkash',
             'screenshot' => UploadedFile::fake()->image('p.png')]);
         $r = WalletRechargeRequest::withoutGlobalScopes()->first();
 

@@ -32,20 +32,19 @@ class WalletController extends Controller
         $data = $request->validate([
             'amount'         => 'required|numeric|min:10|max:1000000',
             'method'         => ['required', Rule::in(array_keys(WalletRechargeRequest::METHODS))],
-            'transaction_id' => 'required|string|max:100',
-            'sender'         => 'nullable|string|max:100',
             'screenshot'     => 'required|image|max:5120',
             'note'           => 'nullable|string|max:500',
         ]);
 
-        if (WalletRechargeRequest::where('transaction_id', $data['transaction_id'])->where('status', '!=', 'rejected')->exists()) {
-            return back()->withInput()->with('error', 'A request with this transaction ID was already sent.');
+        // A double click / resend of the same request.
+        if (WalletRechargeRequest::where('status', 'pending')->where('amount', $data['amount'])->where('created_at', '>=', now()->subMinutes(2))->exists()) {
+            return back()->with('error', 'This request was already sent. Please wait for it to be checked.');
         }
 
         $path = $request->file('screenshot')->store('wallet/' . auth()->user()->tenant_id, 'local');
         WalletRechargeRequest::create([
-            'amount' => $data['amount'], 'method' => $data['method'], 'transaction_id' => trim($data['transaction_id']),
-            'sender' => $data['sender'] ?? null, 'note' => $data['note'] ?? null, 'screenshot_path' => $path,
+            'amount' => $data['amount'], 'method' => $data['method'], 
+            'note' => $data['note'] ?? null, 'screenshot_path' => $path,
             'status' => 'pending', 'requested_by' => auth()->id(),
         ]);
 

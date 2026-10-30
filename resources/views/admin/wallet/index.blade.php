@@ -51,8 +51,11 @@
             @if ($paymentInfo)
                 <div class="text-sm p-3 rounded-xl bg-gray-50 dark:bg-gray-900 whitespace-pre-line">{{ $paymentInfo }}</div>
             @endif
-            <p class="text-xs text-textsecondary">Send the money, then fill this in with the transaction ID and a screenshot of the payment.
-                We add it to your balance as soon as we check it.</p>
+            <ol class="text-xs text-textsecondary space-y-1 list-decimal list-inside">
+                <li>Send the money to the number above.</li>
+                <li>Write the amount and upload a screenshot of the payment.</li>
+                <li>We add it to your balance as soon as we check it.</li>
+            </ol>
             <div class="grid grid-cols-2 gap-3">
                 <label class="block"><span class="text-xs text-textsecondary">Amount (৳)</span>
                     <input type="number" name="amount" min="10" step="1" required value="{{ old('amount') }}" class="{{ $input }}"></label>
@@ -61,15 +64,11 @@
                         @foreach (\App\Models\WalletRechargeRequest::METHODS as $k => $l)<option value="{{ $k }}" @selected(old('method') === $k)>{{ $l }}</option>@endforeach
                     </select></label>
             </div>
-            <label class="block"><span class="text-xs text-textsecondary">Transaction ID</span>
-                <input name="transaction_id" required maxlength="100" value="{{ old('transaction_id') }}" class="{{ $input }}"></label>
-            <label class="block"><span class="text-xs text-textsecondary">Paid from (number / account, optional)</span>
-                <input name="sender" maxlength="100" value="{{ old('sender') }}" class="{{ $input }}"></label>
             <label class="block"><span class="text-xs text-textsecondary">Payment screenshot</span>
                 <input type="file" name="screenshot" accept="image/*" required class="{{ $input }}"></label>
             <label class="block"><span class="text-xs text-textsecondary">Note (optional)</span>
                 <input name="note" maxlength="500" value="{{ old('note') }}" class="{{ $input }}"></label>
-            <button class="px-5 py-2 rounded-xl bg-primary text-white text-sm font-semibold">Send request</button>
+            <button class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold">Send request</button>
         </form>
 
         <div class="{{ $card }} p-5">
@@ -78,7 +77,7 @@
                 <div class="flex items-start justify-between gap-2 py-2 border-b border-border dark:border-gray-700 text-sm">
                     <div>
                         <b>৳{{ number_format((float) $r->amount) }}</b> · {{ \App\Models\WalletRechargeRequest::METHODS[$r->method] ?? $r->method }}
-                        <span class="text-xs text-textsecondary">· {{ $r->transaction_id }} · {{ $r->created_at->format('d M, h:i A') }}</span>
+                        <span class="text-xs text-textsecondary">· {{ $r->created_at->format('d M, h:i A') }}</span>
                         @if ($r->status === 'rejected' && $r->reject_reason)<p class="text-xs text-red-600">{{ $r->reject_reason }}</p>@endif
                     </div>
                     <span class="px-2 py-0.5 rounded-full text-xs font-semibold {{ $statusCls[$r->status] ?? '' }}">{{ ucfirst($r->status) }}</span>

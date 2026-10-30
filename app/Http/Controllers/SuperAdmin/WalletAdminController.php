@@ -26,6 +26,8 @@ class WalletAdminController extends Controller
             'tenants'     => Tenant::orderBy('name')->get(),
             'paymentInfo' => Setting::getValue('wallet_payment_info', '', null),
             'recent'      => WalletTransaction::withoutGlobalScopes()->whereIn('type', ['recharge', 'adjustment'])->latest('id')->take(15)->get(),
+            'rechargedMonth' => (float) WalletTransaction::withoutGlobalScopes()->where('type', 'recharge')->where('created_at', '>=', now()->startOfMonth())->sum('amount'),
+            'feesMonth'      => -1 * (float) WalletTransaction::withoutGlobalScopes()->where('type', 'order')->where('created_at', '>=', now()->startOfMonth())->sum('amount'),
         ]);
     }
 

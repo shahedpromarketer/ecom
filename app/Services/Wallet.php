@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\DB;
  */
 class Wallet
 {
-    public const CHARGE_ON = ['confirmed' => 'When the order is confirmed', 'created' => 'When the order arrives'];
+    public const CHARGE_ON = ['confirmed' => 'When confirmed', 'created' => 'When it arrives'];
 
     /** Statuses an order only reaches once it was accepted (confirmed directly, or moved on past it). */
     public const CONFIRMED = ['confirmed', 'processing', 'shipped', 'hand_delivery', 'hand_delivery_completed', 'delivered',
@@ -79,7 +79,7 @@ class Wallet
             $amount ??= (float) $r->amount;
             $r->forceFill(['status' => 'approved', 'amount' => $amount, 'reviewed_by' => $by, 'reviewed_at' => now()])->save();
             self::credit(Tenant::findOrFail($r->tenant_id), $amount, 'recharge',
-                'Recharge via ' . (WalletRechargeRequest::METHODS[$r->method] ?? $r->method) . ' (' . $r->transaction_id . ')', $r->id, $by);
+                'Recharge via ' . (WalletRechargeRequest::METHODS[$r->method] ?? $r->method) . ($r->transaction_id ? ' (' . $r->transaction_id . ')' : ''), $r->id, $by);
         });
     }
 }
