@@ -147,14 +147,30 @@
             </div>
             <div class="divide-y divide-gray-100">
                 @forelse($tenant->users as $user)
-                <div class="px-6 py-3 flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs">
-                        {{ strtoupper(substr($user->name, 0, 1)) }}
+                <div class="px-6 py-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs shrink-0">
+                            {{ strtoupper(substr($user->name, 0, 1)) }}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900">{{ $user->name }}</p>
+                            <p class="text-xs text-gray-500 truncate">{{ $user->email }} · {{ ucfirst($user->role ?? 'user') }}</p>
+                        </div>
                     </div>
-                    <div>
-                        <p class="text-sm font-medium text-gray-900">{{ $user->name }}</p>
-                        <p class="text-xs text-gray-500">{{ $user->email }} · {{ ucfirst($user->role ?? 'user') }}</p>
-                    </div>
+                    <details class="mt-2 group">
+                        <summary class="inline-block cursor-pointer list-none px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 text-xs font-semibold hover:bg-gray-200">Set new password</summary>
+                        <form method="POST" action="{{ route('super.tenants.user-password', [$tenant->id, $user->id]) }}" class="flex flex-wrap gap-2 pt-2"
+                              onsubmit="return confirm('Set this as the new password for {{ addslashes($user->email) }}? Their old password stops working.')">
+                            @csrf
+                            <input name="password" required minlength="8" maxlength="100" autocomplete="new-password" placeholder="New password (min 8)"
+                                   class="ep-pw flex-1 min-w-[180px] border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-mono">
+                            <button type="button" class="px-3 py-1.5 rounded-lg bg-gray-100 text-xs font-semibold hover:bg-gray-200"
+                                    onclick="const i=this.form.querySelector('.ep-pw'); i.value=Array.from(crypto.getRandomValues(new Uint32Array(3)), n => n.toString(36)).join('').slice(0, 10);">Generate</button>
+                            <button type="button" class="px-3 py-1.5 rounded-lg bg-gray-100 text-xs font-semibold hover:bg-gray-200"
+                                    onclick="const v=this.form.querySelector('.ep-pw').value; if (v) { navigator.clipboard.writeText(v); this.textContent='Copied'; }">Copy</button>
+                            <button class="px-4 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700">Save</button>
+                        </form>
+                    </details>
                 </div>
                 @empty
                 <div class="px-6 py-4 text-center text-gray-400 text-sm">No users found.</div>

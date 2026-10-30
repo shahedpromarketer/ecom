@@ -344,6 +344,30 @@ class SuperAdminController extends Controller {
         return back()->with('success', $msg);
     }
 
+    /** No email here, so a forgotten password is reset by the super admin, who tells the client. */
+    public function setUserPassword(Request $request, $id, $userId)
+    {
+        $data = $request->validate(['password' => 'required|string|min:8|max:100']);
+        $user = User::where('tenant_id', $id)->findOrFail($userId);   // only a user of this shop
+        $user->forceFill(['password' => bcrypt($data['password']), 'remember_token' => \Illuminate\Support\Str::random(60)])->save();
+        // Log out the old sessions (database sessions).
+        rescue(fn () => \Illuminate\Support\Facades\DB::table('sessions')->where('user_id', $user->id)->delete(), null, false);
+
+        ActivityLog::create([
+            'user_id'          => auth()->id(),
+            'action'           => 'user.password_reset',
+            'action_performed' => 'user.password_reset',
+            'subject_type'     => User::class,
+            'subject_id'       => $user->id,
+            'description'      => 'Super admin set a new password for ' . $user->email,
+            'ip_address'       => $request->ip(),
+            'user_agent'       => $request->userAgent(),
+            'tenant_id'        => null,
+        ]);
+
+        return back()->with('success', 'New password set for ' . $user->email . '. Send it to the client; they can change it later from their profile.');
+    }
+
     // ─── Feature 2: Impersonation ─────────────────────────────────────────────
 
     public function impersonate($id) {

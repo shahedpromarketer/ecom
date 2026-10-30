@@ -17,9 +17,9 @@ Route::get('/', function () {
 
 Route::redirect('/dashboard', '/')->name('dashboard');
 
-// Shop owner sign-up (starts a trial tenant)
-Route::get('/register', [RegisterController::class, 'show'])->name('register');
-Route::post('/register', [RegisterController::class, 'store'])->middleware('throttle:5,1');
+// Public sign-up is closed: shops are added by the super admin (Super Admin → Add Tenant).
+Route::redirect('/register', '/admin/login')->name('register');
+Route::post('/register', fn () => redirect('/admin/login'));
 
 // Leaving impersonation must work while logged in as the tenant admin,
 // so it sits outside the super_admin middleware. The controller checks the session.
@@ -34,6 +34,7 @@ Route::prefix('super-admin')->middleware(['auth', 'super_admin'])->name('super.'
     Route::get('/tenants/create',            [SuperAdminController::class, 'createTenant'])->name('tenants.create');
     Route::post('/tenants',                  [SuperAdminController::class, 'storeTenant'])->name('tenants.store');
     Route::get('/tenants/{id}',              [SuperAdminController::class, 'showTenant'])->name('tenants.show');
+    Route::post('/tenants/{id}/users/{user}/password', [SuperAdminController::class, 'setUserPassword'])->name('tenants.user-password')->middleware('throttle:20,1');
     Route::post('/tenants/{id}/suspend',     [SuperAdminController::class, 'suspendTenant'])->name('tenants.suspend');
     Route::post('/tenants/{id}/activate',    [SuperAdminController::class, 'activateTenant'])->name('tenants.activate');
     Route::delete('/tenants/{id}',           [SuperAdminController::class, 'deleteTenant'])->name('tenants.delete');
