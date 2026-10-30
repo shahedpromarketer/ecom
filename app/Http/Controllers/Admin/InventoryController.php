@@ -31,7 +31,7 @@ class InventoryController extends Controller
         $lowStock        = (int) $agg->low_count;
         $grandTotalValue = (float) $agg->value;
 
-        // The list: filtered and searched on the server, 50 rows a page.
+        // The list: filtered and searched on the server, 25 rows a page (each row carries its own adjust form).
         $filter = in_array($request->filter, ['in', 'low', 'out'], true) ? $request->filter : 'all';
         $search = trim((string) $request->input('q', ''));
         $variants = (clone $base)->with(['product.images'])
@@ -41,7 +41,7 @@ class InventoryController extends Controller
             ->when($search !== '', fn ($q) => $q->where(fn ($w) => $w->where('product_variants.sku', 'like', "%{$search}%")
                 ->orWhereHas('product', fn ($p) => $p->where('name', 'like', "%{$search}%"))))
             ->orderBy('product_variants.stock')->orderBy('product_variants.id')
-            ->paginate(50)->withQueryString();
+            ->paginate(25)->withQueryString();
 
         return view('admin.inventory.index', compact('variants', 'totalSkus', 'outOfStock', 'lowStock', 'totalStock', 'grandTotalValue', 'filter', 'search'));
     }
