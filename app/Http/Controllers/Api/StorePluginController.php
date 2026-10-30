@@ -104,15 +104,15 @@ class StorePluginController extends Controller
     /** Stock of a product/variation changed in WooCommerce (sale, refund, manual edit). */
     public function stock(Request $request)
     {
-        // The CRM owns stock (it goes down when a parcel goes to the courier), so a stock change in
-        // WooCommerce — e.g. its checkout reducing stock — is answered with the CRM's own numbers.
-        $product = \App\Services\WooProductImporter::updateStock($request->json()->all());
-        if ($product) {
+        [$product, $copied] = \App\Services\WooProductImporter::updateStock($request->json()->all());
+        $crmOwns = $product && \App\Support\Inventory::managedInCrm($product->tenant_id);
+        if ($crmOwns) {
+            // The shop keeps stock in the CRM: answer with the CRM's numbers.
             \App\Services\StoreStockPusher::queue($product->id);
         }
 
         // Unknown product: the CRM has not imported it yet — not an error for the plugin.
-        return response()->json(['ok' => true, 'updated' => false, 'crm_owns_stock' => (bool) $product]);
+        return response()->json(['ok' => true, 'updated' => $copied, 'crm_owns_stock' => $crmOwns]);
     }
 
     /**

@@ -100,6 +100,11 @@ class OrderObserver
                 if ($variant && ! $item->variant_id) {
                     $item->forceFill(['variant_id' => $variant->id])->saveQuietly();   // remember which one it was
                 }
+                // Shops not keeping stock in the CRM: the store counts its own products' stock.
+                if ($variant && $variant->product?->wp_product_id && ! $variant->isCrmOnly()
+                    && ! \App\Support\Inventory::managedInCrm($order->tenant_id)) {
+                    continue;
+                }
                 if (! $variant) {
                     if ($item->product_id) {
                         \App\Models\ActivityLog::log('order.stock_skipped', $order,

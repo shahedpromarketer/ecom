@@ -71,7 +71,8 @@ class StoreStockPusher
 
     public static function push(?Product $product): bool
     {
-        if (! $product || ! $product->wp_product_id) {
+        // Only shops that keep stock in the CRM change the website's stock.
+        if (! $product || ! $product->wp_product_id || ! \App\Support\Inventory::managedInCrm($product->tenant_id)) {
             return false;
         }
 
