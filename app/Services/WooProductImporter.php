@@ -195,7 +195,8 @@ class WooProductImporter
             return max(0, (int) $qty);
         }
 
-        return $status === 'outofstock' ? 0 : self::UNLIMITED_STOCK;
+        // The store does not count this product: the shop counts it in the CRM (Inventory), starting at 0.
+        return 0;
     }
 
     private static function uniqueSlug(string $base, ?int $ignoreId): string

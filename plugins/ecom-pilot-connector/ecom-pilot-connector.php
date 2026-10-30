@@ -657,13 +657,9 @@ add_action('rest_api_init', function () {
                 if (! $product) {
                     continue;
                 }
-                // "Plenty" in the CRM for a product the store does not count: leave it uncounted.
-                if (! $product->get_manage_stock() && $qty >= 999) {
-                    continue;
-                }
+                // The store does not count this product's stock: leave its setting alone.
                 if (! $product->get_manage_stock()) {
-                    $product->set_manage_stock(true);
-                    $product->save();
+                    continue;
                 }
                 wc_update_product_stock($product, $qty, 'set');
                 $done[] = $id;

@@ -113,13 +113,13 @@ class StoreProductSyncTest extends TestCase
         });
     }
 
-    public function test_unmanaged_stock_shows_as_plenty(): void
+    public function test_unmanaged_store_stock_starts_at_zero_in_the_crm(): void
     {
         $j = $this->jacket();
         $j['variations'][0]['manage_stock'] = false;
         $this->signed('products', $j);
 
-        $this->inShop(fn () => $this->assertSame(999, ProductVariant::where('wp_variation_id', 601)->value('stock')));
+        $this->inShop(fn () => $this->assertSame(0, ProductVariant::where('wp_variation_id', 601)->value('stock')));   // counted in the CRM from 0
     }
 
     public function test_store_stock_reports_do_not_change_crm_stock(): void
