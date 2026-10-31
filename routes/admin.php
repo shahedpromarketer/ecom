@@ -199,6 +199,17 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
 
         // Wallet (prepaid, per-order fee)
+        // The shop's own backup to its own Google Drive
+        Route::get('backup', [\App\Http\Controllers\Admin\BackupController::class, 'index'])->name('backup.index');
+        Route::get('backup/poll', [\App\Http\Controllers\Admin\BackupController::class, 'poll'])->name('backup.poll');
+        Route::get('backup/google/connect', [\App\Http\Controllers\Admin\BackupController::class, 'connect'])->name('backup.connect');
+        Route::get('backup/google/callback', [\App\Http\Controllers\Admin\BackupController::class, 'callback'])->name('backup.callback');
+        Route::post('backup/google/disconnect', [\App\Http\Controllers\Admin\BackupController::class, 'disconnect'])->name('backup.disconnect');
+        Route::post('backup/settings', [\App\Http\Controllers\Admin\BackupController::class, 'settings'])->name('backup.settings');
+        Route::post('backup/now', [\App\Http\Controllers\Admin\BackupController::class, 'backupNow'])->name('backup.now')->middleware('throttle:10,1');
+        Route::post('backup/restore', [\App\Http\Controllers\Admin\BackupController::class, 'restore'])->name('backup.restore')->middleware('throttle:5,1');
+        Route::post('backup/cancel', [\App\Http\Controllers\Admin\BackupController::class, 'cancelTask'])->name('backup.cancel');
+
         Route::get('wallet', [\App\Http\Controllers\Admin\WalletController::class, 'index'])->name('wallet.index');
         Route::get('wallet/history', [\App\Http\Controllers\Admin\WalletController::class, 'history'])->name('wallet.history');
         Route::post('wallet/requests', [\App\Http\Controllers\Admin\WalletController::class, 'storeRequest'])->name('wallet.request');

@@ -13,7 +13,7 @@ use Illuminate\Console\Command;
  */
 class BackupRun extends Command
 {
-    protected $signature = 'backup:run {--queued : Run what the Super Admin page asked for} {--restore= : Restore this local backup zip}';
+    protected $signature = 'backup:run {--queued : Run what the backup pages asked for} {--shops : Back up every shop that connected its own Drive} {--restore= : Restore this local backup zip}';
     protected $description = 'Back up all CRM data (database + uploaded files) to Google Drive, or restore it';
 
     public function handle(): int
@@ -31,8 +31,16 @@ class BackupRun extends Command
             }
 
             if ($this->option('queued')) {
-                if ($msg = BackupManager::runQueued()) {
-                    $this->info($msg);
+                foreach (BackupManager::runQueued() as $msg) {
+                    $this->line($msg);
+                }
+
+                return self::SUCCESS;
+            }
+
+            if ($this->option('shops')) {
+                foreach (BackupManager::backupShops() as $msg) {
+                    $this->line($msg);
                 }
 
                 return self::SUCCESS;

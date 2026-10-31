@@ -149,8 +149,8 @@ class BackupTest extends TestCase
         ]);
         $this->withSession(['backup_oauth_state' => $state ?? 'x'])
             ->get(route('super.backup.callback', ['state' => $state ?? 'x', 'code' => 'c']))->assertSessionHas('success');
-        $this->assertTrue(GoogleDrive::connected());
-        $this->assertSame('me@gmail.com', GoogleDrive::token()['email']);
+        $this->assertTrue(GoogleDrive::for(null)->connected());
+        $this->assertSame('me@gmail.com', GoogleDrive::for(null)->email());
 
         $this->post(route('super.backup.now'))->assertSessionHas('success');
         $this->post(route('super.backup.now'))->assertSessionHas('error');   // one at a time

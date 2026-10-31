@@ -84,7 +84,7 @@
             <div class="space-y-3">
                 <p class="text-sm font-semibold text-gray-800">2. Connect</p>
                 @if ($connected)
-                    <p class="text-sm text-gray-600">Backups go to the folder <b>{{ \App\Services\Backup\GoogleDrive::FOLDER_NAME }}</b> in {{ $email ?: 'your Drive' }}. The CRM can only see the files it put there.</p>
+                    <p class="text-sm text-gray-600">Backups go to the folder <b>{{ \App\Services\Backup\GoogleDrive::for(null)->folderName() }}</b> in {{ $email ?: 'your Drive' }}. The CRM can only see the files it put there.</p>
                     <div class="flex flex-wrap gap-2">
                         <a href="{{ route('super.backup.connect') }}" class="px-4 py-2 rounded-lg bg-gray-100 text-sm font-semibold hover:bg-gray-200">Reconnect</a>
                         <form method="POST" action="{{ route('super.backup.disconnect') }}" onsubmit="return confirm('Stop sending backups to this Google Drive?')">@csrf

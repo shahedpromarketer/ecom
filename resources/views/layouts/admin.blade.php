@@ -597,6 +597,14 @@
             <span class="truncate">API Tokens</span>
         </a>
 
+        <a href="{{ route('admin.backup.index') }}"
+           class="flex items-center gap-3 py-3 pr-4 text-sm font-medium transition-colors duration-150 {{ $navItem('admin.backup*') }}">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z"/>
+            </svg>
+            <span class="truncate">Backup</span>
+        </a>
+
         <a href="{{ route('admin.activity-log.index') }}"
            class="flex items-center gap-3 py-3 pr-4 text-sm font-medium transition-colors duration-150 {{ $navItem('admin.activity-log*') }}">
             <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">

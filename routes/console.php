@@ -16,4 +16,5 @@ Schedule::command('couriers:sync')->everyThirtyMinutes()->withoutOverlapping();
 
 // Full backup to the super admin's Google Drive; queued "Backup now" / "Restore" run within a minute.
 Schedule::command('backup:run')->dailyAt('02:30')->withoutOverlapping(180);
+Schedule::command('backup:run --shops')->dailyAt('03:15')->withoutOverlapping(180);   // shops' own Drives
 Schedule::command('backup:run --queued')->everyMinute()->withoutOverlapping(180);

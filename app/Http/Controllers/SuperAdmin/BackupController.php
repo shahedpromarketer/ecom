@@ -17,9 +17,9 @@ class BackupController extends Controller
     {
         $driveFiles = [];
         $driveError = null;
-        if (GoogleDrive::connected()) {
+        if (GoogleDrive::for(null)->connected()) {
             try {
-                $driveFiles = GoogleDrive::list();
+                $driveFiles = GoogleDrive::for(null)->list();
             } catch (\Throwable $e) {
                 $driveError = $e->getMessage();
             }
@@ -27,9 +27,9 @@ class BackupController extends Controller
 
         return view('super-admin.backup', [
             'client'     => GoogleDrive::client(),
-            'connected'  => GoogleDrive::connected(),
-            'email'      => GoogleDrive::token()['email'] ?? null,
-            'redirect'   => GoogleDrive::redirectUri(),
+            'connected'  => GoogleDrive::for(null)->connected(),
+            'email'      => GoogleDrive::for(null)->email(),
+            'redirect'   => GoogleDrive::for(null)->redirectUri(),
             'status'     => BackupManager::status(),
             'task'       => BackupManager::task(),
             'keep'       => BackupManager::keep(),
@@ -56,7 +56,7 @@ class BackupController extends Controller
         $request->session()->put('backup_oauth_state', $state);
 
         try {
-            return redirect()->away(GoogleDrive::authUrl($state));
+            return redirect()->away(GoogleDrive::for(null)->authUrl($state));
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         }
@@ -73,19 +73,19 @@ class BackupController extends Controller
         }
 
         try {
-            GoogleDrive::exchange($request->code);
-            GoogleDrive::folderId();
+            GoogleDrive::for(null)->exchange($request->code);
+            GoogleDrive::for(null)->folderId();
         } catch (\Throwable $e) {
             return redirect()->route('super.backup')->with('error', $e->getMessage());
         }
-        $this->log('backup.drive_connected', 'Google Drive connected for backups (' . (GoogleDrive::token()['email'] ?? '?') . ')');
+        $this->log('backup.drive_connected', 'Google Drive connected for backups (' . (GoogleDrive::for(null)->email() ?? '?') . ')');
 
         return redirect()->route('super.backup')->with('success', 'Google Drive connected. Press "Backup now" to make the first backup.');
     }
 
     public function disconnect()
     {
-        GoogleDrive::disconnect();
+        GoogleDrive::for(null)->disconnect();
         $this->log('backup.drive_disconnected', 'Google Drive disconnected from backups');
 
         return back()->with('success', 'Google Drive disconnected. Backups stay in your Drive.');
