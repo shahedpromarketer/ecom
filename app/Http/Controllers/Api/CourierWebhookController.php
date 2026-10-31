@@ -28,8 +28,17 @@ class CourierWebhookController extends Controller
 
         // Pathao checks the address first and expects its secret header echoed back.
         if ($account->courier === 'pathao' && ($payload['event'] ?? '') === 'webhook_integration') {
+            // Echo Pathao's own challenge value when it sends one, else our secret.
+            $challenge = $request->header('X-Pathao-Merchant-Webhook-Integration-Secret')
+                ?? $payload['integration_secret'] ?? $payload['secret'] ?? $payload['token'] ?? $account->webhook_token;
+            \Illuminate\Support\Facades\Log::warning('pathao.webhook_integration', [
+                'account' => $account->id,
+                'headers' => collect($request->headers->all())->except(['cookie', 'authorization'])->map(fn ($v) => $v[0] ?? null)->all(),
+                'payload' => $payload,
+            ]);
+
             return response()->json(['status' => 202, 'message' => 'Webhook integration successful'], 202)
-                ->header('X-Pathao-Merchant-Webhook-Integration-Secret', $account->webhook_token);
+                ->header('X-Pathao-Merchant-Webhook-Integration-Secret', (string) $challenge);
         }
 
         // Couriers that can send a secret must send ours (the address already holds it, this is a second lock).
