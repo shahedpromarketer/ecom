@@ -219,7 +219,7 @@ class CourierTest extends TestCase
         $url = '/api/courier-webhook/' . $a->webhook_token;
 
         $this->postJson($url, ['event' => 'webhook_integration'])->assertStatus(202)
-            ->assertHeader('X-Pathao-Merchant-Webhook-Integration-Secret', $a->webhook_token);
+            ->assertHeader('X-Pathao-Merchant-Webhook-Integration-Secret', 'f3992ecc-59da-4cbe-a049-a13da2018d51');
 
         $this->postJson($url, ['consignment_id' => 'DP1', 'event' => 'order.in-transit'])->assertStatus(202);
         $this->assertSame('in_transit', $s->fresh()->status);
