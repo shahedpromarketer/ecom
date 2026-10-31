@@ -99,8 +99,9 @@
 
     {{-- Add / edit form (exists only while open) --}}
     <template x-if="form">
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" @keydown.escape.window="form = null">
-        <form method="POST" :action="form?.action" class="{{ $card }} w-full max-w-lg p-5 space-y-4 max-h-[90vh] overflow-y-auto" @click.outside="form = null">
+    {{-- Close on a click on the dark backdrop only: @click.outside on the form also caught the very click that opened it. --}}
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" @keydown.escape.window="form = null" @click.self="form = null">
+        <form method="POST" :action="form?.action" class="{{ $card }} w-full max-w-lg p-5 space-y-4 max-h-[90vh] overflow-y-auto">
             @csrf
             <template x-if="form?.id"><input type="hidden" name="_method" value="PUT"></template>
             <h3 class="font-bold text-textprimary dark:text-white" x-text="form?.id ? 'Edit account' : 'Add courier account'"></h3>
