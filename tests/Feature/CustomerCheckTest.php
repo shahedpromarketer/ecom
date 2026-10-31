@@ -61,7 +61,7 @@ class CustomerCheckTest extends TestCase
             'steadfast.com.bd/login' => Http::sequence()
                 ->push('<form><input type="hidden" name="_token" value="CSRF1" autocomplete="off"></form>', 200, ['Content-Type' => 'text/html'])
                 ->push('<html>dashboard</html>', 200, ['Content-Type' => 'text/html']),
-            'steadfast.com.bd/user/frauds/check/*' => Http::response(['total_parcels' => 5, 'total_delivered' => 4, 'total_cancelled' => 1, 'total_fraud_reports' => []]),
+            'steadfast.com.bd/user/frauds/check/*' => Http::response(['delivery_ratio' => 80, 'cancellation_ratio' => 20, 'fraud_reports' => 2, 'delivered_count' => 4, 'cancelled_count' => 1]),
         ]);
 
         $c = CustomerCheck::for($this->shop->id, '+8801711223344');
@@ -69,6 +69,7 @@ class CustomerCheckTest extends TestCase
         $this->assertSame('Excellent', $c['couriers']['pathao']['rating']);
         $this->assertSame(5, $c['couriers']['steadfast']['total']);
         $this->assertSame(1, $c['couriers']['steadfast']['failed']);
+        $this->assertSame(2, $c['couriers']['steadfast']['reports']);
         $this->assertSame('RedX no longer shares this', $c['couriers']['redx']['note']);
         $this->assertSame(['total' => 9, 'success' => 8, 'failed' => 1, 'rate' => 88.9], $c['all']);
 

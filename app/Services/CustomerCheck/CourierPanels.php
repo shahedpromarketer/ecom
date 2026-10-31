@@ -108,9 +108,10 @@ class CourierPanels
             throw new RuntimeException('Steadfast: ' . ($d['error'] ?? $d['message'] ?? 'no answer (' . $r->status() . ')'));
         }
 
+        // Current panel: delivered_count / cancelled_count (+ ratios, fraud_reports); older one: total_*.
         $total = $d['total_parcels'] ?? $d['total_parcel'] ?? $d['data']['total_parcels'] ?? null;
-        $success = $d['total_delivered'] ?? $d['delivered'] ?? $d['data']['total_delivered'] ?? null;
-        $failed = $d['total_cancelled'] ?? $d['cancelled'] ?? $d['data']['total_cancelled'] ?? null;
+        $success = $d['delivered_count'] ?? $d['total_delivered'] ?? $d['delivered'] ?? $d['data']['total_delivered'] ?? null;
+        $failed = $d['cancelled_count'] ?? $d['total_cancelled'] ?? $d['cancelled'] ?? $d['data']['total_cancelled'] ?? null;
         if ($total === null && $success !== null && $failed !== null) {
             $total = (int) $success + (int) $failed;
         }
@@ -120,7 +121,7 @@ class CourierPanels
             'success' => $success !== null ? (int) $success : null,
             'failed'  => $failed !== null ? (int) $failed : ($total !== null && $success !== null ? max(0, (int) $total - (int) $success) : null),
             'rating'  => null,
-            'reports' => count($d['total_fraud_reports'] ?? $d['frauds'] ?? []),
+            'reports' => is_numeric($d['fraud_reports'] ?? null) ? (int) $d['fraud_reports'] : count($d['total_fraud_reports'] ?? $d['frauds'] ?? []),
         ];
     }
 
