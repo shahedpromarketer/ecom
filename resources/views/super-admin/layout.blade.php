@@ -59,6 +59,13 @@
             @if ($walletPending)<span class="ml-auto px-1.5 py-0.5 text-[10px] font-bold rounded-md bg-amber-400 text-gray-900">{{ $walletPending }}</span>@endif
         </a>
 
+        @php $backupOk = \App\Services\Backup\BackupManager::status()['ok'] ?? null; @endphp
+        <a href="{{ route('super.backup') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium {{ $nav('super.backup*') }} transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z"/></svg>
+            Backup
+            @if ($backupOk === false)<span class="ml-auto px-1.5 py-0.5 text-[10px] font-bold rounded-md bg-red-500 text-white">!</span>@endif
+        </a>
+
         <div class="pt-2 pb-1">
             <p class="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tools</p>
         </div>

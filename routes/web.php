@@ -56,6 +56,18 @@ Route::prefix('super-admin')->middleware(['auth', 'super_admin'])->name('super.'
 
     // Wallet: recharge requests, balances, per-order charges
     Route::get('/wallet',                    [\App\Http\Controllers\SuperAdmin\WalletAdminController::class, 'index'])->name('wallet');
+
+    // Backups to the super admin's Google Drive
+    Route::get('/backup',                    [\App\Http\Controllers\SuperAdmin\BackupController::class, 'index'])->name('backup');
+    Route::get('/backup/poll',               [\App\Http\Controllers\SuperAdmin\BackupController::class, 'poll'])->name('backup.poll');
+    Route::post('/backup/client',            [\App\Http\Controllers\SuperAdmin\BackupController::class, 'saveClient'])->name('backup.client');
+    Route::get('/backup/google/connect',     [\App\Http\Controllers\SuperAdmin\BackupController::class, 'connect'])->name('backup.connect');
+    Route::get('/backup/google/callback',    [\App\Http\Controllers\SuperAdmin\BackupController::class, 'callback'])->name('backup.callback');
+    Route::post('/backup/google/disconnect', [\App\Http\Controllers\SuperAdmin\BackupController::class, 'disconnect'])->name('backup.disconnect');
+    Route::post('/backup/settings',          [\App\Http\Controllers\SuperAdmin\BackupController::class, 'settings'])->name('backup.settings');
+    Route::post('/backup/now',               [\App\Http\Controllers\SuperAdmin\BackupController::class, 'backupNow'])->name('backup.now');
+    Route::post('/backup/restore',           [\App\Http\Controllers\SuperAdmin\BackupController::class, 'restore'])->name('backup.restore')->middleware('throttle:5,1');
+    Route::post('/backup/cancel',            [\App\Http\Controllers\SuperAdmin\BackupController::class, 'cancelTask'])->name('backup.cancel');
     Route::post('/wallet/requests/{id}/approve', [\App\Http\Controllers\SuperAdmin\WalletAdminController::class, 'approve'])->name('wallet.approve');
     Route::post('/wallet/requests/{id}/reject',  [\App\Http\Controllers\SuperAdmin\WalletAdminController::class, 'reject'])->name('wallet.reject');
     Route::get('/wallet/requests/{id}/screenshot', [\App\Http\Controllers\SuperAdmin\WalletAdminController::class, 'screenshot'])->name('wallet.screenshot');
