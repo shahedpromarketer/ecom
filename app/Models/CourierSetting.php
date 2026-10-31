@@ -16,8 +16,10 @@ class CourierSetting extends Model
     /** courier => label and the fields its account form asks for. */
     public const COURIERS = [
         'steadfast' => ['label' => 'Steadfast', 'color' => 'bg-green-600', 'fields' => [
-            'api_key'    => 'API Key',
-            'api_secret' => 'Secret Key',
+            'api_key'              => 'API Key',
+            'api_secret'           => 'Secret Key',
+            'extra.panel_email'    => 'Panel login email (optional — for customer success rate)',
+            'extra.panel_password' => 'Panel password (optional — for customer success rate)',
         ]],
         'pathao' => ['label' => 'Pathao', 'color' => 'bg-red-500', 'fields' => [
             'api_key'        => 'Client ID',
@@ -45,7 +47,7 @@ class CourierSetting extends Model
     ];
 
     /** Fields that are secrets: never shown back, kept when the form leaves them empty. */
-    public const SECRET_FIELDS = ['api_key', 'api_secret', 'extra.password'];
+    public const SECRET_FIELDS = ['api_key', 'api_secret', 'extra.password', 'extra.panel_password'];
 
     protected $fillable = [
         'courier', 'name', 'api_key', 'api_secret', 'base_url',

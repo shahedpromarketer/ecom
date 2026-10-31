@@ -82,6 +82,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::delete('orders/notes/{note}', [OrderController::class, 'deleteNote'])->name('orders.deleteNote');
         Route::post('orders/{order}/shipment', [OrderController::class, 'createShipment'])->name('orders.createShipment');
         Route::post('orders/{order}/submit-courier', [OrderController::class, 'submitCourier'])->name('orders.submitCourier');
+        Route::get('orders/{order}/customer-check', [OrderController::class, 'customerCheck'])->name('orders.customerCheck')->middleware('throttle:30,1');
         Route::get('orders/{order}/track-courier', [OrderController::class, 'trackCourier'])->name('orders.trackCourier');
         Route::patch('orders/{order}/update-tracking', [OrderController::class, 'updateTracking'])->name('orders.updateTracking');
         Route::post('orders/{order}/return', [ReturnController::class, 'store'])->name('returns.store');

@@ -709,6 +709,15 @@ class OrderController extends Controller
         }
     }
 
+    /** The customer's delivery history: each courier's own (shop's logins) + all shops on Ecom Pilot. */
+    public function customerCheck(Request $request, Order $order)
+    {
+        $tenantId = (int) ($order->tenant_id ?? auth()->user()->tenant_id);
+        $check = \App\Services\CustomerCheck\CustomerCheck::for($tenantId, (string) $order->shipping_phone, $request->boolean('fresh'));
+
+        return view('admin.orders._customer-check', ['check' => $check]);
+    }
+
     public function trackCourier(Order $order)
     {
         $shipment = $order->shipment;

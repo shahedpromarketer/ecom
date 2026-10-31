@@ -189,70 +189,26 @@
     </div>
 </div>
 
-{{-- CARD: COURIER SUCCESS RATE --}}
-<div class="bg-white dark:bg-gray-900 rounded-2xl shadow p-6" x-data="{ open: true }">
-    <div class="flex items-center justify-between cursor-pointer" @click="open = !open">
+{{-- CARD: COURIER SUCCESS RATE (this customer's history; loaded after the page) --}}
+<div class="bg-white dark:bg-gray-900 rounded-2xl shadow p-6" id="customerCheckCard">
+    <div class="flex items-center justify-between gap-2">
         <h3 class="text-base font-semibold text-[#1B2A4A] dark:text-white">Courier Success Rate</h3>
-        <div class="flex items-center gap-2">
-            <button type="button" onclick="refreshCourierStats(event)" class="text-xs text-[#F59E0B] hover:underline flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Refresh</button>
-            <span x-text="open ? '▲' : '▼'" class="text-gray-400 text-xs"></span>
-        </div>
+        <button type="button" onclick="loadCustomerCheck(true)" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-teal-600 text-white text-xs font-semibold hover:bg-teal-700">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Refresh</button>
     </div>
-    <div x-show="open" x-transition class="mt-4">
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="text-xs text-gray-500 dark:text-gray-400 border-b dark:border-gray-700">
-                        <th class="text-left pb-2">Courier</th>
-                        <th class="text-left pb-2">Score</th>
-                        <th class="text-center pb-2">Total</th>
-                        <th class="text-center pb-2">Success</th>
-                        <th class="text-center pb-2">Failed</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @php
-                        // One query for every courier (was three per courier).
-                        $courierStats = \App\Models\CourierShipment::query()
-                            ->join('orders', 'orders.id', '=', 'courier_shipments.order_id')
-                            ->selectRaw("courier_shipments.courier_name,
-                                COUNT(*) AS total,
-                                SUM(CASE WHEN orders.status IN ('delivered','completed') THEN 1 ELSE 0 END) AS success,
-                                SUM(CASE WHEN orders.status IN ('cancelled','returned','failed') THEN 1 ELSE 0 END) AS failed")
-                            ->whereNull('orders.deleted_at')
-                            ->groupBy('courier_shipments.courier_name')
-                            ->get()->keyBy('courier_name');
-                    @endphp
-                    @foreach($activeCouriers as $courier)
-                    @php
-                        $cName   = $courier->courier;
-                        $total   = (int) ($courierStats[$cName]->total ?? 0);
-                        $success = (int) ($courierStats[$cName]->success ?? 0);
-                        $failed  = (int) ($courierStats[$cName]->failed ?? 0);
-                        $pct     = $total > 0 ? round(($success / $total) * 100) : 0;
-                        $barCls  = $pct >= 70 ? 'bg-green-500' : ($pct >= 40 ? 'bg-yellow-500' : 'bg-red-500');
-                        $txtCls  = $pct >= 70 ? 'text-green-600' : ($pct >= 40 ? 'text-yellow-600' : 'text-red-600');
-                    @endphp
-                    <tr class="border-b dark:border-gray-800">
-                        <td class="py-2 font-medium text-gray-700 dark:text-gray-300 capitalize">{{ $cName }}</td>
-                        <td class="py-2 w-32">
-                            <div class="flex items-center gap-2">
-                                <div class="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                    <div class="h-full rounded-full {{ $barCls }}" style="width: {{ $pct }}%"></div>
-                                </div>
-                                <span class="text-xs font-bold {{ $txtCls }}">{{ $pct }}%</span>
-                            </div>
-                        </td>
-                        <td class="py-2 text-center text-gray-600 dark:text-gray-400">{{ $total }}</td>
-                        <td class="py-2 text-center text-green-600 font-medium">{{ $success }}</td>
-                        <td class="py-2 text-center text-red-500 font-medium">{{ $failed }}</td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-    </div>
+    <div id="customerCheckBody" class="mt-4 text-sm text-gray-400">Checking this customer's delivery history…</div>
 </div>
+<script>
+function loadCustomerCheck(fresh) {
+    const body = document.getElementById('customerCheckBody');
+    if (fresh) body.innerHTML = '<span class="text-gray-400">Checking again…</span>';
+    fetch(@js(route('admin.orders.customerCheck', $order)) + (fresh ? '?fresh=1' : ''), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(r => r.ok ? r.text() : Promise.reject())
+        .then(html => body.innerHTML = html)
+        .catch(() => body.innerHTML = '<span class="text-red-500">Could not check right now — press Refresh.</span>');
+}
+document.addEventListener('DOMContentLoaded', () => loadCustomerCheck(false));
+</script>
 
 {{-- CARD: ORDER PRODUCTS --}}
 <div class="bg-white dark:bg-gray-900 rounded-2xl shadow p-6">
