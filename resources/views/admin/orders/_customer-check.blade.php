@@ -29,7 +29,10 @@
                 @endphp
                 <tr class="border-t border-gray-200 dark:border-gray-700 align-top">
                     <td class="p-2 font-semibold text-gray-800 dark:text-gray-200">{{ $c['label'] }}
-                        @if (! empty($c['reports']))<div class="text-[11px] font-normal text-red-600">{{ $c['reports'] }} merchant report(s)</div>@endif</td>
+                        @if (! empty($c['reports']))<div class="text-[11px] font-normal text-red-600">{{ $c['reports'] }} merchant report(s)</div>@endif
+                        @if (! empty($c['saved_at']))
+                            <div class="text-[11px] font-normal text-gray-400" title="{{ $c['why'] ? $c['why'] . ' — ' : '' }}These are the numbers last saved for this customer.">Saved {{ \Carbon\Carbon::parse($c['saved_at'])->format('d M Y') }}</div>
+                        @endif</td>
                     <td class="p-2">
                         @if ($hasCounts)
                             <div class="relative h-4 rounded {{ $c['total'] ? 'bg-gray-200 dark:bg-gray-700' : $bar['gray'] }} overflow-hidden max-w-xs">

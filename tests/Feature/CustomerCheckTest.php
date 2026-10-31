@@ -101,4 +101,39 @@ class CustomerCheckTest extends TestCase
         $this->assertSame(0, $c['all']['total']);
         $this->assertNull($c['all']['rate']);
     }
+    public function test_last_numbers_are_kept_when_a_courier_stops_answering(): void
+    {
+        $sf = Tenancy::as($this->shop->id, fn () => CourierSetting::create(['courier' => 'steadfast', 'is_active' => true, 'api_key' => 'k', 'api_secret' => 's',
+            'extra_config' => ['panel_email' => 'sf@x.test', 'panel_password' => 'pw']]));
+        Http::fake([
+            'steadfast.com.bd/login' => Http::sequence()
+                ->push('<input type="hidden" name="_token" value="T1" autocomplete="off">', 200, ['Content-Type' => 'text/html'])->push('ok', 200, ['Content-Type' => 'text/html']),
+            'steadfast.com.bd/user/frauds/check/*' => Http::sequence()
+                ->push(['delivered_count' => 7, 'cancelled_count' => 1, 'fraud_reports' => 0])
+                ->push(['error' => 'This feature is no longer available.'], 403),
+        ]);
+
+        $first = CustomerCheck::for($this->shop->id, '01711223344', true);
+        $this->assertSame(8, $first['couriers']['steadfast']['total']);
+        $this->assertArrayNotHasKey('saved_at', $first['couriers']['steadfast']);
+
+        // Steadfast stops sharing: the saved numbers are shown, marked with their date.
+        $later = CustomerCheck::for($this->shop->id, '01711223344', true);
+        $s = $later['couriers']['steadfast'];
+        $this->assertSame([8, 7, 1], [$s['total'], $s['success'], $s['failed']]);
+        $this->assertNotEmpty($s['saved_at']);
+        $this->assertStringContainsString('no longer available', $s['why']);
+        $this->assertSame(8, $later['all']['total']);
+
+        // Even with the Steadfast account removed.
+        $sf->delete();
+        $this->assertSame(7, CustomerCheck::for($this->shop->id, '01711223344', true)['couriers']['steadfast']['success']);
+
+        // Another shop never sees this shop's saved numbers.
+        $other = Tenant::create(['name' => 'Other', 'email' => 'o@test.local', 'status' => 'active', 'plan' => 'basic']);
+        $this->assertNull(CustomerCheck::for($other->id, '01711223344', true)['couriers']['steadfast']['total']);
+
+        $order = $this->order($this->shop, '01711223344', 'confirmed');
+        $this->actingAs($this->owner)->get(route('admin.orders.customerCheck', $order))->assertOk()->assertSee('Saved ' . now()->format('d M Y'));
+    }
 }

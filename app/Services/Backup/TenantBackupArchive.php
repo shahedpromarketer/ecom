@@ -23,7 +23,7 @@ class TenantBackupArchive
         'categories', 'products', 'customers', 'coupons', 'orders', 'order_notes', 'order_returns',
         'invoices', 'invoice_templates', 'courier_shipments', 'courier_events', 'courier_payments',
         'followups', 'leads', 'incomplete_orders', 'blacklisted_phones', 'ip_blocklist',
-        'marketing_pixels', 'saved_filters', 'roles', 'settings',
+        'marketing_pixels', 'saved_filters', 'courier_scores', 'roles', 'settings',
     ];
 
     /** Tables without tenant_id, reached through a parent: table => [column, parent table]. Order matters. */

@@ -73,7 +73,7 @@ class CustomerCheck
                 $row['note'] = $e->getMessage();
                 $retry = true;
             }
-            $couriers[$key] = $row;
+            $couriers[$key] = self::remember($tenantId, $phone, $key, $row);
         }
 
         $counted = collect($couriers)->filter(fn ($c) => $c['total'] !== null);
@@ -92,6 +92,39 @@ class CustomerCheck
             'all'      => $all + ['rate' => self::rate($all)],
             'retry'    => $retry,
         ];
+    }
+
+    /**
+     * Keep what a courier answered; when it answers nothing (stopped sharing, login removed,
+     * down), show the last answer we kept instead, marked with its date.
+     */
+    private static function remember(int $tenantId, string $phone, string $courier, array $row): array
+    {
+        $hasData = $row['total'] !== null || $row['rating'] !== null;
+        $where = ['tenant_id' => $tenantId, 'phone' => $phone, 'courier' => $courier];
+
+        if ($hasData) {
+            DB::table('courier_scores')->updateOrInsert($where, [
+                'total' => $row['total'], 'success' => $row['success'], 'failed' => $row['failed'],
+                'rating' => $row['rating'], 'reports' => $row['reports'] ?? null,
+                'checked_at' => now(), 'updated_at' => now(), 'created_at' => now(),
+            ]);
+
+            return $row;
+        }
+
+        $saved = DB::table('courier_scores')->where($where)->first();
+        if (! $saved) {
+            return $row;
+        }
+
+        return array_merge($row, [
+            'total' => $saved->total, 'success' => $saved->success, 'failed' => $saved->failed,
+            'rating' => $saved->rating, 'reports' => $saved->reports,
+            'saved_at' => (string) $saved->checked_at,
+            'why' => $row['note'],
+            'note' => null,
+        ]);
     }
 
     /** Our own history for the number: every shop on Ecom Pilot (null) or one shop. */
